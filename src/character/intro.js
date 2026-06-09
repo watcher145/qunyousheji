@@ -21,5 +21,6 @@ export const characterIntro = {
 	qunyou_chenzhaoyun: "设计：0^0。<br>评价：挺好的设计，印牌很强",
 	qunyou_wanglang: "设计：滑溜溜。<br>评价：阴完了，拿到A和K就能空城全场",
 	qunyou_cbpzhaoyun: "设计：琉多斯。<br>评价：区？？",
-	qunyou_jiangwei: "来源：BV1CDGv6uESF<br>吐槽：原版那描述都能自创好几个新概念了",
+	qunyou_jiangwei: "来源：BV1CDGv6uESF<br>吐槽：原版那描述都能自创好几个新概念了，还有，太弱了，共同拼点本来就不容易赢，自身顶多是小制衡，没有手牌还发动不了技能",
+	qunyou_zhugeliang: "设计：寻辉逐烨<br>吐槽：我不会玩，但是你确定这不是刘协？",
 };

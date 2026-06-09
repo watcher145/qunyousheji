@@ -269,6 +269,177 @@ function qunyou_miaoyu_modAiValue(player, card, num) {
 	return Math.max(num, [6, 4, 3][Math.min(geti(), 2)]);
 }
 
+function qunyou_zhitian_getExecutor(event, player) {
+	if (event.triggername === "useCardToPlayered") {
+		return event.target;
+	}
+	return player;
+}
+
+function qunyou_zhitian_isDamageUnique(event, player) {
+	const executor = qunyou_zhitian_getExecutor(event, player);
+	if (!executor?.isIn() || !executor.countCards("he")) {
+		return false;
+	}
+	if (!event.card || !get.tag(event.card, "damage")) {
+		return false;
+	}
+	if (event.isFirstTarget === false) {
+		return false;
+	}
+	return Array.isArray(event.targets) && event.targets.length === 1;
+}
+
+function qunyou_zhitian_uniqueMinHandOther(player) {
+	const others = game.filterPlayer((current) => current !== player);
+	if (!others.length) {
+		return null;
+	}
+	others.sort((a, b) => a.countCards("h") - b.countCards("h"));
+	if (others.length > 1 && others[0].countCards("h") === others[1].countCards("h")) {
+		return null;
+	}
+	return others[0];
+}
+
+async function qunyou_zhitian_execute(executor, skill) {
+	if (!executor?.isIn() || !executor.countCards("he")) {
+		return;
+	}
+	await executor.chooseToDiscard(2, true, "he").forResult();
+	await executor.draw(2);
+	const other = qunyou_zhitian_uniqueMinHandOther(executor);
+	if (!other?.isIn() || !other.countCards("he")) {
+		return;
+	}
+	const result = await other
+		.chooseBool(get.prompt2(skill))
+		.set("choice", other.countCards("he") <= 3)
+		.forResult();
+	if (!result?.bool || !other.isIn() || !other.countCards("he")) {
+		return;
+	}
+	await other.chooseToDiscard(2, true, "he").forResult();
+	await other.draw(2);
+}
+
+const qunyou_zhijue_suits = ["spade", "heart", "club", "diamond"];
+
+function qunyou_zhijue_storage(player) {
+	let storage = player.storage.qunyou_zhijue;
+	if (!storage || typeof storage !== "object") {
+		storage = {};
+		player.storage.qunyou_zhijue = storage;
+	}
+	for (const key of ["wuxieUsedSuits", "huogongUsedSuits"]) {
+		if (!Array.isArray(storage[key])) {
+			storage[key] = [];
+		}
+	}
+	return storage;
+}
+
+function qunyou_zhijue_getUsed(player, name) {
+	const storage = qunyou_zhijue_storage(player);
+	return name === "wuxie" ? storage.wuxieUsedSuits : storage.huogongUsedSuits;
+}
+
+function qunyou_zhijue_getCrossUsed(player, name) {
+	return qunyou_zhijue_getUsed(player, name === "wuxie" ? "huogong" : "wuxie");
+}
+
+function qunyou_zhijue_getSuit(card, player) {
+	const suit = get.suit(card, player);
+	return qunyou_zhijue_suits.includes(suit) ? suit : null;
+}
+
+function qunyou_zhijue_canTransform(player, name, card) {
+	const suit = qunyou_zhijue_getSuit(card, player);
+	if (!suit) {
+		return false;
+	}
+	return !qunyou_zhijue_getCrossUsed(player, name).includes(suit);
+}
+
+function qunyou_zhijue_markTransform(player, name, card) {
+	const suit = qunyou_zhijue_getSuit(card, player);
+	if (!suit) {
+		return;
+	}
+	const used = qunyou_zhijue_getCrossUsed(player, name);
+	if (!used.includes(suit)) {
+		used.push(suit);
+	}
+}
+
+function qunyou_zhijue_remainingSharedSuits(player) {
+	const storage = qunyou_zhijue_storage(player);
+	return qunyou_zhijue_suits.filter((suit) => !storage.wuxieUsedSuits.includes(suit) && !storage.huogongUsedSuits.includes(suit));
+}
+
+function qunyou_zhijue_bothUsedSuits(player) {
+	const storage = qunyou_zhijue_storage(player);
+	return qunyou_zhijue_suits.filter((suit) => storage.wuxieUsedSuits.includes(suit) && storage.huogongUsedSuits.includes(suit));
+}
+
+function qunyou_zhijue_suitText(list) {
+	return list.length ? list.map((suit) => get.translation(suit)).join("、") : "无";
+}
+
+function qunyou_zhijue_availableNames(event, player) {
+	if (!event?.filterCard) {
+		return player.isPhaseUsing?.() ? ["huogong"] : [];
+	}
+	if (_status.currentPhase === player && event.type === "phase") {
+		return event.filterCard({ name: "huogong", isCard: true }, player, event) ? ["huogong"] : [];
+	}
+	return ["wuxie", "huogong"].filter((name) => event.filterCard({ name, isCard: true }, player, event));
+}
+
+function qunyou_zhijue_hasTransformCard(player, names) {
+	return names.some((name) => player.countCards("hes", (card) => qunyou_zhijue_canTransform(player, name, card)) > 0);
+}
+
+function qunyou_zhijue_canBusuan(event, player) {
+	if (!qunyou_zhijue_remainingSharedSuits(player).length) {
+		return false;
+	}
+	const names = qunyou_zhijue_availableNames(event, player);
+	if (!names.length) {
+		return false;
+	}
+	return qunyou_zhijue_hasTransformCard(player, names);
+}
+
+function qunyou_zhijue_fillSuit(player, suit) {
+	if (!qunyou_zhijue_suits.includes(suit)) {
+		return;
+	}
+	for (const name of ["wuxie", "huogong"]) {
+		const used = qunyou_zhijue_getUsed(player, name);
+		if (!used.includes(suit)) {
+			used.push(suit);
+		}
+	}
+}
+
+async function qunyou_zhijue_busuan(player, event) {
+	const remain = qunyou_zhijue_remainingSharedSuits(player);
+	if (!remain.length) {
+		return false;
+	}
+	await player.chooseToGuanxing(remain.length).set("prompt", `智绝：卜算${get.cnNumber(remain.length)}`).forResult();
+	const controls = remain.map((suit) => get.translation(suit));
+	const result = await player
+		.chooseControl(controls)
+		.set("prompt", "智绝：令其中一种花色视为均已转化过")
+		.set("choice", controls[0])
+		.forResult();
+	const index = controls.indexOf(result?.control);
+	qunyou_zhijue_fillSuit(player, remain[index >= 0 ? index : 0]);
+	return true;
+}
+
 function qunyou_longjue_isFull(player) {
 	return player.getMaxCharge() > 0 && player.countCharge(true) === 0;
 }
@@ -2826,6 +2997,185 @@ export const skills = {
 				popup: false,
 				content(event, trigger, player) {
 					player.storage.qunyou_dingyi_blocked = [];
+				},
+			},
+		},
+	},
+	qunyou_zhitian: {
+		audio: 2,
+		trigger: {
+			player: "useCardToPlayered",
+			target: "useCardToTargeted",
+		},
+		direct: true,
+		filter(event, player) {
+			return qunyou_zhitian_isDamageUnique(event, player);
+		},
+		async content(event, trigger, player) {
+			const executor = qunyou_zhitian_getExecutor(trigger, player);
+			if (!executor?.isIn() || !executor.countCards("he")) {
+				return;
+			}
+			const promptTarget = executor === player ? "你" : get.translation(executor);
+			const result = await player
+				.chooseBool(get.prompt("qunyou_zhitian"), `令${promptTarget}发动“天命”（改为手牌数唯一最小的其他角色也可如此做）`)
+				.set("ai", () => get.attitude(get.player(), executor) > 0)
+				.forResult();
+			if (!result?.bool) {
+				return;
+			}
+			player.logSkill("qunyou_zhitian", executor);
+			await qunyou_zhitian_execute(executor, "qunyou_zhitian");
+		},
+	},
+	qunyou_zhijue: {
+		audio: 2,
+		enable: ["chooseToUse", "chooseToRespond"],
+		mark: true,
+		marktext: "绝",
+		intro: {
+			content(storage, player) {
+				const wuxie = qunyou_zhijue_getUsed(player, "wuxie");
+				const huogong = qunyou_zhijue_getUsed(player, "huogong");
+				const both = qunyou_zhijue_bothUsedSuits(player);
+				return [
+					`本轮已转化过【无懈】的花色：${qunyou_zhijue_suitText(wuxie)}`,
+					`本轮已转化过【火攻】的花色：${qunyou_zhijue_suitText(huogong)}`,
+					`均已转化过的花色：${qunyou_zhijue_suitText(both)}`,
+				].join("<br>");
+			},
+		},
+		group: ["qunyou_zhijue_phase", "qunyou_zhijue_busuan", "qunyou_zhijue_reset"],
+		init(player) {
+			qunyou_zhijue_storage(player);
+			player.markSkill("qunyou_zhijue");
+		},
+		onremove(player) {
+			delete player.storage.qunyou_zhijue;
+			delete player.storage.qunyou_zhijue_backup;
+		},
+		hiddenCard(player, name) {
+			if (name !== "wuxie") {
+				return false;
+			}
+			return player.countCards("hes", (card) => qunyou_zhijue_canTransform(player, name, card)) > 0;
+		},
+		filter(event, player) {
+			if (!event.filterCard) {
+				return false;
+			}
+			const names = qunyou_zhijue_availableNames(event, player);
+			return names.length > 0 && qunyou_zhijue_hasTransformCard(player, names);
+		},
+		chooseButton: {
+			dialog(event, player) {
+				const list = [];
+				for (const name of qunyou_zhijue_availableNames(event, player)) {
+					if (player.countCards("hes", (card) => qunyou_zhijue_canTransform(player, name, card))) {
+						list.push(["锦囊", "", name]);
+					}
+				}
+				return ui.create.dialog("智绝：选择视为使用的牌", [list, "vcard"], "hidden");
+			},
+			check(button) {
+				const player = get.player();
+				const name = button.link[2];
+				if (_status.event.getParent()?.type !== "phase") {
+					return 1;
+				}
+				return player.getUseValue({ name, isCard: true }, null, true);
+			},
+			backup(links, player) {
+				const choice = links[0][2];
+				player.storage.qunyou_zhijue_backup = { name: choice };
+				return {
+					audio: "qunyou_zhijue",
+					sourceSkill: "qunyou_zhijue",
+					position: "hes",
+					selectCard: 1,
+					filterCard(card, player) {
+						const name = player.storage.qunyou_zhijue_backup?.name;
+						return !!name && qunyou_zhijue_canTransform(player, name, card);
+					},
+					check(card) {
+						return 6 - get.value(card);
+					},
+					viewAs() {
+						return { name: player.storage.qunyou_zhijue_backup?.name, isCard: true };
+					},
+					popname: true,
+					async precontent(event, trigger, player) {
+						const data = player.storage.qunyou_zhijue_backup;
+						delete player.storage.qunyou_zhijue_backup;
+						const card = event.result.cards?.[0];
+						if (!data?.name || !card) {
+							return;
+						}
+						qunyou_zhijue_markTransform(player, data.name, card);
+					},
+				};
+			},
+			prompt(links) {
+				const name = links[0][2];
+				return `智绝：将一张本轮未转化过对应花色的牌当【${get.translation(name)}】使用`;
+			},
+		},
+		ai: {
+			order: 8,
+			result: {
+				player: 1,
+			},
+		},
+		subSkill: {
+			busuan: {
+				audio: "qunyou_zhijue",
+				trigger: { player: ["chooseToUseBegin", "chooseToRespondBegin"] },
+				direct: true,
+				filter(event, player) {
+					return qunyou_zhijue_canBusuan(event, player);
+				},
+				async content(event, trigger, player) {
+					const num = qunyou_zhijue_remainingSharedSuits(player).length;
+					const result = await player
+						.chooseBool(get.prompt("qunyou_zhijue"), `是否卜算${get.cnNumber(num)}，然后令一种花色视为【无懈可击】与【火攻】均已转化过？`)
+						.set("ai", () => 0.6)
+						.forResult();
+					if (!result?.bool) {
+						return;
+					}
+					player.logSkill("qunyou_zhijue");
+					await qunyou_zhijue_busuan(player, trigger);
+				},
+			},
+			phase: {
+				audio: "qunyou_zhijue",
+				enable: "phaseUse",
+				filter(event, player) {
+					return qunyou_zhijue_remainingSharedSuits(player).length > 0 && qunyou_zhijue_hasTransformCard(player, ["huogong"]);
+				},
+				async content(event, trigger, player) {
+					player.logSkill("qunyou_zhijue");
+					await qunyou_zhijue_busuan(player, event);
+				},
+				ai: {
+					order: 7.5,
+					result: {
+						player: 1,
+					},
+				},
+			},
+			reset: {
+				charlotte: true,
+				trigger: { global: "roundStart" },
+				forced: true,
+				popup: false,
+				content(event, trigger, player) {
+					player.storage.qunyou_zhijue = {
+						wuxieUsedSuits: [],
+						huogongUsedSuits: [],
+					};
+					delete player.storage.qunyou_zhijue_backup;
+					player.markSkill("qunyou_zhijue");
 				},
 			},
 		},

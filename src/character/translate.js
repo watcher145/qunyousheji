@@ -31,4 +31,6 @@ export const characterTranslate = {
 	qunyou_wanglang: "王朗",
 	qunyou_cbpzhaoyun: "长坂坡赵云",
 	qunyou_jiangwei: "姜维",
+	qunyou_zhugeliang: "谋诸葛亮",
+	qunyou_zhugeliang_prefix: "谋",
 };
