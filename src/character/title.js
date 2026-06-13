@@ -23,4 +23,6 @@ export const characterTitle = {
 	qunyou_cbpzhaoyun: "虎威将军",
 	qunyou_jiangwei: "桀慢的麒麟",
 	qunyou_zhugeliang: "武侯",
+	qunyou_pengyue: "审时沉势",
+	qunyou_liumo: "问琴雅然",
 };
