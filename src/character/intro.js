@@ -28,6 +28,6 @@ export const characterIntro = {
 	qunyou_mengliufeng: "设计：未知。<br>评价：拿一点体力上限换两张决斗。额，不好衡量",
 	qunyou_caoshuang: "设计：嘻˘꒳˘羲",
 	qunyou_hanshiwuhu: "设计：佐世保之时雨。<br>评价：",
-	qunyou_zhonghui: "设计：熏鱼不爱果子。<br>评价：",
+	qunyou_zhonghui: "设计：熏鱼不爱果子。修改：欢愉与希望<br>评价：我也不知道我改的好不好，总之比原版强了。",
 	qunyou_yang_wang: "设计：西夏笠谷。<br>评价：",
 };

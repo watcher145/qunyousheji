@@ -6755,7 +6755,7 @@ export const skills = {
 	},
 	qunyou_quanmou: {
 		audio: 2,
-		trigger: { player: "gainAfter" },
+		trigger: { player: "gainAfter", global: "loseAsyncAfter" },
 		direct: true,
 		mark: true,
 		marktext: "谋",
@@ -6765,20 +6765,32 @@ export const skills = {
 			},
 		},
 		filter(event, player) {
-			return (event.getg?.(player) || []).length > 0;
+			if (event.name === "gain") {
+				return (event.getg?.(player) || []).length > 0;
+			}
+			const lost = event.getl?.(player)?.cards2 || [];
+			if (!lost.length || !event.getg) {
+				return false;
+			}
+			return game.hasPlayer((target) => target !== player && (event.getg(target) || []).some((card) => lost.includes(card)));
 		},
 		async content(event, trigger, player) {
 			const cards = (trigger.getg?.(player) || []).slice();
-			if (!cards.length) {
+			let target = player;
+			if (trigger.name !== "gain") {
+				const lost = trigger.getl?.(player)?.cards2 || [];
+				target = game.filterPlayer((current) => current !== player && (trigger.getg?.(current) || []).some((card) => lost.includes(card)))[0] || null;
+			}
+			if (!target?.isIn?.()) {
 				return;
 			}
-			const result = await player.chooseBool(get.prompt("qunyou_quanmou"), "你可以受到1点无来源伤害，然后令这些牌获得“权谋”标记且无次数限制，并令你的手牌上限永久+1").set("ai", () => true).forResult();
+			const result = await player.chooseBool(get.prompt("qunyou_quanmou"), `你可以对${get.translation(target)}造成1点伤害，然后令这些牌获得“权谋”标记且无次数限制，并令你的手牌上限永久+1`).set("ai", () => true).forResult();
 			if (!result?.bool) {
 				return;
 			}
-			const before = player.getHistory("damage").length;
-			await player.damage("nosource");
-			if (player.getHistory("damage").length <= before) {
+			const before = target.getHistory("damage").length;
+			await target.damage(player);
+			if (target.getHistory("damage").length <= before) {
 				return;
 			}
 			const tagged = cards.filter((card) => get.owner(card) === player && get.position(card) === "h");
@@ -6810,7 +6822,8 @@ export const skills = {
 			},
 		},
 		filter(event, player) {
-			return event.player && event.player !== player && event.num > 0;
+			const usedTargets = player.storage.qunyou_huameng_usedTargets || [];
+			return event.player && event.num > 0 && !usedTargets.includes(event.player.playerid);
 		},
 		async content(event, trigger, player) {
 			const target = trigger.player;
@@ -6818,6 +6831,13 @@ export const skills = {
 			if (!boolResult?.bool || !target?.isIn?.()) {
 				return;
 			}
+			if (!Array.isArray(player.storage.qunyou_huameng_usedTargets)) {
+				player.storage.qunyou_huameng_usedTargets = [];
+			}
+			if (!player.storage.qunyou_huameng_usedTargets.includes(target.playerid)) {
+				player.storage.qunyou_huameng_usedTargets.push(target.playerid);
+			}
+			player.addTempSkill("qunyou_huameng_round", "roundStart");
 			trigger.cancel();
 			player.logSkill("qunyou_huameng", target);
 			const debate = await player.chooseToDebate([target]).set("prompt", get.prompt("qunyou_huameng")).set("prompt2", `与${get.translation(target)}议事`).set("ai", (card) => get.color(card) === "red" ? 1 : 0).forResult();
@@ -6860,7 +6880,7 @@ export const skills = {
 			} else if (opinion === "black" && target.isIn()) {
 				const list = qunyou_huameng_skillList(target, player);
 				if (list.length) {
-					const result = await player.chooseControl(list).set("prompt", `化盟：获得${get.translation(target)}武将牌上的一个技能，直到你下次受到伤害`).set("choiceList", list.map((skill) => get.translation(skill))).set("ai", () => list[0]).forResult();
+					const result = await player.chooseControl(list).set("prompt", `化盟：获得${get.translation(target)}武将牌上的一个技能，直到你下次受到其他角色造成的伤害`).set("choiceList", list.map((skill) => get.translation(skill))).set("ai", () => list[0]).forResult();
 					const skill = result?.control;
 					if (skill) {
 						const storage = player.storage.qunyou_huameng_skills || [];
@@ -6878,11 +6898,24 @@ export const skills = {
 		subSkill: {
 			clear: {
 				charlotte: true,
+				trigger: { player: "damageAfter" },
+				forced: true,
+				popup: false,
+				filter(event) {
+					return !!event.source && event.source !== event.player;
+				},
 				onremove(player) {
 					if (!(player.storage.qunyou_huameng_skills || []).length) {
 						return;
 					}
 					qunyou_huameng_clear(player);
+				},
+				sub: true,
+			},
+			round: {
+				charlotte: true,
+				onremove(player) {
+					delete player.storage.qunyou_huameng_usedTargets;
 				},
 				sub: true,
 			},
@@ -6920,12 +6953,12 @@ export const skills = {
 			if (!giveCard) {
 				return;
 			}
-			const suit = get.suit(giveCard, false);
+			const color = get.color(giveCard, false);
 			await target.gain(giveCard, player, "giveAuto", "bySelf");
 			if (!target.isIn()) {
 				return;
 			}
-			const gainCards = target.getCards("h", (card) => card !== giveCard && get.suit(card, false) === suit);
+			const gainCards = target.getCards("h", (card) => get.color(card, false) === color);
 			if (!gainCards.length) {
 				qunyou_zhashu_clear(player);
 				return;
