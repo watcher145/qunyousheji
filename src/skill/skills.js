@@ -6840,7 +6840,7 @@ export const skills = {
 			player.addTempSkill("qunyou_huameng_round", "roundStart");
 			trigger.cancel();
 			player.logSkill("qunyou_huameng", target);
-			const debate = await player.chooseToDebate([target]).set("prompt", get.prompt("qunyou_huameng")).set("prompt2", `与${get.translation(target)}议事`).set("ai", (card) => get.color(card) === "red" ? 1 : 0).forResult();
+			const debate = await player.chooseToDebate([player, target]).set("prompt", get.prompt("qunyou_huameng")).set("prompt2", `与${get.translation(target)}议事`).set("ai", (card) => get.color(card) === "red" ? 1 : 0).forResult();
 			const opinion = debate?.opinion;
 			if (opinion === "red") {
 				await player.recover();
