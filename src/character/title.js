@@ -25,4 +25,9 @@ export const characterTitle = {
 	qunyou_zhugeliang: "武侯",
 	qunyou_pengyue: "审时沉势",
 	qunyou_liumo: "问琴雅然",
+	qunyou_mengliufeng: "翔枝成凤",
+	qunyou_caoshuang: "托孤傲臣",
+	qunyou_hanshiwuhu: "屡败屡战",
+	qunyou_zhonghui: "暂定",
+	qunyou_yang_wang: "贤婉俭德",
 };

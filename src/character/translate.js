@@ -35,4 +35,10 @@ export const characterTranslate = {
 	qunyou_zhugeliang_prefix: "谋",
 	qunyou_pengyue: "剻越",
 	qunyou_liumo: "刘墨",
+	qunyou_mengliufeng: "梦刘封",
+	qunyou_mengliufeng_prefix: "梦",
+	qunyou_caoshuang: "曹爽",
+	qunyou_hanshiwuhu: "韩氏五虎",
+	qunyou_zhonghui: "钟会",
+	qunyou_yang_wang: "羊徽瑜&王元姬",
 };

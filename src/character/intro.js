@@ -16,7 +16,7 @@ export const characterIntro = {
 	qunyou_sunjiao: "设计：杰劼夫长(贴吧）",
 	qunyou_luxun: "设计：鬼才李华（b站）",
 	qunyou_caozhi: "设计：钟林",
-	qunyou_simayi: "设计：迟眠饱（B站） 修改：欢愉与希望<br>评价，来自BV1vk5G6AERQ",
+	qunyou_simayi: "设计：迟眠饱（B站）<br>，来自BV1vk5G6AERQ。评价：挺看运气的，强度阳顶天",
 	qunyou_haopu: "设计：yyuan",
 	qunyou_chenzhaoyun: "设计：0^0。<br>评价：挺好的设计，印牌很强",
 	qunyou_wanglang: "设计：滑溜溜。<br>评价：阴完了，拿到A和K就能空城全场",
@@ -25,4 +25,9 @@ export const characterIntro = {
 	qunyou_zhugeliang: "设计：寻辉逐烨<br>吐槽：太麻烦了，需要改进",
 	qunyou_pengyue: "设计：鹭。<br>评价：",
 	qunyou_liumo: "设计：祂不想。<br>评价：十分好玩的设计，伪用一摸一，爽！",
+	qunyou_mengliufeng: "设计：未知。<br>评价：拿一点体力上限换两张决斗。额，不好衡量",
+	qunyou_caoshuang: "设计：嘻˘꒳˘羲",
+	qunyou_hanshiwuhu: "设计：佐世保之时雨。<br>评价：",
+	qunyou_zhonghui: "设计：熏鱼不爱果子。<br>评价：",
+	qunyou_yang_wang: "设计：西夏笠谷。<br>评价：",
 };

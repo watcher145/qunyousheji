@@ -16,6 +16,10 @@ export function precontent() {
 	lib.namePrefix.set("嗔", {
 		color: "#c8cdd1",
 	});
+	lib.namePrefix.set("梦", {
+		color: "#6affe2",
+		nature: "watermm",
+	});
 	lib.dynamicTranslate ??= {};
 	for (const key of Object.keys(dynamicTranslates)) {
 		if (!lib.dynamicTranslate[key]) {
