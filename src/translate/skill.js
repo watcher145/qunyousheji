@@ -182,4 +182,10 @@ export const skillTranslate = {
 	qunyou_tongxian: "同弦",
 	qunyou_tongxian_info:
 		"<b>锁定技</b>，当一名角色每回合首次使用一种类别的牌后，你使用一张相同类别的手牌并摸一张牌。以此法使用的牌无次数限制且不能被响应。",
+	qunyou_lingyu: "灵玉",
+	qunyou_lingyu_info:
+		"当你使用手牌时，你可以弃置一张牌：黑色，此牌造成的效果+1；红色，你摸1张牌。然后若你红色与黑色手牌数相等，选择的效果额外+1。",
+	qunyou_qingmeng: "青盟",
+	qunyou_qingmeng_info:
+		"当你受到伤害时，若你没有黑色手牌或者红色手牌，你摸两张牌，若均没有，你额外选择一项：1.此次伤害-1；2.额外摸一张牌。",
 };

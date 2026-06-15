@@ -7152,4 +7152,104 @@ export const skills = {
 			},
 		},
 	},
+	qunyou_lingyu: {
+		audio: 2,
+		trigger: { player: "useCard" },
+		direct: true,
+		filter(event, player) {
+			return true
+		},
+		async content(event, trigger, player) {
+			const result = await player
+				.chooseBool(get.prompt("qunyou_lingyu"), "是否弃置一张牌发动灵玉？")
+				.set("ai", () => {
+                if (player.countCards("h") > 2) return true;
+                if (trigger.card.isCard("sha") && trigger.targets && trigger.targets.some(t => !t.hp受傷)) return true;
+                return false;
+            })
+				.forResult();
+			if (!result?.bool) {
+				return;
+			}
+			const discardResult = await player
+				.chooseToDiscard("灵玉：请选择要弃置的牌", 1, "he", true)
+				.forResult();
+			if (!discardResult?.bool || !discardResult.cards?.length) {
+				return;
+			}
+			player.logSkill("qunyou_lingyu");
+			const discardedCard = discardResult.cards[0];
+        const color = get.color(discardedCard, player);
+        
+        const handCards = player.getCards("h");
+        const usingCard = trigger.card;
+        const otherHands = handCards.filter(c => c !== usingCard);
+        let blackCount = 0, redCount = 0;
+        for (let card of otherHands) {
+            const c = get.color(card, player);
+            if (c === "black") blackCount++;
+            else if (c === "red") redCount++;
+        }
+        const isEqual = (blackCount === redCount);
+        const extra = isEqual ? 1 : 0;
+
+        if (color === "black") {
+            trigger.baseDamage ??= 1;
+            trigger.baseDamage += (1 + extra);
+            game.log(trigger.card, "此牌效果", `#y+${1 + extra}`);
+        } else if (color === "red") {
+            await player.draw(1 + extra);
+        }
+    },
+	},
+	qunyou_qingmeng: {
+    audio: 2,
+    trigger: { player: "damageBegin" },
+    direct: true,
+    filter(event, player) {
+        return true;
+    },
+    async content(event, trigger, player) {
+        const hand = player.getCards("h");
+        let hasBlack = false, hasRed = false;
+        for (let card of hand) {
+            const col = get.color(card, player);
+            if (col === "black") hasBlack = true;
+            if (col === "red") hasRed = true;
+            if (hasBlack && hasRed) break;
+        }
+        
+        const noBlack = !hasBlack;
+        const noRed = !hasRed;
+        
+        if (!noBlack && !noRed) return;
+        
+        player.logSkill("qunyou_qingmeng");
+        let damageMinus = 0;
+        let drawCount = 0;
+        
+        if (noBlack && noRed) {
+            const choice = await player.chooseControl(
+                "青盟：你既无黑色也无红色手牌，请选择额外效果",
+                ["此次伤害-1", "额外摸一张牌"]
+            ).forResult();
+            if (choice && choice.control === "此次伤害-1") {
+                damageMinus += 1;
+            } else if (choice && choice.control === "额外摸一张牌") {
+                drawCount += 1;
+            }
+        }
+		    if (noBlack || noRed) {
+            drawCount += 2;
+        }
+        if (damageMinus > 0) {
+            trigger.num = Math.max(0, (trigger.num ?? 1) - damageMinus);
+            game.log(`伤害 #y-${damageMinus}`);
+        }
+        if (drawCount > 0) {
+            await player.draw(drawCount);
+            game.log(`摸 #y${drawCount} 张牌`);
+        }
+        }
+    },
 };
