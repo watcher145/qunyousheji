@@ -1,8 +1,178 @@
-/**
+﻿/**
  * 技能本体：export const skills = { skill_id: { ... }, ... }
  * 与奇臣传相同，在此集中编写；译名与 *_info 写在 ../translate/skill.js
  */
 import { lib, game, get, ui, _status } from "noname";
+
+function qunyou_validNumber(card, player) {
+	const num = get.number(card, player);
+	return Number.isInteger(num) && num >= 1 && num <= 13 ? num : null;
+}
+
+function qunyou_numberText(num) {
+	if (num === 1) return "A";
+	if (num === 11) return "J";
+	if (num === 12) return "Q";
+	if (num === 13) return "K";
+	return String(num);
+}
+
+async function qunyou_adjustHpTo(player, target) {
+	target = Math.max(0, target);
+	if (player.hp < target) return player.recover(target - player.hp);
+	if (player.hp > target) return player.loseHp(player.hp - target);
+}
+
+async function qunyou_adjustHandTo(player, target) {
+	target = Math.max(0, target);
+	const current = player.countCards("h");
+	if (current < target) {
+		await player.draw(target - current);
+		return;
+	}
+	if (current > target) {
+		await player.chooseToDiscard("h", true, current - target).forResult();
+	}
+}
+
+function qunyou_cycleState(player, skill) {
+	const key = `${skill}_state`;
+	const current = Number.isInteger(player.storage[key]) ? player.storage[key] : 0;
+	player.storage[key] = (current + 1) % 3;
+	player.updateMarks(skill);
+}
+
+function qunyou_getState(player, skill) {
+	const key = `${skill}_state`;
+	if (!Number.isInteger(player.storage[key])) player.storage[key] = 0;
+	return player.storage[key];
+}
+
+function qunyou_getLastNumber(player, skill) {
+	const key = `${skill}_lastNumber`;
+	return Number.isInteger(player.storage[key]) ? player.storage[key] : null;
+}
+
+function qunyou_setLastNumber(player, skill, number) {
+	const key = `${skill}_lastNumber`;
+	if (Number.isInteger(number)) player.storage[key] = number;
+}
+
+function qunyou_getPreviousUseNumber(player, event) {
+	const history = player.getHistory("useCard");
+	if (!history?.length) return null;
+	let index = history.indexOf(event);
+	if (index < 0) index = history.length;
+	for (let i = index - 1; i >= 0; i--) {
+		const number = qunyou_validNumber(history[i].card, player);
+		if (number !== null) return number;
+	}
+	return null;
+}
+
+function qunyou_zhuoqu_numbers(player) {
+	const key = "qunyou_zhuoqu_numbers";
+	if (!Array.isArray(player.storage[key])) player.storage[key] = [];
+	return player.storage[key];
+}
+
+function qunyou_zhuoqu_addNumber(player, number) {
+	const before = Array.isArray(player.storage.qunyou_zhuoqu_numbers) ? player.storage.qunyou_zhuoqu_numbers.slice() : [];
+	game.log(player, "【灼躯日志-加点前】", number ?? "无点数", before.length ? before.map(num => get.strNumber(num)).join("、") : "无");
+	if (!Number.isInteger(number)) return;
+	if (!Array.isArray(player.storage.qunyou_zhuoqu_numbers)) player.storage.qunyou_zhuoqu_numbers = [];
+	const list = player.storage.qunyou_zhuoqu_numbers;
+	if (!list.includes(number)) {
+		list.push(number);
+		list.sort((a, b) => a - b);
+	}
+	player.markSkill("qunyou_zhuoqu");
+	game.log(player, "【灼躯日志-加点后】", list.length ? list.map(num => get.strNumber(num)).join("、") : "无");
+}
+
+function qunyou_zhuoqu_removeNumbers(player, numbers) {
+	const before = Array.isArray(player.storage.qunyou_zhuoqu_numbers) ? player.storage.qunyou_zhuoqu_numbers.slice() : [];
+	game.log(player, "【灼躯日志-解封前】", Array.isArray(numbers) ? numbers.map(num => get.strNumber(num)).join("、") || "无" : "无", before.length ? before.map(num => get.strNumber(num)).join("、") : "无");
+	if (!Array.isArray(numbers) || !numbers.length) return;
+	if (!Array.isArray(player.storage.qunyou_zhuoqu_numbers)) player.storage.qunyou_zhuoqu_numbers = [];
+	const list = player.storage.qunyou_zhuoqu_numbers;
+	player.storage.qunyou_zhuoqu_numbers = list.filter((num) => !numbers.includes(num));
+	if (player.storage.qunyou_zhuoqu_numbers.length) player.markSkill("qunyou_zhuoqu");
+	else player.unmarkSkill("qunyou_zhuoqu");
+	player.updateMarks("qunyou_zhuoqu");
+	game.log(player, "【灼躯日志-解封后】", player.storage.qunyou_zhuoqu_numbers.length ? player.storage.qunyou_zhuoqu_numbers.map(num => get.strNumber(num)).join("、") : "无");
+}
+
+function qunyou_zhuoqu_numberText(player) {
+	const list = Array.isArray(player.storage.qunyou_zhuoqu_numbers) ? player.storage.qunyou_zhuoqu_numbers : [];
+	return list.length ? list.map(num => get.strNumber(num)).join("、") : "无";
+}
+
+function qunyou_zhuoqu_cardNumbers(card, player) {
+	const list = [];
+	const add = (item) => {
+		const num = qunyou_validNumber(item, player);
+		if (num !== null && !list.includes(num)) list.push(num);
+	};
+	if (!card) return list;
+	if (Number.isInteger(card.storage?.qunyou_zhuoqu_number)) list.push(card.storage.qunyou_zhuoqu_number);
+	add(card);
+	if (Array.isArray(card.cards)) card.cards.forEach(add);
+	return list;
+}
+
+function qunyou_zhuoqu_isCurrentUse() {
+	const evt = get.event();
+	if (!evt) return false;
+	if (evt.skill === "qunyou_zhuoqu" || evt.skill === "qunyou_zhuoqu_backup") return true;
+	const parent = evt.getParent?.();
+	return parent?.skill === "qunyou_zhuoqu" || parent?.skill === "qunyou_zhuoqu_backup";
+}
+
+function qunyou_zhuoqu_isBlocked(player, card) {
+	const blocked = Array.isArray(player.storage.qunyou_zhuoqu_numbers) ? player.storage.qunyou_zhuoqu_numbers : [];
+	return qunyou_zhuoqu_cardNumbers(card, player).some((num) => blocked.includes(num));
+}
+
+function qunyou_zhuoqu_getUsedNumber(event, player) {
+	if (!event) return null;
+	if (Number.isInteger(event.card?.storage?.qunyou_zhuoqu_number)) {
+		return event.card.storage.qunyou_zhuoqu_number;
+	}
+	const skill = event.skill || event.getParent?.()?.skill || "";
+	if (skill !== "qunyou_zhuoqu" && skill !== "qunyou_zhuoqu_backup") return null;
+	const cards = Array.isArray(event.cards) && event.cards.length ? event.cards : Array.isArray(event.card?.cards) ? event.card.cards : [];
+	for (const card of cards) {
+		const number = qunyou_validNumber(card, player);
+		if (number !== null) return number;
+	}
+	return null;
+}
+
+function qunyou_zhuoqu_isOutsideDiscardPhase(event) {
+	if (!event?.getParent) return true;
+	for (let i = 1; i <= 6; i++) {
+		const parent = event.getParent(i);
+		if (!parent) break;
+		if (parent.name === "phaseDiscard") return false;
+		if (["phaseUse", "phaseDraw", "phaseJudge", "phaseZhunbei", "phaseJieshu"].includes(parent.name)) return true;
+	}
+	return true;
+}
+
+function qunyou_zhuoqu_discardedNumbers(event, player) {
+	if (!event || !qunyou_zhuoqu_isOutsideDiscardPhase(event)) return [];
+	if (event.type !== "discard" || event.getlx === false) return [];
+	let cards = [];
+	if (Array.isArray(event.cards) && event.cards.length) cards = event.cards;
+	else if (Array.isArray(event.cards2) && event.cards2.length) cards = event.cards2;
+	else if (Array.isArray(event.getl?.(player)?.cards2) && event.getl(player).cards2.length) cards = event.getl(player).cards2;
+	cards = cards.filter(card => get.position(card, true) === "d");
+	if (!cards.length) return [];
+	const blocked = Array.isArray(player.storage.qunyou_zhuoqu_numbers) ? player.storage.qunyou_zhuoqu_numbers : [];
+	return [...new Set(cards.map((card) => qunyou_validNumber(card, player)).filter((num) => blocked.includes(num)))];
+}
+
 
 /** 愁辞：普通锦囊（非延时） */
 function qunyou_chouci_isNormalTrick(card) {
@@ -7229,10 +7399,7 @@ export const skills = {
         let drawCount = 0;
         
         if (noBlack && noRed) {
-            const choice = await player.chooseControl(
-                "青盟：你既无黑色也无红色手牌，请选择额外效果",
-                ["此次伤害-1", "额外摸一张牌"]
-            ).forResult();
+            const choice = await player.chooseControl(["此次伤害-1", "额外摸一张牌"]).set("prompt", "青盟：你既无黑色也无红色手牌，请选择额外效果").forResult();
             if (choice && choice.control === "此次伤害-1") {
                 damageMinus += 1;
             } else if (choice && choice.control === "额外摸一张牌") {
@@ -7252,4 +7419,291 @@ export const skills = {
         }
         }
     },
+	qunyou_zhuoqu: {
+		audio: 2,
+		enable: "chooseToUse",
+		mark: true,
+		marktext: "灼",
+		intro: {
+			markcount(storage, player) {
+				return Array.isArray(player.storage.qunyou_zhuoqu_numbers) ? player.storage.qunyou_zhuoqu_numbers.length : 0;
+			},
+			content(storage, player) {
+				const list = Array.isArray(player.storage.qunyou_zhuoqu_numbers) ? player.storage.qunyou_zhuoqu_numbers : [];
+				return `不能使用或打出的点数：${list.length ? list.map(num => get.strNumber(num)).join("、") : "无"}`;
+			},
+		},
+		init(player) {
+			if (!Array.isArray(player.storage.qunyou_zhuoqu_numbers)) player.storage.qunyou_zhuoqu_numbers = [];
+		},
+		onremove(player) {
+			delete player.storage.qunyou_zhuoqu_numbers;
+		},
+		filter(event, player) {
+			return player.countCards("hes") > 0 && event.filterCard({ name: "wuzhong", isCard: true }, player, event);
+		},
+		chooseButton: {
+			dialog() {
+				return ui.create.dialog("灼躯", [[["锦囊", "", "wuzhong"]], "vcard"]);
+			},
+			check() {
+				return 1;
+			},
+			backup(links, player) {
+				game.log(player, "【灼躯日志-生成backup】");
+				return {
+					audio: "qunyou_zhuoqu",
+					sourceSkill: "qunyou_zhuoqu",
+					selectCard: 1,
+					filterCard(card, player2) {
+						return !qunyou_zhuoqu_isBlocked(player2, card);
+					},
+					popname: true,
+					viewAs: {
+						name: "wuzhong",
+						isCard: true,
+						storage: { qunyou_zhuoqu: true },
+					},
+					check(card) {
+						return 7 - get.value(card);
+					},
+					position: "hes",
+					onuse(result, player2) {
+						const card = result.cards?.[0];
+						const number = qunyou_validNumber(card, player2);
+						game.log(
+							player2,
+							"【灼躯日志-onuse】",
+							card ? get.translation(card) : "无底牌",
+							number ?? "无点数",
+							result.card?.name || "无虚拟牌"
+						);
+						if (number !== null) {
+							qunyou_zhuoqu_addNumber(player2, number);
+						}
+					},
+					precontent(event, trigger, player2) {
+						const card = event.result?.cards?.[0];
+						const number = qunyou_validNumber(card, player2);
+						game.log(
+							player2,
+							"【灼躯日志-precontent】",
+							card ? get.translation(card) : "无底牌",
+							number ?? "无点数",
+							event.result?.card?.name || "无虚拟牌"
+						);
+						if (number !== null) {
+							qunyou_zhuoqu_addNumber(player2, number);
+						}
+					},
+				};
+			},
+			prompt() {
+				return "将一张牌当【无中生有】使用";
+			},
+		},
+		mod: {
+			cardEnabled(card, player) {
+				if (qunyou_zhuoqu_isCurrentUse()) return;
+				if (qunyou_zhuoqu_isBlocked(player, card)) return false;
+			},
+			cardRespondable(card, player) {
+				if (qunyou_zhuoqu_isCurrentUse()) return;
+				if (qunyou_zhuoqu_isBlocked(player, card)) return false;
+			},
+			cardSavable(card, player) {
+				if (qunyou_zhuoqu_isCurrentUse()) return;
+				if (qunyou_zhuoqu_isBlocked(player, card)) return false;
+			},
+		},
+		group: ["qunyou_zhuoqu_probe", "qunyou_zhuoqu_unlock"],
+		subSkill: {
+			probe: {
+				charlotte: true,
+				trigger: {
+					player: ["useCard1", "useCardAfter"],
+				},
+				forced: true,
+				popup: false,
+				filter(event) {
+					return !!event.card?.storage?.qunyou_zhuoqu;
+				},
+				content(event, trigger, player) {
+					game.log(
+						player,
+						"【灼躯日志-用牌链】",
+						event.triggername || "无triggername",
+						trigger.card?.name || "无牌名",
+						Array.isArray(trigger.cards) ? `cards:${trigger.cards.map(card => get.translation(card)).join("、")}` : "cards:无",
+						Array.isArray(trigger.card?.cards) ? `card.cards:${trigger.card.cards.map(card => get.translation(card)).join("、")}` : "card.cards:无",
+						`当前封点:${Array.isArray(player.storage.qunyou_zhuoqu_numbers) && player.storage.qunyou_zhuoqu_numbers.length ? player.storage.qunyou_zhuoqu_numbers.map(num => get.strNumber(num)).join("、") : "无"}`
+					);
+				},
+				sub: true,
+			},
+			unlock: {
+				charlotte: true,
+				trigger: {
+					player: "loseAfter",
+					global: "loseAsyncAfter",
+				},
+				forced: true,
+				popup: false,
+				filter(event, player) {
+					game.log(player, "【灼躯日志-解封入口】", event.name || "无事件名", event.triggername || "无triggername", event.type || "无type");
+					const outside = qunyou_zhuoqu_isOutsideDiscardPhase(event);
+					const lost = event.getl?.(player);
+					const cards0 = Array.isArray(event.cards) ? event.cards : [];
+					const cards1 = Array.isArray(event.cards2) ? event.cards2 : [];
+					const cards2 = Array.isArray(lost?.cards2) ? lost.cards2 : [];
+					game.log(
+						player,
+						"【灼躯日志-解封细节】",
+						`outside:${outside}`,
+						`getlx:${event.getlx === false ? "false" : "ok"}`,
+						`cards:${cards0.length}`,
+						`cards2:${cards1.length}`,
+						`lost.cards2:${cards2.length}`
+					);
+					if (!outside || event.type !== "discard" || event.getlx === false) return false;
+					let cards = [];
+					if (cards0.length) cards = cards0;
+					else if (cards1.length) cards = cards1;
+					else if (cards2.length) cards = cards2;
+					cards = cards.filter(card => get.position(card, true) === "d");
+					game.log(player, "【灼躯日志-解封入堆】", cards.length ? cards.map(card => `${get.translation(card)}:${qunyou_validNumber(card, player) ?? "无点数"}`).join("、") : "无");
+					if (!cards.length) return false;
+					const blocked = Array.isArray(player.storage.qunyou_zhuoqu_numbers) ? player.storage.qunyou_zhuoqu_numbers.slice() : [];
+					const hits = [...new Set(cards.map(card => qunyou_validNumber(card, player)).filter(num => Number.isInteger(num) && blocked.includes(num)))];
+					game.log(
+						player,
+						"【灼躯日志-解封候选】",
+						event.name || "无事件名",
+						event.type || "无type",
+						cards.map(card => `${get.translation(card)}:${qunyou_validNumber(card, player) ?? "无点数"}`).join("、"),
+						`当前封点:${blocked.length ? blocked.map(num => get.strNumber(num)).join("、") : "无"}`,
+						`命中点数:${hits.length ? hits.map(num => get.strNumber(num)).join("、") : "无"}`
+					);
+					if (hits.length) {
+						player.storage.qunyou_zhuoqu_pending_remove = hits.slice();
+						game.log(player, "【灼躯日志-解封判定】", hits.map(num => get.strNumber(num)).join("、"));
+					}
+					return hits.length > 0;
+				},
+				content() {
+					game.log(player, "【灼躯日志-解封content】");
+					try {
+						const hits = Array.isArray(player.storage.qunyou_zhuoqu_pending_remove) ? player.storage.qunyou_zhuoqu_pending_remove.slice() : [];
+						delete player.storage.qunyou_zhuoqu_pending_remove;
+						const current = Array.isArray(player.storage.qunyou_zhuoqu_numbers) ? player.storage.qunyou_zhuoqu_numbers.slice() : [];
+						game.log(player, "【灼躯日志-解封前】", hits.length ? hits.map(num => get.strNumber(num)).join("、") : "无", current.length ? current.map(num => get.strNumber(num)).join("、") : "无");
+						if (!hits.length) return;
+						player.storage.qunyou_zhuoqu_numbers = current.filter(num => !hits.includes(num));
+						if (player.storage.qunyou_zhuoqu_numbers.length) player.markSkill("qunyou_zhuoqu");
+						else player.unmarkSkill("qunyou_zhuoqu");
+						player.updateMarks("qunyou_zhuoqu");
+						game.log(player, "【灼躯日志-解封后】", player.storage.qunyou_zhuoqu_numbers.length ? player.storage.qunyou_zhuoqu_numbers.map(num => get.strNumber(num)).join("、") : "无");
+					} catch (e) {
+						game.log(player, "【灼躯日志-解封报错】", String(e));
+					}
+				},
+				sub: true,
+			},
+			backup: {
+				audio: "qunyou_zhuoqu",
+				sub: true,
+				sourceSkill: "qunyou_zhuoqu",
+			},
+		},
+	},
+	qunyou_guwo: {
+		audio: 2,
+		forced: true,
+		locked: true,
+		popup: false,
+		silent: true,
+		firstDo: true,
+		mark: true,
+		marktext: "孤",
+		init(player) {
+			if (!Number.isInteger(player.storage.qunyou_guwo_state)) {
+				player.storage.qunyou_guwo_state = 0;
+			}
+		},
+		intro: {
+			markcount(storage, player) {
+				return qunyou_getState(player, "qunyou_guwo") + 1;
+			},
+			content(storage, player) {
+				const state = qunyou_getState(player, "qunyou_guwo");
+				if (state === 0) return "①若与你上使用牌点数递增";
+				if (state === 1) return "②若与你上使用牌点数递增，②则将体力调整至手牌数";
+				return "③若与你上使用牌点数递增，③则将体力调整至手牌数，③手牌调整至已损失体力数";
+			},
+		},
+		trigger: { player: "useCardAfter" },
+		filter(event, player) {
+			const current = qunyou_validNumber(event.card, player);
+			const last = qunyou_getPreviousUseNumber(player, event);
+			return current !== null && last !== null && current > last;
+		},
+		async content(event, trigger, player) {
+			const state = qunyou_getState(player, "qunyou_guwo");
+			if (state >= 1) {
+				await qunyou_adjustHpTo(player, player.countCards("h"));
+			}
+			if (state >= 2) {
+				await qunyou_adjustHandTo(player, player.getDamagedHp());
+			}
+			qunyou_cycleState(player, "qunyou_guwo");
+		},
+	},
+	qunyou_chubu: {
+		audio: 2,
+		forced: true,
+		locked: true,
+		popup: false,
+		silent: true,
+		firstDo: true,
+		mark: true,
+		marktext: "躇",
+		init(player) {
+			if (!Number.isInteger(player.storage.qunyou_chubu_state)) {
+				player.storage.qunyou_chubu_state = 0;
+			}
+		},
+		intro: {
+			markcount(storage, player) {
+				return qunyou_getState(player, "qunyou_chubu") + 1;
+			},
+			content(storage, player) {
+				const state = qunyou_getState(player, "qunyou_chubu");
+				if (state === 0) return "①若与你上使用牌点数递减";
+				if (state === 1) return "②若与你上使用牌点数递减，②则弃置所有手牌摸1张牌";
+				return "③若与你上使用牌点数递减，③则弃置所有手牌摸1张牌，③并减1点体力上限";
+			},
+		},
+		trigger: { player: "useCardAfter" },
+		filter(event, player) {
+			const current = qunyou_validNumber(event.card, player);
+			const last = qunyou_getPreviousUseNumber(player, event);
+			return current !== null && last !== null && current < last;
+		},
+		async content(event, trigger, player) {
+			const state = qunyou_getState(player, "qunyou_chubu");
+			if (state >= 1) {
+				const handCount = player.countCards("h");
+				if (handCount > 0) {
+					await player.chooseToDiscard("h", true, handCount, "allowChooseAll").forResult();
+				}
+				await player.draw();
+			}
+			if (state >= 2) {
+				await player.loseMaxHp();
+			}
+			qunyou_cycleState(player, "qunyou_chubu");
+		},
+	},
 };
+
+

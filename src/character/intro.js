@@ -31,4 +31,5 @@ export const characterIntro = {
 	qunyou_zhonghui: "设计：熏鱼不爱果子。修改：欢愉与希望<br>评价：我也不知道我改的好不好，总之比原版强了。",
 	qunyou_yang_wang: "设计：西夏笠谷。<br>评价：",
 	qunyou_xian_hua: "设计：西夏笠谷。<br>评价：",
+	qunyou_mojiangwei: "设计：墨客。<br>评价：",
 };

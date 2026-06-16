@@ -188,4 +188,13 @@ export const skillTranslate = {
 	qunyou_qingmeng: "青盟",
 	qunyou_qingmeng_info:
 		"当你受到伤害时，若你没有黑色手牌或者红色手牌，你摸两张牌，若均没有，你额外选择一项：1.此次伤害-1；2.额外摸一张牌。",
+	qunyou_zhuoqu: "灼躯",
+	qunyou_zhuoqu_info:
+		"你可将一张牌当作【无中生有】使用，直至你于弃牌阶段外弃置与此牌同点数的牌前无法使用或打出与此牌同点数的牌。",
+	qunyou_guwo: "孤我",
+	qunyou_guwo_info:
+		"转换技，锁定技，当你使用牌结算后，①②③若与你上使用牌点数递增，②③则将体力调整至手牌数，③手牌调整至已损失体力数。",
+	qunyou_chubu: "躇步",
+	qunyou_chubu_info:
+		"转换技，锁定技，当你使用牌结算后，①②③若与你上使用牌点数递减，②③则弃置所有手牌摸1张牌③并减1点体力上限。",
 };
