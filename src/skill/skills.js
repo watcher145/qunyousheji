@@ -70,6 +70,88 @@ function qunyou_getPreviousUseNumber(player, event) {
 	return null;
 }
 
+function qunyou_jingce_storage(player) {
+	const key = "qunyou_jingce_data";
+	if (!player.storage[key] || typeof player.storage[key] !== "object") {
+		player.storage[key] = {
+			suits: [],
+			types: [],
+			drawn: [],
+		};
+	}
+	const storage = player.storage[key];
+	if (!Array.isArray(storage.suits)) storage.suits = [];
+	if (!Array.isArray(storage.types)) storage.types = [];
+	if (!Array.isArray(storage.drawn)) storage.drawn = [];
+	return storage;
+}
+
+function qunyou_jingce_peek(player) {
+	const storage = player.storage.qunyou_jingce_data;
+	if (!storage || typeof storage !== "object") {
+		return {
+			suits: [],
+			types: [],
+			drawn: [],
+		};
+	}
+	return {
+		suits: Array.isArray(storage.suits) ? storage.suits : [],
+		types: Array.isArray(storage.types) ? storage.types : [],
+		drawn: Array.isArray(storage.drawn) ? storage.drawn : [],
+	};
+}
+
+function qunyou_jingce_clear(player) {
+	const key = "qunyou_jingce_data";
+	player.storage[key] = {
+		suits: [],
+		types: [],
+		drawn: [],
+	};
+	player.syncStorage(key);
+	player.removeSkill("qunyou_jingce_disabled");
+	player.updateMarks("qunyou_jingce_mark");
+}
+
+function qunyou_jingce_recordUse(player, card) {
+	if (!card) return;
+	const storage = qunyou_jingce_storage(player);
+	const suit = get.suit(card, player);
+	if (lib.suit.includes(suit) && !storage.suits.includes(suit)) {
+		storage.suits.push(suit);
+	}
+	const type = get.type2(card, player);
+	if (["basic", "trick", "equip"].includes(type) && !storage.types.includes(type)) {
+		storage.types.push(type);
+	}
+	player.updateMarks("qunyou_jingce_mark");
+}
+
+function qunyou_jingce_targetCount(player) {
+	const storage = qunyou_jingce_storage(player);
+	return player.storage.qunyou_jingce ? storage.types.length : storage.suits.length;
+}
+
+function qunyou_jingce_modeText(player) {
+	return player.storage.qunyou_jingce ? "阴：类别数" : "阳：花色数";
+}
+
+function qunyou_jingce_drawnText(player) {
+	const list = qunyou_jingce_peek(player).drawn;
+	return list.length ? list.map((num) => get.cnNumber(num)).join("、") : "无";
+}
+
+function qunyou_jingce_usedSuitsText(player) {
+	const suits = qunyou_jingce_peek(player).suits;
+	return suits.length ? suits.map((suit) => get.translation(suit)).join("、") : "无";
+}
+
+function qunyou_jingce_usedTypesText(player) {
+	const types = qunyou_jingce_peek(player).types;
+	return types.length ? types.map((type) => get.translation(type)).join("、") : "无";
+}
+
 function qunyou_zhuoqu_numbers(player) {
 	const key = "qunyou_zhuoqu_numbers";
 	if (!Array.isArray(player.storage[key])) player.storage[key] = [];
@@ -7702,6 +7784,93 @@ export const skills = {
 				await player.loseMaxHp();
 			}
 			qunyou_cycleState(player, "qunyou_chubu");
+		},
+	},
+	qunyou_jingce: {
+		audio: 2,
+		zhuanhuanji: true,
+		mark: true,
+		marktext: "☯",
+		intro: {
+			content(storage) {
+				return storage ? "阴：将手牌数调整至你本回合使用牌的类别数。" : "阳：将手牌数调整至你本回合使用牌的花色数。";
+			},
+		},
+		trigger: { player: "useCardAfter" },
+		direct: true,
+		init(player, skill) {
+			qunyou_jingce_storage(player);
+			player.addSkill(skill + "_mark");
+		},
+		onremove(player, skill) {
+			player.removeSkill(skill + "_mark");
+			player.removeSkill(skill + "_reset");
+			qunyou_jingce_clear(player);
+		},
+		filter(event, player) {
+			return event.player === player && !player.hasSkill("qunyou_jingce_disabled");
+		},
+		async content(event, trigger, player) {
+			qunyou_jingce_recordUse(player, trigger.card);
+			player.addTempSkill("qunyou_jingce_reset", { global: "phaseAfter" });
+			const target = qunyou_jingce_targetCount(player);
+			const prompt = player.storage.qunyou_jingce
+				? `你可以将手牌数调整至你本回合使用牌的类别数（${target}）`
+				: `你可以将手牌数调整至你本回合使用牌的花色数（${target}）`;
+			const result = await player.chooseBool(get.prompt("qunyou_jingce"), prompt).set("choice", true).forResult();
+			if (!result?.bool) {
+				return;
+			}
+			player.logSkill("qunyou_jingce");
+			const before = player.countCards("h");
+			await qunyou_adjustHandTo(player, target);
+			const drew = Math.max(0, target - before);
+			if (drew > 0) {
+				const storage = qunyou_jingce_storage(player);
+				if (storage.drawn.includes(drew)) {
+					player.addSkill("qunyou_jingce_disabled");
+				} else {
+					storage.drawn.push(drew);
+					storage.drawn.sort((a, b) => a - b);
+				}
+				player.updateMarks("qunyou_jingce_mark");
+			}
+			player.changeZhuanhuanji("qunyou_jingce");
+			player.updateMarks("qunyou_jingce_mark");
+		},
+		subSkill: {
+			reset: {
+				charlotte: true,
+				onremove(player) {
+					qunyou_jingce_clear(player);
+				},
+				sub: true,
+			},
+			mark: {
+				charlotte: true,
+				mark: true,
+				marktext: "策",
+				intro: {
+					content(storage, player) {
+						return [
+							`当前模式：${qunyou_jingce_modeText(player)}`,
+							`本回合已使用花色：${qunyou_jingce_usedSuitsText(player)}`,
+							`本回合已使用类型：${qunyou_jingce_usedTypesText(player)}`,
+							`本回合因“精策”已摸过的数量：${qunyou_jingce_drawnText(player)}`,
+							player.hasSkill("qunyou_jingce_disabled") ? "本回合此技能已失效" : "本回合此技能未失效",
+						].join("<br>");
+					},
+				},
+				sub: true,
+			},
+			disabled: {
+				charlotte: true,
+				mark: false,
+				intro: {
+					content: "本回合此技能已失效",
+				},
+				sub: true,
+			},
 		},
 	},
 };

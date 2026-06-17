@@ -263,5 +263,13 @@ export const characterData = {
 		maxHp: 9,
 		hujia: 0,
 		skills: ["qunyou_zhuoqu", "qunyou_guwo", "qunyou_chubu"],
-	}
+	},
+	qunyou_guohuai: {
+		sex: "male",
+		group: "wei",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["qunyou_jingce"],
+	},
 };

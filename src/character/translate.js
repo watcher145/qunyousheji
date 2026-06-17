@@ -44,4 +44,6 @@ export const characterTranslate = {
 	qunyou_xian_hua: "曹宪&曹华",
 	qunyou_mojiangwei: "魔姜维",
 	qunyou_mojiangwei_prefix: "魔",
+	qunyou_guohuai: "谋郭淮",
+	qunyou_guohuai_prefix: "谋",
 };

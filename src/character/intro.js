@@ -7,14 +7,14 @@ export const characterIntro = {
 	qunyou_xiean: "设计：夏商周在。<br>陈郡谢氏中最强的，族谢安的公式打法就是，延后摸3牌，之后的摸牌都不延后->遇到弃牌就延后->用一张伤害牌，然后摸三弃三捡回这张伤害牌。",
 	qunyou_xiexuan: "设计：拉普拉斯。<br>评价：有点弱了，印杀和桃的条件太苛刻，况且横置角色的条件也很难，如果把兵主不限次数，强度就正常了。",
 	qunyou_zhaoyun: "设计：钟林。<br>评价：又有强度但也不至于太阴的设计。",
-	qunyou_sunshao: "设计：（B站）叼五我爱你麻。<br>评价：实际上非常缺装备牌，当然，过牌量不错。",
+	qunyou_sunshao: "设计：叼五我爱你麻（B站）。<br>评价：实际上非常缺装备牌，当然，过牌量不错。",
 	qunyou_caocao: "设计：钟林。<br>主要是单机，真正玩的时候需要放宽点条件，比如选择获得大于展示牌点数的牌，或者对小于展示牌点数的角色造成伤害，最后回复等于点数牌的体力。",
     qunyou_xielingyun: "设计：混乱的啃",
 	qunyou_xieshi: "设计：ff",
 	qunyou_spwenyang: "设计：昆世",
 	qunyou_liukun: "欢愉与希望<br>“何意百炼刚，化为绕指柔。”",
 	qunyou_sunjiao: "设计：杰劼夫长(贴吧）",
-	qunyou_luxun: "设计：鬼才李华（b站）",
+	qunyou_luxun: "设计：BV1Rv7S65EAy",
 	qunyou_caozhi: "设计：钟林",
 	qunyou_simayi: "设计：迟眠饱（B站）<br>，来自BV1vk5G6AERQ。评价：挺看运气的，强度阳顶天",
 	qunyou_haopu: "设计：yyuan",
@@ -32,4 +32,6 @@ export const characterIntro = {
 	qunyou_yang_wang: "设计：西夏笠谷。<br>评价：",
 	qunyou_xian_hua: "设计：西夏笠谷。<br>评价：",
 	qunyou_mojiangwei: "设计：墨客。<br>评价：",
+	qunyou_guohuai: "设计：心乐之。修改：欢愉与希望<br>评价：",
+	
 };

@@ -32,4 +32,5 @@ export const characterTitle = {
 	qunyou_yang_wang: "贤婉俭德",
 	qunyou_xian_hua: "锦瑟良缘",
 	qunyou_mojiangwei: "赴焱窮奇",
+	qunyou_guohuai: "临危济难",
 };
