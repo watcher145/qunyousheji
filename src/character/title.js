@@ -33,4 +33,7 @@ export const characterTitle = {
 	qunyou_xian_hua: "锦瑟良缘",
 	qunyou_mojiangwei: "赴焱窮奇",
 	qunyou_guohuai: "临危济难",
+	qunyou_diaochan: "诛魔成义",
+	qunyou_wuzhangfei: "烈武恒威",
+	qunyou_weiguanyu: "美髯公",
 };

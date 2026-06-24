@@ -46,4 +46,10 @@ export const characterTranslate = {
 	qunyou_mojiangwei_prefix: "魔",
 	qunyou_guohuai: "谋郭淮",
 	qunyou_guohuai_prefix: "谋",
+	qunyou_diaochan: "族貂蝉",
+	qunyou_diaochan_prefix: "族",	
+	qunyou_wuzhangfei: "武张飞",
+	qunyou_wuzhangfei_prefix: "武",
+	qunyou_weiguanyu: "威关羽",
+	qunyou_weiguanyu_prefix: "威",
 };

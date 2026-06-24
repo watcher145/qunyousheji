@@ -32,6 +32,8 @@ export const characterIntro = {
 	qunyou_yang_wang: "设计：西夏笠谷。<br>评价：",
 	qunyou_xian_hua: "设计：西夏笠谷。<br>评价：",
 	qunyou_mojiangwei: "设计：墨客。<br>评价：",
-	qunyou_guohuai: "设计：心乐之。修改：欢愉与希望<br>评价：",
-	
+	qunyou_guohuai: "设计：心乐之。<br>评价：沙摩柯和赵俨的私生子，其实强度不高，孩子们，我又卡基本牌了",
+	qunyou_diaochan: "设计：来自大宝规则集中宗族技的例子<br>评价：",
+	qunyou_wuzhangfei: "设计：晴<br>评价：",
+	qunyou_weiguanyu: "设计：祭主<br>评价：",
 };

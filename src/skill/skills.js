@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 技能本体：export const skills = { skill_id: { ... }, ... }
  * 与奇臣传相同，在此集中编写；译名与 *_info 写在 ../translate/skill.js
  */
@@ -110,7 +110,6 @@ function qunyou_jingce_clear(player) {
 		drawn: [],
 	};
 	player.syncStorage(key);
-	player.removeSkill("qunyou_jingce_disabled");
 	player.updateMarks("qunyou_jingce_mark");
 }
 
@@ -135,11 +134,6 @@ function qunyou_jingce_targetCount(player) {
 
 function qunyou_jingce_modeText(player) {
 	return player.storage.qunyou_jingce ? "阴：类别数" : "阳：花色数";
-}
-
-function qunyou_jingce_drawnText(player) {
-	const list = qunyou_jingce_peek(player).drawn;
-	return list.length ? list.map((num) => get.cnNumber(num)).join("、") : "无";
 }
 
 function qunyou_jingce_usedSuitsText(player) {
@@ -253,6 +247,111 @@ function qunyou_zhuoqu_discardedNumbers(event, player) {
 	if (!cards.length) return [];
 	const blocked = Array.isArray(player.storage.qunyou_zhuoqu_numbers) ? player.storage.qunyou_zhuoqu_numbers : [];
 	return [...new Set(cards.map((card) => qunyou_validNumber(card, player)).filter((num) => blocked.includes(num)))];
+}
+
+function qunyou_isPositiveMultiple(number, base) {
+	return Number.isInteger(number) && Number.isInteger(base) && base > 0 && number % base === 0;
+}
+
+function qunyou_gainCount(event, player) {
+	return (event.getg?.(player) || []).length;
+}
+
+function qunyou_haoxianFieldCandidates(player, number) {
+	const list = [];
+	for (const target of game.filterPlayer((current) => current !== player)) {
+		for (const card of target.getCards("ej", (card) => qunyou_validNumber(card, target) === number)) {
+			list.push({ card, owner: target });
+		}
+	}
+	return list;
+}
+
+function qunyou_haoxianHandCandidates(player, number) {
+	const list = [];
+	for (const target of game.filterPlayer((current) => current !== player)) {
+		for (const card of target.getCards("h", (card) => qunyou_validNumber(card, target) === number)) {
+			list.push({ card, owner: target });
+		}
+	}
+	return list;
+}
+
+function qunyou_haoxianPileCandidates(pile, number) {
+	if (!pile?.childNodes?.length) {
+		return [];
+	}
+	return Array.from(pile.childNodes).filter((card) => qunyou_validNumber(card, false) === number);
+}
+
+function qunyou_haoxianCanGain(player, number) {
+	if (!Number.isInteger(number) || number <= 0) {
+		return false;
+	}
+	if (qunyou_haoxianFieldCandidates(player, number).length) {
+		return true;
+	}
+	if (qunyou_haoxianHandCandidates(player, number).length) {
+		return true;
+	}
+	if (qunyou_haoxianPileCandidates(ui.cardPile, number).length) {
+		return true;
+	}
+	if (qunyou_haoxianPileCandidates(ui.discardPile, number).length) {
+		return true;
+	}
+	return false;
+}
+
+async function qunyou_haoxianGainSequential(player, number, count) {
+	const gained = [];
+	const lostTargets = [];
+	let remain = count;
+	const takeFromOwners = async (pool) => {
+		if (remain <= 0 || !pool.length) {
+			return;
+		}
+		const picks = pool.randomGets(Math.min(remain, pool.length));
+		for (const item of picks) {
+			if (remain <= 0) {
+				break;
+			}
+			const { card, owner } = item;
+			if (get.owner(card) !== owner) {
+				continue;
+			}
+			await player.gain(card, owner, "giveAuto");
+			if (get.owner(card) === player) {
+				gained.push(card);
+				remain--;
+				if (owner?.isIn?.() && !lostTargets.includes(owner)) {
+					lostTargets.push(owner);
+				}
+			}
+		}
+	};
+	const takeFromPile = async (pile) => {
+		if (remain <= 0) {
+			return;
+		}
+		const pool = qunyou_haoxianPileCandidates(pile, number);
+		if (!pool.length) {
+			return;
+		}
+		const picks = pool.randomGets(Math.min(remain, pool.length));
+		await player.gain(picks, "gain2");
+		for (const card of picks) {
+			if (get.owner(card) === player) {
+				gained.push(card);
+				remain--;
+			}
+		}
+	};
+	await takeFromOwners(qunyou_haoxianFieldCandidates(player, number));
+	await takeFromOwners(qunyou_haoxianHandCandidates(player, number));
+	await takeFromPile(ui.cardPile);
+	await takeFromPile(ui.discardPile);
+	return { gained, lostTargets };
 }
 
 
@@ -446,6 +545,84 @@ function qunyou_combo_getDiscardCards(event, player) {
 function qunyou_combo_break(player, skill) {
 	delete player.storage[`${skill}_pending`];
 	player.removeTip(`${skill}_mark`);
+}
+
+function qunyou_taowei_useCards(player, event) {
+	const cards = [];
+	const add = card => {
+		if (get.itemtype(card) === "card" && !cards.includes(card)) {
+			cards.push(card);
+		}
+	};
+	for (const evt of player.getHistory("lose")) {
+		const related = evt.relatedEvent || evt.getParent();
+		if (related !== event) continue;
+		if (Array.isArray(evt.hs)) evt.hs.forEach(add);
+	}
+	if (Array.isArray(event?.cards)) event.cards.forEach(add);
+	if (!cards.length && Array.isArray(event?.card?.cards)) event.card.cards.forEach(add);
+	if (!cards.length && get.itemtype(event?.card) === "card") cards.push(event.card);
+	return cards;
+}
+
+function qunyou_taowei_handCardsBeforeUse(event, player) {
+	if (Array.isArray(event?.hs) && event.hs.length) {
+		return event.hs.filter(card => get.itemtype(card) === "card");
+	}
+	const cards = player.getCards("h").slice();
+	for (const card of qunyou_taowei_useCards(player, event)) {
+		if (!cards.includes(card)) cards.push(card);
+	}
+	return cards;
+}
+
+function qunyou_taowei_currentMaxNumber(event, player) {
+	const numbers = qunyou_taowei_handCardsBeforeUse(event, player)
+		.map(card => qunyou_validNumber(card, player))
+		.filter(num => Number.isInteger(num));
+	if (!numbers.length) return null;
+	return Math.max(...numbers);
+}
+
+function qunyou_taowei_matchStage(player, event, stage) {
+	const cards = qunyou_taowei_useCards(player, event);
+	if (!cards.length) return null;
+	if (stage === 0) {
+		const max = qunyou_taowei_currentMaxNumber(event, player);
+		if (!Number.isInteger(max)) return null;
+		return cards.find(card => qunyou_validNumber(card, player) === max) || null;
+	}
+	if (stage === 1) {
+		return cards.find(card => get.color(card, player) === "red") || null;
+	}
+	if (stage === 2) {
+		return cards.find(card => get.name(card, player) === "sha") || (get.name(event.card, player) === "sha" ? cards[0] : null);
+	}
+	return null;
+}
+
+function qunyou_taowei_reuseCard(player, event) {
+	const cards = qunyou_taowei_useCards(player, event);
+	if (!cards.length || !event?.card) return null;
+	return get.autoViewAs(
+		{
+			name: get.name(event.card, false),
+			nature: get.nature(event.card, false),
+			isCard: true,
+		},
+		cards
+	);
+}
+
+async function qunyou_taowei_compare(player, target, card) {
+	return await player
+		.chooseToCompare(target)
+		.set("fixedResult", { [player.playerid]: card })
+		.forResult();
+}
+
+function qunyou_hanguo_visibleTag() {
+	return "visible_qunyou_hanguo";
 }
 
 /** 咏絮：递归展开本次响应所用牌的实体底牌（兼容嵌套虚拟牌） */
@@ -3098,6 +3275,7 @@ export const skills = {
 	qunyou_fuzhen: {
 		audio: 2,
 		// 每回合限一次（同胆持 olsbdanchi：usable 1；选「否」不消耗次数）
+		direct: true,
 		usable: 1,
 		// 时机参考 character/onlyOL/skill.js old_olsbdanchi、character/xianding/skill.js xinlvli
 		trigger: {
@@ -7808,7 +7986,7 @@ export const skills = {
 			qunyou_jingce_clear(player);
 		},
 		filter(event, player) {
-			return event.player === player && !player.hasSkill("qunyou_jingce_disabled");
+			return event.player === player;
 		},
 		async content(event, trigger, player) {
 			qunyou_jingce_recordUse(player, trigger.card);
@@ -7822,19 +8000,7 @@ export const skills = {
 				return;
 			}
 			player.logSkill("qunyou_jingce");
-			const before = player.countCards("h");
 			await qunyou_adjustHandTo(player, target);
-			const drew = Math.max(0, target - before);
-			if (drew > 0) {
-				const storage = qunyou_jingce_storage(player);
-				if (storage.drawn.includes(drew)) {
-					player.addSkill("qunyou_jingce_disabled");
-				} else {
-					storage.drawn.push(drew);
-					storage.drawn.sort((a, b) => a - b);
-				}
-				player.updateMarks("qunyou_jingce_mark");
-			}
 			player.changeZhuanhuanji("qunyou_jingce");
 			player.updateMarks("qunyou_jingce_mark");
 		},
@@ -7856,21 +8022,444 @@ export const skills = {
 							`当前模式：${qunyou_jingce_modeText(player)}`,
 							`本回合已使用花色：${qunyou_jingce_usedSuitsText(player)}`,
 							`本回合已使用类型：${qunyou_jingce_usedTypesText(player)}`,
-							`本回合因“精策”已摸过的数量：${qunyou_jingce_drawnText(player)}`,
-							player.hasSkill("qunyou_jingce_disabled") ? "本回合此技能已失效" : "本回合此技能未失效",
 						].join("<br>");
 					},
 				},
 				sub: true,
 			},
-			disabled: {
+		},
+	},
+	qunyou_pianyi: {
+		audio: 2,
+		enable: "phaseUse",
+		usable: 1,
+		filter(event, player) {
+			return game.hasPlayer(
+				(target) =>
+					target.isIn() &&
+					target.countCards("h") > 0 &&
+					!player.getStorage("qunyou_pianyi_targets").includes(target),
+			);
+		},
+		filterTarget(card, player, target) {
+			return (
+				target.isIn() &&
+				target.countCards("h") > 0 &&
+				!player.getStorage("qunyou_pianyi_targets").includes(target)
+			);
+		},
+		async content(event, trigger, player) {
+			const target = event.target;
+			player.markAuto("qunyou_pianyi_targets", [target]);
+			player.addTempSkill("qunyou_pianyi_clear", "phaseAfter");
+			player.logSkill("qunyou_pianyi", target);
+
+			const handCards = target.getCards("h");
+			if (!handCards.length) return;
+
+			const spades = handCards.filter((c) => get.suit(c, target) === "spade");
+			const nonSpades = handCards.filter((c) => get.suit(c, target) !== "spade");
+
+			// 将所有手牌当一张【酒】使用（转化牌）
+			const vcard = get.autoViewAs({ name: "jiu" }, handCards);
+			await target.useCard(vcard, handCards, target);
+
+			// 两项选择
+			const drawOption = `摸${nonSpades.length}张牌`;
+			const spadeOption = `依次使用${spades.length}张♠牌`;
+
+			let targetChoice;
+			if (!spades.length) {
+				targetChoice = 0;
+			} else if (!nonSpades.length) {
+				targetChoice = 1;
+			} else {
+				const result = await target
+					.chooseControl([drawOption, spadeOption])
+					.set("prompt", "翩仪：抉择")
+					.set("ai", () => 0)
+					.forResult();
+				targetChoice = result?.index ?? 0;
+			}
+
+			const execDraw = async (who) => {
+				if (nonSpades.length > 0) await who.draw(nonSpades.length);
+			};
+			const execSpades = async (who) => {
+				for (const spade of spades) {
+					if (!who.isIn()) break;
+					// 直接以该♠牌为素材使用，不经过 gain
+					await who.chooseUseTarget(spade, [spade], true, false);
+				}
+			};
+
+			if (targetChoice === 0) {
+				await execDraw(target);
+				await execSpades(player);
+			} else {
+				await execSpades(target);
+				await execDraw(player);
+			}
+		},
+		subSkill: {
+			clear: {
 				charlotte: true,
-				mark: false,
+				onremove(player) {
+					player.unmarkAuto("qunyou_pianyi_targets", player.getStorage("qunyou_pianyi_targets").slice());
+				},
+			},
+		},
+		ai: {
+			order: 5,
+			result: { target: 1 },
+		},
+	},
+	qunyou_zisheng: {
+		audio: 2,
+		locked: true,
+		trigger: { player: "useCardAfter" },
+		forced: true,
+		filter(event, player) {
+			return !!event.card;
+		},
+		async content(event, trigger, player) {
+			player.storage.qunyou_zisheng_used_count = (player.storage.qunyou_zisheng_used_count || 0) + 1;
+			const count = player.storage.qunyou_zisheng_used_count;
+			if (count % 3 !== 0) {
+				return;
+			}
+			await player.draw(3);
+			player.addSkill("qunyou_zisheng_effect");
+		},
+		subSkill: {
+			effect: {
+				charlotte: true,
+				forced: true,
+				popup: false,
+				mark: true,
 				intro: {
-					content: "本回合此技能已失效",
+					content: "下一张牌无距离和次数限制",
+				},
+				mod: {
+					cardUsable() {
+						return Infinity;
+					},
+					targetInRange() {
+						return true;
+					},
+				},
+				trigger: { player: "useCard1" },
+				firstDo: true,
+				filter(event, player) {
+					return player.hasSkill("qunyou_zisheng_effect");
+				},
+				content(event, trigger, player) {
+					player.removeSkill("qunyou_zisheng_effect");
+					if (trigger.addCount !== false) {
+						trigger.addCount = false;
+						const stat = player.getStat().card;
+						const name = trigger.card.name;
+						if (typeof stat[name] === "number" && stat[name] > 0) {
+							stat[name]--;
+						}
+					}
 				},
 				sub: true,
 			},
+			clear: {
+				charlotte: true,
+				trigger: { global: "phaseAfter" },
+				forced: true,
+				popup: false,
+				filter(event, player) {
+					return !!player.storage.qunyou_zisheng_used_count || player.hasSkill("qunyou_zisheng_effect");
+				},
+				content(event, trigger, player) {
+					delete player.storage.qunyou_zisheng_used_count;
+					if (player.hasSkill("qunyou_zisheng_effect")) {
+						player.removeSkill("qunyou_zisheng_effect");
+					}
+				},
+				sub: true,
+			},
+		},
+	},
+	qunyou_xianlue: {
+		audio: 2,
+		locked: true,
+		trigger: { player: "useCard" },
+		forced: true,
+		filter(event, player) {
+			const card = event.card;
+			const number = qunyou_validNumber(card, player);
+			if (!Number.isInteger(number)) {
+				return false;
+			}
+			const gains = player.getHistory("gain");
+			for (let i = gains.length - 1; i >= 0; i--) {
+				const evt = gains[i];
+				if (!evt?.cards?.length) {
+					continue;
+				}
+				const phase = evt.getParent("phase", true);
+				if (phase?.player !== player) {
+					continue;
+				}
+				return qunyou_isPositiveMultiple(number, evt.cards.length);
+			}
+			return false;
+		},
+		content(event, trigger, player) {
+			if (get.tag(trigger.card, "damage") > 0 || get.tag(trigger.card, "recover") > 0) {
+				trigger.baseDamage++;
+			}
+			if (player.awakenedSkills.includes("qunyou_haoxian")) {
+				player.restoreSkill("qunyou_haoxian");
+			}
+		},
+	},
+	qunyou_haoxian: {
+		audio: 2,
+		limited: true,
+		skillAnimation: true,
+		animationColor: "metal",
+		mark: true,
+		marktext: "贤",
+		intro: {
+			content(storage, player) {
+				return player.awakenedSkills.includes("qunyou_haoxian") ? "限定技已发动" : "限定技未发动";
+			},
+		},
+		trigger: {
+			player: "gainAfter",
+			global: "loseAsyncAfter",
+		},
+		direct: true,
+		filter(event, player) {
+			const count = qunyou_gainCount(event, player);
+			return count > 0 && !player.awakenedSkills.includes("qunyou_haoxian") && player.countCards("he") >= count && qunyou_haoxianCanGain(player, count);
+		},
+		async content(event, trigger, player) {
+			const count = qunyou_gainCount(trigger, player);
+			const result = await player
+				.chooseBool(get.prompt2("qunyou_haoxian"))
+				.set("choice", true)
+				.forResult();
+			if (!result?.bool) {
+				return;
+			}
+			player.logSkill("qunyou_haoxian");
+			player.awakenSkill("qunyou_haoxian");
+			const discard = await player.chooseToDiscard("he", true, count).set("prompt", `豪贤：请弃置${count}张牌`).forResult();
+			const number = discard?.cards?.length || 0;
+			if (!number) {
+				return;
+			}
+			const { lostTargets } = await qunyou_haoxianGainSequential(player, number, number);
+			const targets = lostTargets.filter(target => target?.isIn?.());
+			if (!targets.length) {
+				return;
+			}
+			const choose = await player
+				.chooseTarget([1, targets.length], "豪贤：对任意名因此失去牌的角色各造成1点伤害", (card, player, target) => {
+					return _status.event.targets.includes(target);
+				})
+				.set("targets", targets)
+				.set("ai", target => get.damageEffect(target, player, player))
+				.forResult();
+			if (!choose?.bool || !choose.targets?.length) {
+				return;
+			}
+			for (const target of choose.targets) {
+				if (target.isIn()) {
+					await target.damage(player);
+				}
+			}
+		},
+	},
+	qunyou_cuiping: {
+		audio: 2,
+		locked: true,
+		mod: {
+			targetEnabled(card, player, target) {
+				if (
+					target !== _status.currentPhase ||
+					!target.hasSkill("qunyou_cuiping") ||
+					player === target
+				)
+					return;
+				if (!target.getHistory("useCard", (evt) => get.color(evt.card) === "black").length)
+					return false;
+			},
+		},
+		group: "qunyou_cuiping_respond",
+		subSkill: {
+			respond: {
+				charlotte: true,
+				popup: false,
+				locked: true,
+				trigger: { global: "useCardBefore" },
+				forced: true,
+				filter(event, player) {
+					if (_status.currentPhase !== player || event.player === player) return false;
+					return !!player.getHistory("useCard", (evt) => get.color(evt.card) === "red").length;
+				},
+				content(event, trigger) {
+					trigger.nowuxie = true;
+					trigger.directHit.addArray(game.players);
+				},
+			},
+		},
+	},
+	qunyou_taowei: {
+		audio: 2,
+		comboSkill: true,
+		mark: true,
+		marktext: "威",
+		intro: {
+			content(storage, player) {
+				const data = player.storage.qunyou_taowei_data;
+				if (!data) return "连招未开始";
+				const list = data.cards || [];
+				const text = list.map(c => get.translation(c)).join("、");
+				return `进度 ${data.stage ?? 0}/3 · ${text ? "已参与：" + text : "无"}${data.used ? " · 已完成" : ""}`;
+			},
+		},
+		trigger: { player: "useCardAfter" },
+		forced: true,
+		popup: false,
+		priority: 20,
+		filter(event, player) {
+			if (_status.currentPhase !== player) return false;
+			const data = player.storage.qunyou_taowei_data;
+			if (data?.used) return false;
+			return qunyou_taowei_useCards(player, event).length > 0;
+		},
+		async content(event, trigger, player) {
+			if (!player.storage.qunyou_taowei_data) {
+				player.storage.qunyou_taowei_data = { stage: 0, cards: [] };
+			}
+			const data = player.storage.qunyou_taowei_data;
+			let matched = qunyou_taowei_matchStage(player, trigger, data.stage);
+			let wasReset = false;
+			if (!matched) {
+				data.stage = 0;
+				data.cards = [];
+				wasReset = true;
+				matched = qunyou_taowei_matchStage(player, trigger, 0);
+				if (!matched) return;
+			}
+			data.cards.push(matched);
+			data.stage++;
+			if (!wasReset) {
+				trigger.qunyou_taowei_participated = true;
+			}
+			trigger.qunyou_taowei_matchCard = matched;
+			trigger.qunyou_taowei_reuseCard = qunyou_taowei_reuseCard(player, trigger);
+			if (data.stage >= 3) {
+				data.used = true;
+				trigger.qunyou_taowei_finish = true;
+			}
+		},
+		group: ["qunyou_taowei_resolve", "qunyou_taowei_clear"],
+	},
+	qunyou_taowei_resolve: {
+		charlotte: true,
+		trigger: { player: "useCardAfter" },
+		forced: true,
+		popup: false,
+		priority: 10,
+		filter(event) {
+			return !!event.qunyou_taowei_finish;
+		},
+		async content(event, trigger, player) {
+			const data = player.storage.qunyou_taowei_data;
+			if (!data) return;
+			const cards = data.cards.slice(0, 3);
+			const notWins = {};
+			let selfNotWin = 0;
+			const order = [];
+			for (let i = 0; i < cards.length; i++) {
+				if (!game.hasPlayer(target => target !== player && target.countCards("h") > 0)) break;
+				const result = await player
+					.chooseTarget(`滔威：第${get.cnNumber(i + 1)}次拼点`, true, (card, p, target) => {
+						return target !== p && target.countCards("h") > 0;
+					})
+					.set("ai", target => -get.attitude(player, target))
+					.forResult();
+				if (!result?.bool || !result.targets?.length) break;
+				const target = result.targets[0];
+				const compare = await qunyou_taowei_compare(player, target, cards[i]);
+				const id = target.playerid;
+				notWins[id] ??= 0;
+				if (!order.includes(target)) order.push(target);
+				if (compare?.tie || compare?.bool) notWins[id]++;
+				else selfNotWin++;
+			}
+			for (const target of order) {
+				if (target?.isIn?.() && (notWins[target.playerid] || 0) > selfNotWin) {
+					await target.damage(player);
+				}
+			}
+		},
+	},
+	qunyou_taowei_clear: {
+		charlotte: true,
+		trigger: { player: "phaseUseAfter" },
+		forced: true,
+		popup: false,
+		filter(event, player) {
+			return !!player.storage.qunyou_taowei_data;
+		},
+		content(event, trigger, player) {
+			delete player.storage.qunyou_taowei_data;
+		},
+	},
+	qunyou_hanguo: {
+		audio: 2,
+		locked: true,
+		forced: true,
+		group: ["qunyou_hanguo_show", "qunyou_hanguo_reuse"],
+	},
+	qunyou_hanguo_show: {
+		charlotte: true,
+		trigger: {
+			player: ["enterGame", "gainAfter", "loseAfter", "hideShownCardsAfter"],
+			global: ["equipAfter", "addJudgeAfter", "gainAfter", "loseAsyncAfter", "addToExpansionAfter"],
+		},
+		forced: true,
+		popup: false,
+		filter(event, player) {
+			return player.countCards("h") > player.getShownCards().length;
+		},
+		async content(event, trigger, player) {
+			const cards = player.getCards("h").filter(card => !player.getShownCards().includes(card));
+			if (cards.length) {
+				await player.addShownCards({
+					cards,
+					gaintag: [qunyou_hanguo_visibleTag()],
+				});
+			}
+		},
+	},
+	qunyou_hanguo_reuse: {
+		charlotte: true,
+		trigger: { player: "useCardAfter" },
+		prompt2: "撼国：你可再次使用此牌",
+		popup: false,
+		priority: 1,
+		filter(event, player) {
+			const card = event.qunyou_taowei_reuseCard;
+			if (!card || !event.qunyou_taowei_participated) return false;
+			const type = get.type(card);
+			if (type !== "basic" && type !== "trick") return false;
+			return player.hasUseTarget(card);
+		},
+		async content(event, trigger, player) {
+			await player
+				.chooseUseTarget(trigger.qunyou_taowei_reuseCard, qunyou_taowei_useCards(player, trigger), true, false)
+				.set("prompt", `撼国：你可再次使用${get.translation(trigger.card)}`)
+				.forResult();
 		},
 	},
 };

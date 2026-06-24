@@ -20,6 +20,14 @@ export function precontent() {
 		color: "#6affe2",
 		nature: "watermm",
 	});
+	lib.namePrefix.set("武", {
+		color: "#c8cdd1",
+		nature: "woodmm",
+	});
+	lib.namePrefix.set("威", {
+		color: "#ff9966",
+        nature: "glodenmm"
+	});
 	lib.dynamicTranslate ??= {};
 	for (const key of Object.keys(dynamicTranslates)) {
 		if (!lib.dynamicTranslate[key]) {
