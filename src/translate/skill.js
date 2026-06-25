@@ -2,6 +2,7 @@
  * 技能翻译：技能名 + skill_id + "_info"
  * 例：my_skill: "技能", "my_skill_info": "技能描述……"
  */
+import { get } from "noname";
 export const skillTranslate = {
 	qunyou_youlong: "游龙",
 	qunyou_youlong_info:
@@ -231,4 +232,12 @@ export const skillTranslate = {
 	qunyou_zhoujie_info: "限定技，出牌阶段，你可以获得你攻击范围内任意名其他角色区域内合计X张牌（X为你的攻击范围）。",
 	qunyou_sc1_pingzheng: "平征",
 	qunyou_sc1_pingzheng_info: "出牌阶段开始时，你可以失去一点体力并令至多两名角色依次选择一项：1.令你摸一张牌并视为对其使用【决斗】；2.交给你两张相同颜色的手牌。",
+	qunyou_chuandao: "传道",
+	qunyou_chuandao_info: "出牌阶段，你可以将任意张手牌分配给其他角色并记录这些牌的花色。你以此法交出四种花色的牌后，若本回合你未因“传道”而摸过牌，你清除记录并摸X张牌（X为你本回合“传道”过的角色数且至多为3）。",
+	qunyou_qiyi: "起义",
+	qunyou_qiyi_info: "每回合各限一次，你于摸牌阶段外获得牌后，摸两张牌并分配给至多两名其他角色两张牌；你于弃牌阶段外失去牌后，对至多两名其他角色各造成1点雷电伤害。",
+	qunyou_shifu: "施符",
+	qunyou_shifu_info: "<b>锁定技</b>，其他角色于其回合外获得你的牌时，将牌置于其武将牌上称为“符”并令其回复1点体力；其回合开始时，交给你等量的牌（不足则全给），然后获得这些“符”并失去1点体力。",
+	qunyou_muzhong: "募众",
+	qunyou_muzhong_info: `<b>限定技</b>，出牌阶段，你可以令任意名对其发动过“传道”的角色依次展示并交给你一张牌，若你以此法获得的牌包含三种类型，你获得${get.poptip("qunyou_qiyi")}，否则你获得${get.poptip("qunyou_shifu")}。`,
 };
