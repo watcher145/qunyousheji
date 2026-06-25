@@ -8784,4 +8784,236 @@ qunyou_zhoujie: {
         }
     },
 },
+qunyou_chuandao: {
+    audio: 2,
+    enable: "phaseUse",
+    filter(event, player) {
+        return player.countCards("h") > 0;
+    },
+    async content(event, trigger, player) {
+        const cardResult = await player.chooseCard({
+            position: "h",
+            selectCard: [1, Infinity],
+            prompt: "传道：选择要分配的手牌",
+        }).forResult();
+        if (!cardResult.bool || !cardResult.cards?.length) return;
+        const cards = cardResult.cards;
+        const targetResult = await player.chooseTarget("传道：选择分配目标", true, (card, p, t) => t !== p).forResult();
+        if (!targetResult.bool || !targetResult.targets?.length) return;
+        const target = targetResult.targets[0];
+        await player.give(cards, target);
+        player.storage.qunyou_chuandao_suits ??= [];
+        player.storage.qunyou_chuandao_targets ??= [];
+        player.storage.qunyou_chuandao_turnTargets ??= [];
+        for (const card of cards) {
+            const suit = get.suit(card, player);
+            if (lib.suit.includes(suit) && !player.storage.qunyou_chuandao_suits.includes(suit)) {
+                player.storage.qunyou_chuandao_suits.push(suit);
+            }
+        }
+        if (!player.storage.qunyou_chuandao_targets.includes(target.playerid)) {
+            player.storage.qunyou_chuandao_targets.push(target.playerid);
+        }
+        if (!player.storage.qunyou_chuandao_turnTargets.includes(target.playerid)) {
+            player.storage.qunyou_chuandao_turnTargets.push(target.playerid);
+        }
+        player.markSkill("qunyou_chuandao");
+        if (player.storage.qunyou_chuandao_suits.length >= 4 && !player.storage.qunyou_chuandao_drew) {
+            const X = Math.min(player.storage.qunyou_chuandao_turnTargets.length, 3);
+            await player.draw(X);
+            player.storage.qunyou_chuandao_drew = true;
+            player.storage.qunyou_chuandao_suits = [];
+            player.storage.qunyou_chuandao_turnTargets = [];
+            player.unmarkSkill("qunyou_chuandao");
+        }
+    },
+    ai: {
+        order: 6,
+        result: { player: 1 },
+    },
+    mark: true,
+    intro: {
+        content(storage, player) {
+            const suits = player.storage.qunyou_chuandao_suits || [];
+            const turnTargets = player.storage.qunyou_chuandao_turnTargets || [];
+            const parts = [];
+            if (suits.length) parts.push(`花色：${suits.map(s => get.translation(s)).join("、")}`);
+            if (turnTargets.length) parts.push(`本回合：${turnTargets.length}人`);
+            return parts.length ? parts.join(" | ") : "无记录";
+        },
+    },
+},
+qunyou_muzhong: {
+    audio: 2,
+    enable: "phaseUse",
+    limited: true,
+    filter(event, player) {
+        const targets = player.storage.qunyou_chuandao_targets;
+        if (!Array.isArray(targets) || !targets.length) return false;
+        return targets.some(id => {
+            const p = game.findPlayer(pp => pp.playerid === id);
+            return p?.isIn() && p.countCards("h") > 0;
+        });
+    },
+    async content(event, trigger, player) {
+        player.awakenSkill(event.name);
+        const targetIds = player.storage.qunyou_chuandao_targets || [];
+        const available = targetIds.map(id => game.findPlayer(p => p.playerid === id)).filter(p => p?.isIn() && p.countCards("h") > 0);
+        if (!available.length) return;
+        const targetResult = await player.chooseTarget(
+            "募众：选择要令其展示牌的角色（曾对其发动过传道）",
+            [1, available.length],
+            (card, p, t) => available.includes(t)
+        ).forResult();
+        const targets = targetResult.targets || [];
+        if (!targets.length) return;
+        const typeSet = new Set();
+        for (const target of targets) {
+            if (!target.isIn() || !target.countCards("h")) continue;
+            const result = await target.chooseCard("h", true, `募众：展示并交给${get.translation(player)}一张牌`).forResult();
+            if (result.bool && result.cards?.length) {
+                const card = result.cards[0];
+                await target.give(card, player);
+                typeSet.add(get.type2(card, player));
+            }
+        }
+        if (typeSet.has("basic") && typeSet.has("trick") && typeSet.has("equip")) {
+            await player.addSkill("qunyou_qiyi");
+            player.popup("起义");
+        } else {
+            await player.addSkill("qunyou_shifu");
+            player.popup("施符");
+        }
+    },
+    ai: {
+        order: 1,
+        result: { player: 1 },
+    },
+},
+qunyou_qiyi: {
+    audio: 2,
+    group: ["qunyou_qiyi_gain", "qunyou_qiyi_loss"],
+    subSkill: {
+        gain: {
+            name: "起义",
+            trigger: { player: "gainBegin" },
+            usable: 1,
+            filter(event, player) {
+                return event.getParent("phaseDraw")?.player != player;
+            },
+            async content(event, trigger, player) {
+                await player.draw(2);
+                const targets = game.filterPlayer(p => p !== player && p.isIn());
+                if (!targets.length) return;
+                const result = await player.chooseTarget(
+                    "起义：分配给至多两名其他角色各一张牌",
+                    [1, Math.min(2, targets.length)],
+                    (card, p, t) => t !== player
+                ).forResult();
+                if (result.targets?.length) {
+                    for (const target of result.targets) {
+                        if (player.countCards("h") > 0) {
+                            const giveResult = await player.chooseCard("h", true, `起义：给${get.translation(target)}一张牌`).forResult();
+                            if (giveResult.cards?.length) {
+                                await player.give(giveResult.cards, target);
+                            }
+                        }
+                    }
+                }
+            },
+        },
+        loss: {
+            name: "起义",
+            trigger: { player: "loseAfter" },
+            usable: 1,
+            filter(event, player) {
+                const parent = event.getParent();
+                return parent?.name !== "phaseDiscard" && parent?.name !== "useCard";
+            },
+            async content(event, trigger, player) {
+                const targets = game.filterPlayer(p => p !== player && p.isIn());
+                if (!targets.length) return;
+                const result = await player.chooseTarget(
+                    "起义：对至多两名其他角色各造成1点雷电伤害",
+                    [1, Math.min(2, targets.length)],
+                    (card, p, t) => t !== player
+                ).forResult();
+                if (result.targets?.length) {
+                    for (const target of result.targets) {
+                        await target.damage(1, "thunder");
+                    }
+                }
+            },
+        },
+    },
+},
+qunyou_shifu: {
+    audio: 2,
+    trigger: { global: "gainAfter" },
+    forced: true,
+    filter(event, player) {
+        if (event.player === player) return false;
+        if (_status.currentPhase === event.player) return false;
+        if (event.giver !== player) return false;
+        const cards = event.getg?.(event.player) || event.cards || [];
+        if (cards.some(c => c.hasGaintag?.("qunyou_shifu_return"))) return false;
+        return true;
+    },
+    async content(event, trigger, player) {
+        const target = trigger.player;
+        if (!target?.isIn()) return;
+        const cards = trigger.getg?.(target) || trigger.cards || [];
+        if (!cards.length) return;
+        await target.addToExpansion(cards, player, "give").forResult();
+        for (const card of cards) {
+            card.addGaintag("qunyou_shifu_return");
+        }
+        await target.recover(1);
+        if (!target.hasSkill("qunyou_shifu_return")) {
+            target.storage.qunyou_shifu_owner = player;
+            target.addTempSkill("qunyou_shifu_return", { player: "phaseBeginStartAfter" });
+        }
+    },
+    subSkill: {
+        "return": {
+            trigger: { player: "phaseBeginStart" },
+            forced: true,
+            mark: true,
+            intro: { content: "expansion", markcount: "expansion" },
+            onremove(player, skill) {
+                const cards = player.getExpansions(skill);
+                if (cards.length) {
+                    player.loseToDiscardpile({ cards });
+                }
+            },
+            async content(event, trigger, player) {
+                const skillOwner = player.storage.qunyou_shifu_owner;
+                if (!skillOwner?.isIn()) {
+                    player.removeSkill("qunyou_shifu_return");
+                    return;
+                }
+                const fuCards = player.getExpansions("qunyou_shifu_return");
+                if (!fuCards.length) {
+                    player.removeSkill("qunyou_shifu_return");
+                    return;
+                }
+                const num = fuCards.length;
+                const handCount = player.countCards("h");
+                const toGive = Math.min(num, handCount);
+                if (toGive > 0) {
+                    const result = await player.chooseCard("h", true, toGive, `施符：交给${get.translation(skillOwner)}${toGive}张牌`).forResult();
+                    if (result.cards?.length) {
+                        await player.give(result.cards, skillOwner);
+                    }
+                }
+                await player.gain(fuCards, player, "give");
+                await player.loseHp(1);
+                for (const card of fuCards) {
+                    card.removeGaintag("qunyou_shifu_return");
+                }
+                player.removeSkill("qunyou_shifu_return");
+            },
+        },
+    },
+},
 }

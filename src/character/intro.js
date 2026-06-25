@@ -38,4 +38,5 @@ export const characterIntro = {
 	qunyou_wuzhangfei: "设计：晴<br>评价：",
 	qunyou_weiguanyu: "设计：祭主<br>评价：",
 	qunyou_zhangyan: "设计：终汐舷",
+	xinghe_zhangjiao: "设计：玖宴",
 };

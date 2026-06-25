@@ -54,4 +54,6 @@ export const characterTranslate = {
 	qunyou_weiguanyu: "威关羽",
 	qunyou_weiguanyu_prefix: "威",
 	qunyou_zhangyan: "张燕",
+	xinghe_zhangjiao: "朔张角",
+	xinghe_zhangjiao_prefix: "朔",
 };

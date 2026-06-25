@@ -28,13 +28,15 @@ function cloneAndPatchCards() {
 }
 
 const characterSortTranslate = {
-	qunyou_chenjunxieshi: "陈郡谢氏",
+	qunyou_chenjunxieshi: "问鼎•陈郡谢氏",
+	qunyou_xingheshuo: "星河入梦•朔",
 	qunyou_sinatsuriku:"西夏笠谷",
 	qunyou_gaijin:"需要改进的设计",
 };
 
 const characterSort = {
 	qunyou_chenjunxieshi: ["qunyou_xiedaoyun", "qunyou_xiean", "qunyou_xiexuan", "qunyou_xielingyun", "qunyou_xieshi"],
+	qunyou_xingheshuo: ["xinghe_zhangjiao"],
 	qunyou_sinatsuriku: ["qunyou_yang_wang","qunyou_xian_hua","qunyou_sunce"],
 	qunyou_gaijin: ["qunyou_caocao", "qunyou_cbpzhaoyun", "qunyou_zhugeliang"],
 };
