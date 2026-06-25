@@ -29,7 +29,7 @@ function cloneAndPatchCards() {
 
 const characterSortTranslate = {
 	qunyou_chenjunxieshi: "问鼎•陈郡谢氏",
-	qunyou_xingheshuo: "星河入梦•朔",
+	qunyou_xingheshuo: "山河如梦•朔",
 	qunyou_sinatsuriku:"西夏笠谷",
 	qunyou_gaijin:"需要改进的设计",
 };
