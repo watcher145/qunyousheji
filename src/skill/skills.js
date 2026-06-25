@@ -8470,6 +8470,7 @@ qunyou_sc1_guanyong: {
         const target = event.player;
 
         if (!target || !target.isIn()) return false;
+        if (player.storage.qunyou_sc1_guanyong_marked?.includes(target)) return false;
         if (target !== player) {
             return target.countCards("h") > 0;
         } else {
@@ -8477,6 +8478,7 @@ qunyou_sc1_guanyong: {
         }
     },
     async content(event, trigger, player) {
+        if (!player.storage.qunyou_sc1_guanyong_marked) player.storage.qunyou_sc1_guanyong_marked = [];
 
 		var num = Math.random() < 0.5 ? 1 : 2;
         
@@ -8504,6 +8506,11 @@ qunyou_sc1_guanyong: {
 
         if (!card) return; // 如果未能成功获取或展示牌则中止
 
+        player.storage.qunyou_sc1_guanyong_marked.add(target);
+        if (!player.hasSkill("qunyou_sc1_guanyong_clear")) {
+            player.addTempSkill("qunyou_sc1_guanyong_clear", { global: "roundStart" });
+        }
+
         // 2. 检测牌的属性与类型
         const isRed = get.color(card, player) === "red";
         const isBasic = get.type(card, player) === "basic";
@@ -8517,11 +8524,16 @@ qunyou_sc1_guanyong: {
         if (isBasic) {
             // 在卡牌本体上做个标记，以供伤害/回复事件检测
             card.storage.qunyou_sc1_guanyong_plus = true;
+            player.addGaintag([card], "qunyou_sc1_guanyong_mark");
             
-            player.addTempSkill("qunyou_sc1_guanyong_modifier", { global: "phaseAfter" });
+            player.addSkill("qunyou_sc1_guanyong_modifier");
+            if (!player.hasSkill("qunyou_sc1_guanyong_cleanup")) {
+                player.addSkill("qunyou_sc1_guanyong_cleanup");
+            }
         }
 
 		if(isRed && isBasic) {
+        player.popup("乘势", "fire");
         if (get.owner(card) === player && ["h", "e"].includes(get.position(card))) {
             // 检查无距离和次数限制下是否可以使用
             // 临时添加无视距离和次数的技能效果，以使 chooseToUse 能够正确检测该牌可用
@@ -8573,8 +8585,39 @@ qunyou_sc1_guanyong_modifier: {
     },
     content(event, trigger, player) {
         trigger.num++; // 伤害值或回复量 +1
+        trigger.card.removeGaintag("qunyou_sc1_guanyong_mark");
+        delete trigger.card.storage.qunyou_sc1_guanyong_plus;
         game.log(trigger.card, "受到【冠勇】加成，效果+1");
-    }
+    },
+},
+qunyou_sc1_guanyong_cleanup: {
+    charlotte: true,
+    trigger: { global: "loseAsyncAfter" },
+    forced: true,
+    popup: false,
+    silent: true,
+    filter(event, player) {
+        const cards = event.getl(player)?.cards2 || [];
+        if (!cards.some(c => get.itemtype(c) == "card" && c.storage?.qunyou_sc1_guanyong_plus)) return false;
+        // 正在使用中不清理（+1 效果仍需 storage），等 modifier 的 content 负责清理
+        if (event.getParent(evt => evt.name === "useCard", false, true)) return false;
+        return true;
+    },
+    content(event, trigger, player) {
+        const cards = trigger.getl(player).cards2;
+        for (const card of cards) {
+            if (get.itemtype(card) == "card" && card.storage?.qunyou_sc1_guanyong_plus) {
+                delete card.storage.qunyou_sc1_guanyong_plus;
+                card.removeGaintag("qunyou_sc1_guanyong_mark");
+            }
+        }
+    },
+},
+qunyou_sc1_guanyong_clear: {
+    charlotte: true,
+    onremove: (player) => {
+        delete player.storage.qunyou_sc1_guanyong_marked;
+    },
 },
 qunyou_sc1_pingzheng: {
     audio: 2,
@@ -8664,5 +8707,81 @@ qunyou_sc1_pingzheng: {
             }
         }
     }
+},
+qunyou_qingjie: {
+    audio: 2,
+    trigger: { player: "useCardAfter" },
+    filter(event, player) {
+        const type = get.type2(event.card);
+        return type === "basic" || type === "trick" || type === "equip";
+    },
+    async content(event, trigger, player) {
+        const type = get.type2(trigger.card);
+        if (type === "basic") {
+            const cardsResult = await player.chooseCard({
+                position: "h",
+                selectCard: [0, Infinity],
+                prompt: "轻捷：重铸任意张手牌",
+            }).forResult();
+            if (cardsResult.cards?.length) {
+                await player.recast(cardsResult.cards);
+            }
+        } else if (type === "trick") {
+            const targetResult = await player.chooseTarget(
+                "轻捷：弃置一名其他角色一张牌", true,
+                (card, p, t) => t !== p && t.countDiscardableCards(p, "he") > 0
+            ).forResult();
+            if (targetResult.targets?.length) {
+                await player.discardPlayerCard(targetResult.targets[0], "he", true);
+            }
+        } else if (type === "equip") {
+            await player.chooseUseTarget(
+                { name: "sha", isCard: true },
+                "轻捷：视为使用一张【杀】", false
+            );
+        }
+    },
+},
+qunyou_zhoujie: {
+    audio: 2,
+    enable: "phaseUse",
+    limited: true,
+    filter(event, player) {
+        const range = player.getAttackRange();
+        if (range <= 0) return false;
+        return game.hasPlayer(current =>
+            current !== player && current.isIn() &&
+            player.inRange(current) &&
+            current.countGainableCards(player, "hej") > 0
+        );
+    },
+    async content(event, trigger, player) {
+        player.awakenSkill(event.name);
+        const range = player.getAttackRange();
+        let remaining = range;
+        while (remaining > 0) {
+            const available = game.filterPlayer(current =>
+                current !== player && current.isIn() &&
+                player.inRange(current) &&
+                current.countGainableCards(player, "hej") > 0
+            );
+            if (!available.length) break;
+            const targetResult = await player.chooseTarget(
+                `骤劫：选择要获得牌的角色（剩余${remaining}张）`,
+                true,
+                (card, p, t) => t !== player && available.includes(t)
+            ).set("ai", target => get.attitude(player, target) <= 0 ? 1 : 0).forResult();
+            if (!targetResult.bool) break;
+            const target = targetResult.targets[0];
+            const maxCards = Math.min(remaining, target.countGainableCards(player, "hej"));
+            const gainResult = await player.choosePlayerCard(
+                target, "hej", true, [1, maxCards]
+            ).set("prompt", `骤劫：选择要获得的牌（至多${maxCards}张）`)
+             .forResult();
+            if (!gainResult.bool || !gainResult.cards?.length) break;
+            await player.gain(gainResult.cards, target, "give");
+            remaining -= gainResult.cards.length;
+        }
+    },
 },
 }
