@@ -221,4 +221,9 @@ export const skillTranslate = {
 	qunyou_hanguo: "撼国",
 	qunyou_hanguo_info:
 		"锁定技，你的手牌始终全部明置。你使用的基本牌或普通锦囊牌若参与连招，则你可再次使用之。",
+	qunyou_sc1_guanyong: "冠勇",
+	qunyou_sc1_guanyong_info:
+		"<b>锁定技</b>，每回合各角色限一次，一名角色受到伤害后，你获得其一张手牌(为你则改为展示一张手牌)，若此牌为：红色牌，你摸一张牌；基本牌，你令此牌造成的伤害或回复的效果+1；乘势：你使用或弃置此牌并回复一点体力(无距离和次数限制)。",
+	qunyou_sc1_pingzheng: "平征",
+	qunyou_sc1_pingzheng_info: "出牌阶段开始时，你可以失去一点体力并令至多两名角色依次选择一项：1.令你摸一张牌并视为对其使用【决斗】；2.交给你两张相同颜色的手牌。",
 };

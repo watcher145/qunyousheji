@@ -8462,6 +8462,207 @@ export const skills = {
 				.forResult();
 		},
 	},
-};
+qunyou_sc1_guanyong: {
+    audio: "ext:群友设计/audio:2", // 直接使用音频文件名
+    trigger: { global: "damageEnd" }, // 一名角色受到伤害后
+    forced: true, // 锁定技
+    filter(event, player) {
+        const target = event.player;
 
+        if (!target || !target.isIn()) return false;
+        if (target !== player) {
+            return target.countCards("h") > 0;
+        } else {
+            return player.countCards("h") > 0;
+        }
+    },
+    async content(event, trigger, player) {
 
+		var num = Math.random() < 0.5 ? 1 : 2;
+        
+        // 2. 拼接出完整的文件名：qunyou_sc1_guanyong1 或 qunyou_sc1_guanyong2
+        // game.playSkillAudio(文件名, false, 'ext:扩展名')
+
+        const target = trigger.player;
+        let card = null;
+
+        // 1. 获得或展示手牌
+        if (target !== player) {
+            // 你获得其一张手牌（通过 gainPlayerCard 自动亮出或直接获取并触发 log）
+            const result = await player.gainPlayerCard(target, "h", true).forResult();
+            if (result && result.cards && result.cards.length) {
+                card = result.cards[0];
+            }
+        } else {
+            // 若其为你则改为你展示一张手牌
+            const result = await player.chooseCard("冠勇：展示一张手牌", "h", true).forResult();
+            if (result && result.cards && result.cards.length) {
+                card = result.cards[0];
+                await player.showCards([card], `${get.translation(player)}因【冠勇】展示了手牌`);
+            }
+        }
+
+        if (!card) return; // 如果未能成功获取或展示牌则中止
+
+        // 2. 检测牌的属性与类型
+        const isRed = get.color(card, player) === "red";
+        const isBasic = get.type(card, player) === "basic";
+
+        // 红色牌：你摸一张牌
+        if (isRed) {
+            await player.draw(1);
+        }
+
+        // 基本牌：令此牌造成的伤害或回复的体力+1
+        if (isBasic) {
+            // 在卡牌本体上做个标记，以供伤害/回复事件检测
+            card.storage.qunyou_sc1_guanyong_plus = true;
+            
+            player.addTempSkill("qunyou_sc1_guanyong_modifier", { global: "phaseAfter" });
+        }
+
+		if(isRed && isBasic) {
+        if (get.owner(card) === player && ["h", "e"].includes(get.position(card))) {
+            // 检查无距离和次数限制下是否可以使用
+            // 临时添加无视距离和次数的技能效果，以使 chooseToUse 能够正确检测该牌可用
+            player.addTempSkill("qunyou_sc1_guanyong_infinite");
+            
+            const useResult = await player.chooseToUse({
+                prompt: `冠勇：使用【${get.translation(card)}】（无距离和次数限制），若无法使用则取消以将其弃置`,
+                filterCard: (c) => c === card,
+                forced: false // 这里给玩家选择使用的机会，如果卡牌符合规则能用就用，点取消或者不能用就自动弃置
+            }).forResult();
+
+            player.removeSkill("qunyou_sc1_guanyong_infinite");
+
+            if (!useResult || !useResult.bool) {
+                // 无法使用或取消使用，则直接弃置
+                await player.discard(card);
+            }
+            
+            // 无论使用成功还是弃置成功，回复一点体力
+            await player.recover(1);
+        	}
+		}
+	},
+},
+
+qunyou_sc1_guanyong_infinite: {
+    charlotte: true,
+    mod: {
+        cardUsable(player, card) {
+            return Infinity; // 无次数限制
+        },
+        targetInRange(player, card, target) {
+            return true; // 无距离限制
+        }
+    }
+},
+
+qunyou_sc1_guanyong_modifier: {
+    charlotte: true,
+    trigger: {
+        source: "damageBegin1",   // 伤害造成前
+        player: "recoverBegin1"   // 回复进行前
+    },
+    forced: true,
+    popup: false,
+    filter(event, player) {
+        // 检查造成伤害或回复的牌是否带有刚刚被标记的属性
+        return event.card && event.card.storage && event.card.storage.qunyou_sc1_guanyong_plus === true;
+    },
+    content(event, trigger, player) {
+        trigger.num++; // 伤害值或回复量 +1
+        game.log(trigger.card, "受到【冠勇】加成，效果+1");
+    }
+},
+qunyou_sc1_pingzheng: {
+    audio: 2,
+    trigger: { player: "phaseUseBegin" },
+    // 出牌阶段开始时即可发动
+    filter(event, player) {
+        return game.hasPlayer(current => current !== player);
+    },
+    // 使用 check / cost 询问，把失去体力改为玩家可以选择的项
+    async cost(event, trigger, player) {
+        event.result = await player.chooseBool(
+            get.prompt2("qunyou_sc1_pingzheng"),
+            "是否失去1点体力，令至多两名其他角色各选择一项？"
+        ).set("ai", () => {
+            // AI 判断：若体力大于1且场上有敌人，则倾向于发动
+            return player.hp > 1 && game.hasPlayer(current => current !== player && get.attitude(player, current) < 0);
+        }).forResult();
+    },
+    async content(event, trigger, player) {
+        // 此时玩家点击了确定，尝试失去1点体力，如果失去了才执行后续
+        const loseResult = await player.loseHp(1);
+        
+        // 确保失去体力成功，且自己依然在场，再选择目标
+        if (!player.isIn()) return;
+
+        // 令你选择至多两名其他角色
+        const targetResult = await player.chooseTarget(
+            "平征：请选择至多两名其他角色",
+            [1, 2], // 至多两名
+            (card, player, target) => target !== player
+        ).set("ai", (target) => {
+            // AI 优先选敌人
+            return -get.attitude(_status.event.player, target);
+        }).forResult();
+
+        if (targetResult && targetResult.bool && targetResult.targets?.length) {
+            const targets = targetResult.targets.slice();
+            
+            // 依次执行
+            for (const target of targets) {
+                if (!target.isIn() || !player.isIn()) continue;
+
+                // 检查目标是否有两张相同颜色的手牌
+                const handcards = target.getCards("h");
+                const redCount = handcards.filter(c => get.color(c, target) === "red").length;
+                const blackCount = handcards.filter(c => get.color(c, target) === "black").length;
+                const canChooseOption2 = (redCount >= 2 || blackCount >= 2);
+
+                const controls = ["选项一：令其摸一张牌并视为对其决斗"];
+                if (canChooseOption2) {
+                    controls.push("选项二：交给他两张相同颜色的手牌");
+                }
+
+                const choiceResult = await target.chooseControl(controls)
+                    .set("prompt", `平征：请对 ${get.translation(player)} 选择一项执行`)
+                    .set("ai", () => {
+                        if (get.attitude(target, player) > 0 && canChooseOption2) {
+                            return "选项二：交给他两张相同颜色的手牌";
+                        }
+                        return "选项一：令其摸一张牌并视为对其决斗";
+                    }).forResult();
+
+                if (choiceResult && choiceResult.control) {
+                    if (choiceResult.control.includes("选项一")) {
+                        await player.draw(1);
+                        if (player.isIn() && target.isIn()) {
+                            await player.useCard({ name: "juedou", isCard: true }, target, false);
+                        }
+                    } else if (choiceResult.control.includes("选项二")) {
+                        const giveResult = await target.chooseCard(
+                            "平征：请选择两张相同颜色的手牌交给 " + get.translation(player),
+                            2, true,
+                            (card, target) => {
+                                const chosen = _status.event.cards || [];
+                                if (chosen.length === 0) return true;
+                                return get.color(card, target) === get.color(chosen[0], target);
+                            }
+                        ).set("ai", (card) => {
+                            return 6 - get.value(card);
+                        }).forResult();
+
+                        if (giveResult && giveResult.bool && giveResult.cards?.length === 2) {
+                            await target.give(giveResult.cards, player);
+                        }
+                    }
+                }
+            }
+        }
+    }
+},
+}
