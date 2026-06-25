@@ -37,4 +37,5 @@ export const characterIntro = {
 	qunyou_diaochan: "设计：来自大宝规则集中宗族技的例子<br>评价：",
 	qunyou_wuzhangfei: "设计：晴<br>评价：",
 	qunyou_weiguanyu: "设计：祭主<br>评价：",
+	qunyou_zhangyan: "设计：终汐舷",
 };
