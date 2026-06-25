@@ -54,6 +54,8 @@ export default function () {
 				"audio/die/qunyou_spwenyang.mp3",
 				"audio/die/qunyou_liukun.mp3",
 				"audio/die/qunyou_simayi.mp3",
+				"audio/skill/qunyou_sc1_guanyong1.mp3",
+				"audio/skill/qunyou_sc1_guanyong2.mp3",
 			],
 		},
 	};
