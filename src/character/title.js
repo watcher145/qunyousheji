@@ -38,5 +38,6 @@ export const characterTitle = {
 	qunyou_weiguanyu: "美髯公",
 	qunyou_sunce: "平江东扫患寇",
 	qunyou_zhangyan: "轻勇骇势",
-	xinghe_zhangjiao: "太平道人",
+	shanhe_zhangjiao: "太平道人",
+	shanhe_luzhi: "桢干质烈",
 };

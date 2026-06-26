@@ -2257,6 +2257,32 @@ function qunyou_zhashu_clear(player) {
 	player.markSkill("qunyou_zhashu");
 }
 
+function getTurnDiscardCards() {
+	const cards = [];
+	const addCard = (card) => {
+		if (cards.includes(card)) return;
+		if (get.position(card, true) !== "d") return;
+		cards.push(card);
+	};
+	const currentPhase = _status.event?.getParent("phase");
+	const currentPlayer = currentPhase?.player;
+	if (!currentPlayer) return cards;
+	for (const target of game.filterPlayer()) {
+		target.getHistory("lose", (evt) => {
+			if (evt.position != ui.discardPile) return false;
+			const p = evt.getParent("phase");
+			if (!p || p.player !== currentPlayer) return false;
+			(evt.cards2 || evt.cards || []).forEach(addCard);
+		});
+	}
+	game.getGlobalHistory("cardMove", (evt) => {
+		if (evt.name != "cardsDiscard") return false;
+		const p = evt.getParent("phase");
+		if (!p || p.player !== currentPlayer) return false;
+		(evt.cards || []).forEach(addCard);
+	});
+	return cards;
+}
 
 export const skills = {
 	qunyou_shenshi: {
@@ -7300,7 +7326,7 @@ export const skills = {
 		trigger: { source: "damageBegin4" },
 		direct: true,
 		ai: {
-			order: 1,
+			order: 5,
 			result: { player: 1 },
 		},
 		mark: true,
@@ -8206,10 +8232,19 @@ export const skills = {
 				},
 			},
 		},
-		ai: {
-			order: 5,
-			result: { target: 1 },
+	ai: {
+		order: 5,
+		result: { player: 1 },
+		check(event, player) {
+			const handCards = player.getCards("h");
+			if (!handCards.length) return 0;
+			const totalValue = handCards.reduce((sum, c) => sum + get.value(c, player), 0);
+			const avgValue = totalValue / handCards.length;
+			const lostHp = player.maxHp - player.hp;
+			if (avgValue < 5 && lostHp > handCards.length) return 1;
+			return 0;
 		},
+	},
 	},
 	qunyou_zisheng: {
 		audio: 2,
@@ -8859,10 +8894,10 @@ qunyou_zhoujie: {
     audio: 2,
     enable: "phaseUse",
     limited: true,
-    ai: {
-        order: 7,
-        result: { player: 1 },
-    },
+	ai: {
+		order: 5,
+		result: { player: 1 },
+	},
     filter(event, player) {
         const range = player.getAttackRange();
         if (range <= 0) return false;
@@ -9175,5 +9210,186 @@ qunyou_shifu: {
             },
         },
     },
+},
+qunyou_zhenpan: {
+	audio: 2,
+	trigger: { player: "phaseZhunbeiBegin" },
+	async content(event, trigger, player) {
+		const Y = player.hp - 1;
+		if (player.countCards("he") < 1 || player.countCards("he") < Y) return;
+        await player.loseHp();
+        const X = player.hp;
+		const toDiscard = await player.chooseToDiscard("he", true, X).set("prompt", `镇叛：弃置${X}张牌`).forResult();
+		if (!toDiscard.bool || !toDiscard.cards.length) return;
+		const suits = [...new Set(toDiscard.cards.map(c => get.suit(c, player)).filter(s => lib.suit.includes(s)))];
+		if (!suits.length) return;
+		const targetResult = await player.chooseTarget("镇叛：选择一名其他角色观看其手牌", true, (card, p, t) => t !== p).set("ai", (target) => {
+			const player = _status.event.player;
+			if (get.attitude(player, target) > 0) return 0;
+			return target.countCards("h");
+		}).forResult();
+		if (!targetResult.bool || !targetResult.targets.length) return;
+		const target = targetResult.targets[0];
+		await player.viewHandcards(target);
+		target.addTempSkill("qunyou_zhenpan_ban", { global: "phaseJieshuAfter" });
+		target.storage.qunyou_zhenpan_ban = suits;
+	},
+	ai: {
+		order: 5,
+		result: { player: 1 },
+		check(event, player) {
+			if (player.hp < 1) return 0;
+			if (player.hp === 1) {
+				const hasPeach = player.getCards("h").some(c => get.name(c) === "tao");
+				const hasJiu = player.getCards("h").some(c => get.name(c) === "jiu");
+				if (!hasPeach && !hasJiu) return 0;
+			}
+			if (player.countCards("he") > player.hp - 1) return 1;
+			return 0;
+		},
+	},
+},
+qunyou_zhenpan_ban: {
+	charlotte: true,
+	onremove: true,
+	mod: {
+		cardEnabled(card, player) {
+			const suits = player.storage.qunyou_zhenpan_ban;
+			if (suits?.length && suits.includes(get.suit(card))) return false;
+		},
+		cardRespondable(card, player) {
+			const suits = player.storage.qunyou_zhenpan_ban;
+			if (suits?.length && suits.includes(get.suit(card))) return false;
+		},
+		cardSavable(card, player) {
+			const suits = player.storage.qunyou_zhenpan_ban;
+			if (suits?.length && suits.includes(get.suit(card))) return false;
+		},
+	},
+	mark: true,
+	marktext: "镇",
+	intro: { content: (storage) => "本回合不能使用或打出" + (storage || []).map(s => get.translation(s)).join("、") + "的牌" },
+},
+qunyou_kangbian: {
+	audio: 2,
+	trigger: { player: "useCardToPlayer", global: "useCardToPlayer" },
+	usable: 1,
+	filter(event, player) {
+		if (event.targets.length !== 1) return false;
+		if (event.player === player && event.target !== player) return true;
+		if (event.target === player && event.player !== player && get.name(event.card) === "sha") return true;
+		return false;
+	},
+	async content(event, trigger, player) {
+		const target = trigger.player === player ? trigger.target : trigger.player;
+		if (!target.countCards("h")) return;
+		const handCards = player.getCards("h");
+		const turnDiscards = getTurnDiscardCards();
+		const dialogSections = ["抗辩：选择拼点牌"];
+		if (handCards.length) dialogSections.push("手牌", handCards);
+		if (turnDiscards.length) dialogSections.push("本回合弃牌堆", turnDiscards);
+		const chooseResult = await player.chooseButton(dialogSections, true).set("ai", (button) => {
+			return 6 - get.value(button.link, player);
+		}).forResult();
+		if (!chooseResult.bool || !chooseResult.links.length) return;
+		const selectedCard = chooseResult.links[0];
+		const compare = player.chooseToCompare(target);
+		compare.set("fixedResult", { [player.playerid]: selectedCard });
+		const { bool: win } = await compare.forResult();
+		if (win) {
+			const gainTargets = await player.chooseTarget(
+				"抗辩：选择至多三名其他角色，获得其各一张手牌",
+				[1, 3],
+				(card, p, t) => t !== player && t.countCards("h") > 0
+			).set("ai", (target) => {
+				const player = _status.event.player;
+				if (get.attitude(player, target) < 0) return target.countCards("h");
+				return 0;
+			}).forResult();
+			if (gainTargets.bool && gainTargets.targets.length) {
+				const gainedCards = [];
+				for (const t of gainTargets.targets) {
+					const cardResult = await player.gainPlayerCard(t, "h", true).forResult();
+					if (cardResult.bool && cardResult.cards.length) {
+						gainedCards.push({ target: t, card: cardResult.cards[0] });
+					}
+				}
+				for (const { target: t } of gainedCards) {
+					if (player.countCards("h") > 0) {
+						const giveResult = await player.chooseCard("h", true, `抗辩：交给${get.translation(t)}一张牌`).set("ai", (card) => {
+							return -get.value(card);
+						}).forResult();
+						if (giveResult.bool && giveResult.cards.length) {
+							await player.give(giveResult.cards, t);
+						}
+					}
+				}
+			}
+		} else {
+			await player.loseHp();
+		}
+	},
+	group: "qunyou_kangbian_pindian",
+	ai: {
+		order: 5,
+		result: { player: 1 },
+		check(event, player) {
+			const target = event.player === player ? event.target : event.player;
+			if (get.attitude(player, target) >= 0) return 0;
+			const hasBig = player.getCards("h").some(c => get.number(c) >= 10);
+			return hasBig ? 1 : 0;
+		},
+	},
+},
+qunyou_kangbian_pindian: {
+	name: "抗辩·拼点",
+	direct: true,
+	trigger: { global: "chooseToCompareBegin" },
+	filter(event, player) {
+		if (event.player !== player && !event.targets?.includes(player) && event.target !== player) return false;
+		if (event.fixedResult?.[player.playerid]) return false;
+		return getTurnDiscardCards().length > 0;
+	},
+	async content(event, trigger, player) {
+		const handCards = player.getCards("h");
+		const turnDiscards = getTurnDiscardCards();
+		const dialogSections = ["抗辩·拼点：选择拼点牌"];
+		if (handCards.length) dialogSections.push("手牌", handCards);
+		if (turnDiscards.length) dialogSections.push("本回合弃牌堆", turnDiscards);
+		const result = await player.chooseButton(dialogSections, true).set("ai", (button) => {
+			return 6 - get.value(button.link, player);
+		}).forResult();
+		if (result.bool && result.links.length) {
+			trigger.fixedResult = trigger.fixedResult || {};
+			trigger.fixedResult[player.playerid] = result.links[0];
+		}
+	},
+},
+qunyou_yinshan: {
+	audio: 2,
+	trigger: { player: "phaseJieshuBegin" },
+	async content(event, trigger, player) {
+		const handCards = player.getCards("h");
+		if (handCards.length) {
+			await player.discard(handCards);
+		}
+		const lostHp = player.maxHp - player.hp;
+		if (lostHp > 0) {
+			await player.draw(lostHp);
+		}
+	},
+	ai: {
+		order: 5,
+		result: { player: 1 },
+		check(event, player) {
+			const handCards = player.getCards("h");
+			if (!handCards.length) return 0;
+			const totalValue = handCards.reduce((sum, c) => sum + get.value(c, player), 0);
+			const avgValue = totalValue / handCards.length;
+			const lostHp = player.maxHp - player.hp;
+			if (avgValue < 5 && lostHp > handCards.length) return 1;
+			return 0;
+		},
+	},
 },
 }
