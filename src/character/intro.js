@@ -39,5 +39,6 @@ export const characterIntro = {
 	qunyou_weiguanyu: "设计：祭主<br>评价：很有新意，但是卡最大点了怎么办，也是一个待改进名单",
 	qunyou_zhangyan: "设计：终汐舷<br>评价：阴，但是很爽",
 	shanhe_zhangjiao: "设计：玖宴<br>评价：太好玩了，起义的强度是真高，另外ai比较笨，不会凑三类型，因此给多点人，可以很顺利获得起义",
-	shanhe_luzhi:"设计：魁梧影<br>评价：需要控血线，封牌的确保证了强度，虽然是个摸牌白",
+	shanhe_luzhi: "设计：魁梧影<br>评价：需要控血线，封牌的确保证了强度，虽然是个摸牌白",
+	shanhe_dongzhuo: "设计：玖宴<br>评价：一开始还以为只能配刘协，直到我发现扶主能重置，这下真成大汉忠良了",
 };

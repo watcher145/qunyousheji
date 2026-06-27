@@ -58,4 +58,6 @@ export const characterTranslate = {
 	shanhe_zhangjiao_prefix: "朔",
 	shanhe_luzhi: "朔卢植",
 	shanhe_luzhi_prefix: "朔",
+	shanhe_dongzhuo: "梦董卓",
+	shanhe_dongzhuo_prefix: "梦",
 };
