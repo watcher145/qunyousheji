@@ -253,4 +253,12 @@ export const skillTranslate = {
 	qunyou_qinzhan:"勤战",
 	qunyou_qinzhan_info:"每回合结束时，若本回合有存活角色受到过【杀】造成的伤害，你可以使用一张【杀】；其他角色受到至少2点的单次伤害后，你可以减少一点体力上限并令“绮武”的一个数字+1。",
 	qunyou_qinzhan_attack:"勤战"
+	qunyou_yongli: "拥立",
+	qunyou_yongli_info: `锁定技，每轮开始时，你选择一名其他角色，令其获得${get.poptip("tianming")}直到本轮结束，若其武将牌上有${get.poptip("tianming")}，则改为令其获得${get.poptip("twzhuiting")}直到本轮结束。若\u201C拥立\u201D角色死亡，你获得${get.poptip("qunyou_yunmo")}并失去\u201C扶主\u201D直到你下次发动\u201C拥立\u201D。`,
+	qunyou_taoning: "讨佞",
+	qunyou_taoning_info: "每回合限一次，你使用基本牌指定目标或成为无花色牌的目标时，你可以摸两张牌或对当前回合角色造成1点伤害。",
+	qunyou_fuzhu: "扶主",
+	qunyou_fuzhu_info: "每回合限一次，当你造成伤害后，你可以摸两张牌并交给\u201C拥立\u201D角色两张牌，然后令当前回合角色的一个描述含有出牌阶段限一次的技能视为未发动过。",
+	qunyou_yunmo: "陨没",
+	qunyou_yunmo_info: "锁定技，你受到锦囊牌造成的伤害加+1。",
 };
