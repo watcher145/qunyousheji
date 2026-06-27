@@ -2854,7 +2854,7 @@ export const skills = {
 				},
 			},
 			reset: {
-				trigger: { global: "phaseBegin" },
+	trigger: { global: "roundStart" },
 				forced: true,
 				popup: false,
 				content(event, trigger, player) {
@@ -9390,6 +9390,121 @@ qunyou_yinshan: {
 			if (avgValue < 5 && lostHp > handCards.length) return 1;
 			return 0;
 		},
+	},
+},
+qunyou_yongli: {
+	audio: 2,
+	trigger: { global: "roundStart" },
+	forced: true,
+	init(player, skill) {
+		player.addSkill(skill + "_die");
+	},
+	onremove(player, skill) {
+		player.removeSkill(skill + "_die");
+	},
+	async content(event, trigger, player) {
+		if (player.hasSkill("qunyou_yunmo")) player.removeSkill("qunyou_yunmo");
+		if (!player.hasSkill("qunyou_fuzhu")) player.addSkill("qunyou_fuzhu");
+		const { result } = await player.chooseTarget(
+			"拥立",
+			"选择一名其他角色",
+			(card, player, target) => target != player
+		);
+		if (!result?.targets?.length) return;
+		const target = result.targets[0];
+		if (target.hasSkill("tianming")) {	
+			target.addTempSkill("twzhuiting", "roundEnd");
+		} else {
+			target.addTempSkill("tianming", "roundEnd");
+		}
+		player.storage.qunyou_yongli_target = target;
+		target.addTempSkill("qunyou_yongli_mark", "roundEnd");
+	},
+	subSkill: {
+		die: {
+			trigger: { global: "dieAfter" },
+			forced: true,
+			filter(event, player) {
+				return player.storage.qunyou_yongli_target?.playerid == event.player.playerid;
+			},
+			async content(event, trigger, player) {
+				delete player.storage.qunyou_yongli_target;
+				player.addSkill("qunyou_yunmo");
+				player.removeSkill("qunyou_fuzhu");
+			},
+		},
+		mark: {
+			mark: true,
+			intro: { content: "被董相国拥立了" },
+		},
+	},
+},
+qunyou_taoning: {
+	audio: 2,
+	trigger: { player: "useCardToPlayer" },
+	usable: 1,
+	filter(event, player) {
+		if (event.targets.length != 1) return false;
+		if (event.player == player && get.type(event.card) == "basic") return true;
+		return event.target == player && get.suit(event.card) == "none";
+	},
+	async content(event, trigger, player) {
+		const { result } = await player.chooseControl("摸两张牌", "造成1点伤害")
+			.set("prompt", get.prompt("qunyou_taoning"))
+			.set("ai", () => Math.random() < 0.5 ? "摸两张牌" : "造成1点伤害");
+		if (result.control == "摸两张牌") await player.draw(2);
+		else await _status.currentPlayer.damage(1, player);
+	},
+},
+qunyou_fuzhu: {
+	audio: 2,
+	trigger: { source: "damageAfter" },
+	usable: 1,
+	filter(event, player) {
+		return player.storage.qunyou_yongli_target?.isIn();
+	},
+	async content(event, trigger, player) {
+		await player.draw(2);
+		const target = player.storage.qunyou_yongli_target;
+		const result = await player.chooseCard({
+			position: "h",
+			selectCard: [2, 2],
+			forced: true,
+			prompt: "选择两张牌交给" + get.translation(target),
+		}).set("ai", card => get.value(card)).forResult();
+		if (result.cards?.length) {
+			await player.give(result.cards, target);
+		}
+		const current = _status.currentPhase;
+		const allSkills = current.getSkills(null, false, false);
+		const skills = allSkills.filter(id => {
+			const info = lib.translate[id + "_info"];
+			const count = get.skillCount(id, current);
+			const triggerCount = current.getStat("triggerSkill")[id];
+			return info && info.match(/"?出牌阶段限一次/g) &&
+				(get.skillCount(id, current) > 0 || current.getStat("triggerSkill")[id] > 0);
+		});
+		if (skills.length) {
+		const controlResult = await player.chooseControl(skills, "cancel2")
+			.set("prompt", "为" + get.translation(current) + "选择一个技能重置为未发动")
+			.set("ai", () => skills[0])
+			.forResult();
+			if (controlResult.control != "cancel2") {
+				delete current.getStat("skill")[controlResult.control];
+				delete current.getStat("triggerSkill")[controlResult.control];
+			}
+		}
+	},
+},
+qunyou_yunmo: {
+	audio: 2,
+	trigger: { player: "damageBegin2" },
+	forced: true,
+	filter(event, player) {
+		return get.type(event.card) == "trick";
+	},
+	async content(event, trigger, player) {
+		trigger.num++;
 	},
 },
 }
