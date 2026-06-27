@@ -304,5 +304,37 @@ export const characterData = {
 		maxHp: 5,
 		hujia: 0,
 		skills: ["qunyou_sc1_guanyong","qunyou_sc1_pingzheng"],
+	},
+	qunyou_zhangyan: {
+        sex: "male",
+		group: "qun",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["qunyou_qingjie","qunyou_zhoujie"],
+	},
+	shanhe_zhangjiao: {
+		sex: "male",
+		group: "qun",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["qunyou_chuandao","qunyou_muzhong"],
+	},
+	shanhe_luzhi: {
+		sex: "male",
+		group: "qun",
+		hp: 3,
+		maxHp: 6,
+		hujia: 0,
+		skills: ["qunyou_zhenpan","qunyou_kangbian","qunyou_yinshan"],
+	},
+	qunyou_lvlingqi:{
+		sex: "female",
+		group: "qun",
+		hp: 5,
+		maxHp: 5,
+		hujia: 0,
+		skills: ["qunyou_qiwu","qunyou_qinzhan"],
 	}
 };

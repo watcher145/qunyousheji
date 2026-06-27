@@ -2,6 +2,7 @@
  * 技能翻译：技能名 + skill_id + "_info"
  * 例：my_skill: "技能", "my_skill_info": "技能描述……"
  */
+import { get } from "noname";
 export const skillTranslate = {
 	qunyou_youlong: "游龙",
 	qunyou_youlong_info:
@@ -222,8 +223,34 @@ export const skillTranslate = {
 	qunyou_hanguo_info:
 		"锁定技，你的手牌始终全部明置。你使用的基本牌或普通锦囊牌若参与连招，则你可再次使用之。",
 	qunyou_sc1_guanyong: "冠勇",
+	qunyou_sc1_guanyong_mark: "冠勇",
 	qunyou_sc1_guanyong_info:
-		"<b>锁定技</b>，每回合各角色限一次，一名角色受到伤害后，你获得其一张手牌(为你则改为展示一张手牌)，若此牌为：红色牌，你摸一张牌；基本牌，你令此牌造成的伤害或回复的效果+1；乘势：你使用或弃置此牌并回复一点体力(无距离和次数限制)。",
+		"<b>锁定技</b>，每轮每名角色限一次，一名角色受到伤害后，你获得其一张手牌(为你则改为展示一张手牌)，若此牌为：红色牌，你摸一张牌；基本牌，你令此牌造成的伤害或回复的效果+1；乘势：你使用或弃置此牌并回复一点体力(无距离和次数限制)。",
+	qunyou_qingjie: "轻捷",
+	qunyou_qingjie_info: "你使用基本牌后，你可以重铸任意张手牌；使用锦囊牌后，你可以弃置一名其他角色一张牌；使用装备牌后，你可以视为使用一张【杀】。",
+	qunyou_zhoujie: "骤劫",
+	qunyou_zhoujie_info: "限定技，出牌阶段，你可以获得你攻击范围内任意名其他角色区域内合计X张牌（X为你的攻击范围）。",
 	qunyou_sc1_pingzheng: "平征",
 	qunyou_sc1_pingzheng_info: "出牌阶段开始时，你可以失去一点体力并令至多两名角色依次选择一项：1.令你摸一张牌并视为对其使用【决斗】；2.交给你两张相同颜色的手牌。",
+	qunyou_chuandao: "传道",
+	qunyou_chuandao_info: "出牌阶段，你可以将任意张手牌分配给其他角色并记录这些牌的花色。你以此法交出四种花色的牌后，若本回合你未因“传道”而摸过牌，你清除记录并摸X张牌（X为你本回合“传道”过的角色数且至多为3）。",
+	qunyou_qiyi: "起义",
+	qunyou_qiyi_info: "每回合各限一次，你于摸牌阶段外获得牌后，摸两张牌并分配给至多两名其他角色两张牌；你于弃牌阶段外失去牌后，对至多两名其他角色各造成1点雷电伤害。",
+	qunyou_shifu: "施符",
+	qunyou_shifu_info: "<b>锁定技</b>，其他角色于其回合外获得你的牌时，将牌置于其武将牌上称为“符”并令其回复1点体力；其回合开始时，交给你等量的牌（不足则全给），然后获得这些“符”并失去1点体力。",
+	qunyou_muzhong: "募众",
+	qunyou_muzhong_info: `<b>限定技</b>，出牌阶段，你可以令任意名对其发动过"传道"的角色依次展示并交给你一张牌，若你以此法获得的牌包含三种类型，你获得${get.poptip("qunyou_qiyi")}，否则你获得${get.poptip("qunyou_shifu")}。`,
+	qunyou_zhenpan: "镇叛",
+	qunyou_zhenpan_info: "准备阶段，你可以失去1点体力，然后你弃置X张牌并选择一名其他角色观看其手牌（X为你的体力值），该角色本回合不能使用或打出与你弃置花色相同的牌。",
+	qunyou_zhenpan_ban: "镇叛·禁",
+	qunyou_kangbian: "抗辩",
+	qunyou_kangbian_info: "每回合限一次，你使用牌指定唯一目标或你成为【杀】的唯一目标时，你可与对方拼点，若你赢，你获得至多三名其他角色的各一张手牌，然后依次交给这些角色各一张牌；若你没赢，你失去1点体力。你可以使用本回合弃牌堆中的牌作为拼点牌。",
+	qunyou_kangbian_pindian: "抗辩·拼点",
+	qunyou_yinshan: "隐山",
+	qunyou_yinshan_info: "结束阶段，你可以弃置所有手牌并摸已损失体力值数的牌。",
+	qunyou_qiwu:"绮武",
+	qunyou_qiwu_info:"锁定技，你使用伤害牌指定其他角色为目标后，其须弃置1张基本牌，否则不能响应此牌且对其造成的伤害+1。你获得其他角色以此法弃置的【杀】。",
+	qunyou_qinzhan:"勤战",
+	qunyou_qinzhan_info:"每回合结束时，若本回合有存活角色受到过【杀】造成的伤害，你可以使用一张【杀】；其他角色受到至少2点的单次伤害后，你可以减少一点体力上限并令“绮武”的一个数字+1。",
+	qunyou_qinzhan_attack:"勤战"
 };

@@ -43,6 +43,7 @@ export const characterTranslate = {
 	qunyou_yang_wang: "羊徽瑜&王元姬",
 	qunyou_xian_hua: "曹宪&曹华",
 	qunyou_sunce: "孙策",
+	qunyou_lvlingqi: "吕玲绮",
 	qunyou_mojiangwei: "魔姜维",
 	qunyou_mojiangwei_prefix: "魔",
 	qunyou_guohuai: "谋郭淮",
@@ -53,4 +54,9 @@ export const characterTranslate = {
 	qunyou_wuzhangfei_prefix: "武",
 	qunyou_weiguanyu: "威关羽",
 	qunyou_weiguanyu_prefix: "威",
+	qunyou_zhangyan: "张燕",
+	shanhe_zhangjiao: "朔张角",
+	shanhe_zhangjiao_prefix: "朔",
+	shanhe_luzhi: "朔卢植",
+	shanhe_luzhi_prefix: "朔",
 };

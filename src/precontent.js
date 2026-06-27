@@ -26,7 +26,11 @@ export function precontent() {
 	});
 	lib.namePrefix.set("威", {
 		color: "#ff9966",
-        nature: "glodenmm"
+        nature: "glodenmm",
+	});
+	lib.namePrefix.set("朔", {
+		color: "#dbdbdb",
+        nature: "glodenmm",
 	});
 	lib.dynamicTranslate ??= {};
 	for (const key of Object.keys(dynamicTranslates)) {
