@@ -252,7 +252,6 @@ export const skillTranslate = {
 	qunyou_qiwu_info:"锁定技，你使用伤害牌指定其他角色为目标后，其须弃置1张基本牌，否则不能响应此牌且对其造成的伤害+1。你获得其他角色以此法弃置的【杀】。",
 	qunyou_qinzhan:"勤战",
 	qunyou_qinzhan_info:"每回合结束时，若本回合有存活角色受到过【杀】造成的伤害，你可以使用一张【杀】；其他角色受到至少2点的单次伤害后，你可以减少一点体力上限并令“绮武”的一个数字+1。",
-	qunyou_qinzhan_attack:"勤战"
 	qunyou_yongli: "拥立",
 	qunyou_yongli_info: `锁定技，每轮开始时，你选择一名其他角色，令其获得${get.poptip("tianming")}直到本轮结束，若其武将牌上有${get.poptip("tianming")}，则改为令其获得${get.poptip("twzhuiting")}直到本轮结束。若\u201C拥立\u201D角色死亡，你获得${get.poptip("qunyou_yunmo")}并失去\u201C扶主\u201D直到你下次发动\u201C拥立\u201D。`,
 	qunyou_taoning: "讨佞",
