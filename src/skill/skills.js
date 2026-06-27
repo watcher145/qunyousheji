@@ -9391,6 +9391,173 @@ qunyou_yinshan: {
 			return 0;
 		},
 	},
+},// 绮武
+qunyou_qiwu: {
+    audio: 2,
+    trigger: { player: "useCardToPlayered" },
+    forced: true,
+	mark: true,
+	marktext: "绮",
+	intro: {
+			content(storage,player) {
+				const x = player.storage.qunyou_qiwu_X ?? 1;
+				const y = player.storage.qunyou_qiwu_Y ?? 1;
+				return `弃置${x}张基本牌，造成的伤害 +${y}`;
+			},
+		},
+    // 过滤：你使用的伤害牌指定其他角色为目标
+    filter(event, player) {
+        if (event.target === player || !event.target.isIn()) return false;
+        return get.tag(event.card, "damage") > 0;
+    },
+    async content(event, trigger, player) {
+        const target = trigger.target;
+        
+				if(player.storage.qunyou_qiwu_X === undefined)
+				{
+					player.storage.qunyou_qiwu_X = 1;
+				}
+				if(player.storage.qunyou_qiwu_Y === undefined)
+				{
+					player.storage.qunyou_qiwu_Y = 1;
+				}
+
+        // 动态读取当前的数字，若未被“勤战”加过点，默认值为 1
+        const numX = player.storage.qunyou_qiwu_X;
+        const numY = player.storage.qunyou_qiwu_Y;
+
+        player.logSkill("qunyou_qiwu", target);
+
+        // 其须弃置 X 张基本牌
+        const result = await target.chooseToDiscard(
+            `绮武：请弃置 ${numX} 张基本牌，否则此牌不能响应且对其造成的伤害 +${numY}`,
+            numX, "he", 
+            (card, target) => get.type(card, target) === "basic"
+        ).set("ai", (card) => 6 - get.value(card)).forResult();
+
+        // 检查是否足额弃置了基本牌
+        if (result?.bool && result.cards?.length === numX) {
+            // 找出其中是【杀】的牌
+            const shas = result.cards.filter(card => get.name(card, false) === "sha" && get.position(card, true) === "d");
+            if (shas.length > 0) {
+                await player.gain(shas, "gain2");
+            }
+        } else {
+            // 否则：不能响应此牌
+            trigger.directHit.add(target);
+            // 且对其造成的伤害 + Y
+            // 利用 useCardToPlayered 时机，将增伤逻辑挂载到对应的伤害事件前置或此牌结算中
+            target.addTempSkill("qunyou_qiwu_buff");
+            target.storage.qunyou_qiwu_buff = (target.storage.qunyou_qiwu_buff || 0) + numY;
+        }
+    },
+    subSkill: {
+        buff: {
+            charlotte: true,
+            trigger: { player: "damageBegin4" },
+            forced: true,
+            popup: false,
+            filter(event, player) {
+                return event.getParent().target === player && player.storage.qunyou_qiwu_buff > 0;
+            },
+            content(event, trigger, player) {
+                trigger.num += player.storage.qunyou_qiwu_buff;
+                delete player.storage.qunyou_qiwu_buff;
+                player.removeSkill("qunyou_qiwu_buff");
+            }
+        }
+    }
+},
+
+// 勤战
+qunyou_qinzhan: {
+	audio: 2,
+	group: ["qunyou_qinzhan_attack"],
+	trigger: {
+		global: ["damageAfter"]
+	},
+	filter: function(event, player, name) {
+
+		if (name === "damageAfter") {
+			return event.player !== player && event.num >= 2;
+		}
+		return false;
+	},
+	direct: true,
+	content: async function(event, trigger, player) {
+		const name = event.triggername;
+
+		if (name === "damageAfter") {
+			const result = await player.chooseBool(
+				get.prompt("qunyou_qinzhan"),
+				"是否减少1点体力上限，并令“绮武”的一个数字+1？"
+			).set("ai", () => {
+				return player.maxHp > 2;
+			}).forResult();
+			
+			if (result && result.bool) {
+				player.logSkill("qunyou_qinzhan", trigger.player);
+				await player.loseMaxHp(1);
+				
+				if(player.storage.qunyou_qiwu_X === undefined)
+				{
+					player.storage.qunyou_qiwu_X = 1;
+				}
+				if(player.storage.qunyou_qiwu_Y === undefined)
+				{
+					player.storage.qunyou_qiwu_Y = 1;
+				}
+				
+				const choice = await player.chooseControl("弃置基本牌数", "对其造成伤害值").set("prompt", "勤战：请选择令〖绮武〗的哪一个数字+1？").forResult();
+				
+				if (choice.control === "弃置基本牌数") {
+					player.storage.qunyou_qiwu_X++;
+					game.log(player, "使〖绮武〗的数字", "#y弃置基本牌数", "+1");
+				} else {
+					player.storage.qunyou_qiwu_Y++;
+					game.log(player, "使〖绮武〗的数字", "#y对其造成伤害值", "+1");
+				}
+				
+				// 3. 更新技能标记（如果有标记显示的话）
+				//player.updateMarks("qunyou_qiwu");
+			}
+		}
+	}
+},
+qunyou_qinzhan_attack: {
+	audio: 2, // 技能语音数量，可根据实际调整
+	charlotte: true,
+    trigger: {
+        global: "phaseJieshuBegin", // 触发时机：任意角色的结束阶段开始时
+    },
+	filter: function(event, player) {
+        if (!player.hasCard(card => player.canUse(card, player), "hs") && !player.hasCard({name: "sha", isCard: true}, "hs")) {
+        }
+        
+        // 2. 核心逻辑：过滤本回合所有角色的伤害历史记录
+        return game.hasPlayer(function(current) {
+            // 获取该角色本回合受到的伤害历史
+            const history = current.getHistory("damage");
+            return history.some(evt => {
+                // 判断条件：伤害是由【杀】（sha）造成的
+                return evt.card && evt.card.name === "sha";
+            });
+        });
+    },
+    check: function(event, player) {
+        // AI 检查：判断当前是否有值得使用【杀】的目标
+        return player.hasUseTarget({ name: "sha", isCard: true });
+    },
+    content: async function(event, trigger, player) {
+        // 提示发动技能，并引导使用一张【杀】
+        await player.chooseToUse({
+            prompt: "是否发动【勤战】，使用一张【杀】？",
+            filterCard: { name: "sha" }, // 只能选名字为【杀】的牌
+            position: "hs" // 从手牌或装备区选择
+        }).forResult();
+    }
+}
+
 },
 qunyou_yongli: {
 	audio: 2,

@@ -36,6 +36,8 @@ const characterSortTranslate = {
 
 const characterSort = {
 	qunyou_chenjunxieshi: ["qunyou_xiedaoyun", "qunyou_xiean", "qunyou_xiexuan", "qunyou_xielingyun", "qunyou_xieshi"],
+	qunyou_xingheshuo: ["shanhe_zhangjiao", "shanhe_luzhi"],
+	qunyou_sinatsuriku: ["qunyou_yang_wang","qunyou_xian_hua","qunyou_sunce","qunyou_lvlingqi"],
 	qunyou_xingheshuo: ["shanhe_zhangjiao", "shanhe_luzhi", "shanhe_dongzhuo"],
 	qunyou_sinatsuriku: ["qunyou_yang_wang","qunyou_xian_hua","qunyou_sunce"],
 	qunyou_gaijin: ["qunyou_caocao", "qunyou_cbpzhaoyun", "qunyou_zhugeliang"],
