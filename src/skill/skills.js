@@ -9556,8 +9556,6 @@ qunyou_qinzhan_attack: {
             position: "hs" // 从手牌或装备区选择
         }).forResult();
     }
-}
-
 },
 qunyou_yongli: {
 	audio: 2,
