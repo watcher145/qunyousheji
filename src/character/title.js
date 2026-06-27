@@ -41,4 +41,5 @@ export const characterTitle = {
 	qunyou_zhangyan: "轻勇骇势",
 	shanhe_zhangjiao: "太平道人",
 	shanhe_luzhi: "桢干质烈",
+	shanhe_dongzhuo: "肃佞的辅相",
 };

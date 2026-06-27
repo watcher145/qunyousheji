@@ -331,10 +331,18 @@ export const characterData = {
 	},
 	qunyou_lvlingqi:{
 		sex: "female",
+	  group: "qun",
+		hp: 5,
+		maxHp: 5,
+		hujia: 0, 
+		skills: ["qunyou_qiwu","qunyou_qinzhan"],
+	},
+  shanhe_dongzhuo: {
+		sex: "male",
 		group: "qun",
 		hp: 5,
 		maxHp: 5,
-		hujia: 0,
-		skills: ["qunyou_qiwu","qunyou_qinzhan"],
-	}
+		hujia: 0,  
+		skills: ["qunyou_yongli","qunyou_taoning","qunyou_fuzhu"],
+	},
 };
