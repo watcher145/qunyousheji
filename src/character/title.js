@@ -42,4 +42,10 @@ export const characterTitle = {
 	shanhe_zhangjiao: "太平道人",
 	shanhe_luzhi: "桢干质烈",
 	shanhe_dongzhuo: "肃佞的辅相",
+	qunyou_lvyi: "权伥",
+	yachaiclan_cuiyan: "德音孔昭",
+	yachaiclan_wangxiang: "伐冰之肇",
+	yachaiclan_diaochan: "冲波逆折",
+	yachaiclan_wuyi: "奉书献马",
+	yachaiclan_xunyu: "芳兰生门",
 };

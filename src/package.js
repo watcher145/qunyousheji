@@ -30,17 +30,17 @@ function cloneAndPatchCards() {
 const characterSortTranslate = {
 	qunyou_chenjunxieshi: "问鼎•陈郡谢氏",
 	qunyou_xingheshuo: "山河如梦•朔",
+	yachaiclan: "崖柴的族武将设",
 	qunyou_sinatsuriku:"西夏笠谷",
-	qunyou_gaijin:"需要改进的设计",
+	qunyou_gaijin:"需要改进的设计(请勿玩）",
 };
 
 const characterSort = {
 	qunyou_chenjunxieshi: ["qunyou_xiedaoyun", "qunyou_xiean", "qunyou_xiexuan", "qunyou_xielingyun", "qunyou_xieshi"],
-	qunyou_xingheshuo: ["shanhe_zhangjiao", "shanhe_luzhi"],
+    qunyou_xingheshuo: ["shanhe_zhangjiao", "shanhe_luzhi", "shanhe_dongzhuo"],
+	yachaiclan: ["yachaiclan_cuiyan", "yachaiclan_wangxiang", "yachaiclan_diaochan", "yachaiclan_wuyi", "yachaiclan_xunyu"],
 	qunyou_sinatsuriku: ["qunyou_yang_wang","qunyou_xian_hua","qunyou_sunce","qunyou_lvlingqi"],
-	qunyou_xingheshuo: ["shanhe_zhangjiao", "shanhe_luzhi", "shanhe_dongzhuo"],
-	qunyou_sinatsuriku: ["qunyou_yang_wang","qunyou_xian_hua","qunyou_sunce"],
-	qunyou_gaijin: ["qunyou_caocao", "qunyou_cbpzhaoyun", "qunyou_zhugeliang"],
+	qunyou_gaijin: ["qunyou_cbpzhaoyun", "qunyou_zhugeliang"],
 };
 
 /**
