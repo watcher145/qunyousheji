@@ -72,4 +72,13 @@ export const characterTranslate = {
 	yachaiclan_wuyi_prefix: "族",
 	yachaiclan_xunyu: "族荀彧",
 	yachaiclan_xunyu_prefix: "族",
+	yachaiclan_luxun: "族陆逊",
+	yachaiclan_luxun_prefix: "族",
+	yachaiclan_lukang: "族陆抗",
+	yachaiclan_lukang_prefix: "族",
+	yachaiclan_luji: "族陆机",
+	yachaiclan_luji_prefix: "族",
+	yachaiclan_luyun: "族陆云",
+	yachaiclan_luyun_prefix: "族",
+	qunyou_zhouyu: "周瑜",
 };
