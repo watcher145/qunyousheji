@@ -32,6 +32,12 @@ export function precontent() {
 		color: "#dbdbdb",
         nature: "glodenmm",
 	});
+	// 来自活动武将扩展
+	lib.poptip.add({
+		name: "奋武技",
+		id: "rule_shiwuSkill",
+		info: "奋武技的使用次数为本轮你造成和受到的伤害值+1，至多为5。",
+	});
 	lib.dynamicTranslate ??= {};
 	for (const key of Object.keys(dynamicTranslates)) {
 		if (!lib.dynamicTranslate[key]) {
