@@ -317,4 +317,32 @@ export const skillTranslate = {
 	qunyou_guanwei_info:"每回合各花色限一次，一名角色的出牌阶段结束后，若其此阶段使用过至少两张牌且这些牌花色均相同，你可以弃置一张牌，令其摸两张牌并立即执行一个额外的出牌阶段；其此回合结束时，你摸X张牌。(X为其本回合执行出牌阶段数-1）",
 	qunyou_gongqing:"公清",
 	qunyou_gongqing_info:"锁定技，当你受到伤害时，若伤害来源的攻击范围：小于3且你不是本回合首次受到伤害，防止此伤害；大于3，此伤害+1。",
+	yachai_shangwen: "尚文",
+	yachai_shangwen_info:
+		"其他角色的结束阶段，若其于本回合未造成过伤害，你可以将至多X张牌交给其。（X为你的体力值）",
+	yachai_gailan: "该览",
+	yachai_gailan_info:
+		"出牌阶段限一次，你可以弃置X张牌并观看一名角色的手牌，然后用至多X张手牌交换其中等量张牌。（X为你的体力值）",
+	yachai_yishuang: "移霜",
+	yachai_yishuang_info:
+		"当一张点数未被记录过的牌造成伤害后，你可以记录此牌的点数，并令一名角色重铸至多三张牌。",
+	yachai_baizhou: "柏舟",
+	yachai_baizhou_info:
+		"当你使用牌造成伤害或受到牌造成的伤害时，你可以令此牌点数+3或-3（最小为A，最大为K）。",
+	yachai_jingui: "尽规",
+	yachai_jingui_mark: "尽规",
+	yachai_jingui_info:
+		"一名角色的回合内，当其区域内首次有牌进入弃牌堆后，你可以令其获得其中一张，若如此做，其于本回合内使用此牌时无距离和次数限制。",
+	yachai_jiegai: "节概",
+	yachai_jiegai_info:
+		"锁定技，每回合首次成为其他角色使用牌的目标后，若你不在其攻击范围内，此牌对你无效。",
+	yachai_shice: "势策",
+	yachai_shice_info:
+		"每回合限一次，当你成为伤害牌的目标后，你可以令此牌的一个目标摸一张牌。然后若其不为你且此牌未对你与其造成伤害，你可以弃置使用者一张牌。",
+	yachai_jiangming: "将明",
+	yachai_jiangming_info:
+		"每回合限X次，当你使用手牌后，若此牌点数比你本回合此前使用过的手牌点数都大，你可以亮出牌堆顶的X张牌并依次使用其中任意张点数大于此牌点数的非装备牌。（X为你的体力上限）",
+	clanzhuding: "柱鼎",
+	clanzhuding_info:
+		"宗族技，锁定技，游戏开始时，你选择一种牌的类别，同族角色每回合首次通过武将牌上的技能使用此类牌时将手牌摸至体力上限。",
 };
