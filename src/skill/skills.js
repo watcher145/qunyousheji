@@ -11293,373 +11293,232 @@ yachai_najian: {
 			}
 		},
 	},
-// === 移霜 ===
-	yachai_yishuang: {
-		trigger: { global: "damageSource" },
-		filter(event, player) {
-			const card = event.card;
-			if (!card) return false;
-			const number = get.number(card, player);
-			if (typeof number !== "number") return false;
-			return !player.getStorage("yachai_yishuang").includes(number);
+	qunyou_guanwei: {
+	audio: 2,
+	trigger: {
+		global: "phaseUseEnd", // 触发时机：一名角色的出牌阶段结束后
+	},
+	filter: function(event, player) {
+		// 1. 检查技能拥有者潘濬自己是否有牌可弃置
+		if (!player.countCards("hes")) return false;
+		
+		const target = event.player;
+		if (!target || !target.isIn()) return false;
+		
+		// 2. 核心逻辑：获取目标在该出牌阶段使用的所有牌
+		const history = target.getHistory("useCard", function(evt) {
+			return evt.getParent("phaseUse") === event;
+		});
+		
+		if (history.length < 2) return false; // 必须至少使用过两张牌
+		
+		// 检查这些牌的花色是否均相同且合法
+		const firstSuit = get.suit(history[0].card, target);
+		if (!lib.suit.includes(firstSuit)) return false;
+		
+		const allSameSuit = history.every(evt => get.suit(evt.card, target) === firstSuit);
+		if (!allSameSuit) return false;
+		
+		// 3. 每回合各花色限一次
+		player.storage.qunyou_guanwei_suits ??= [];
+		if (player.storage.qunyou_guanwei_suits.includes(firstSuit)) return false;
+		
+		return true;
+	},
+	async content(event, trigger, player) {
+		const target = trigger.player;
+		const history = target.getHistory("useCard", function(evt) {
+			return evt.getParent("phaseUse") === trigger;
+		});
+		const suit = get.suit(history[0].card, target);
+		
+		// 记录该花色本回合已被发动过
+		player.storage.qunyou_guanwei_suits.push(suit);
+		
+		// 4. 弃置一张牌并执行效果
+		const discardResult = await player.chooseToDiscard("hes", true, "观微：请弃置一张牌").forResult();
+		if (discardResult.bool) {
+			// 目标摸两张牌
+			await target.draw(2);
+			
+			if (target.isIn()) {
+				// 成功插入并执行额外阶段，计数器 +1 
+				player.storage.qunyou_guanwei_count = (player.storage.qunyou_guanwei_count || 0) + 1;
+				
+				// 令其立即执行一个额外的出牌阶段
+				await target.phaseUse();
+			}
+		}
+	},
+	ai: {
+		result: {
+			player: function(player, target) {
+				return { target: 2 }; // 告诉潘濬AI，这个技能对队友收益极大，积极发动
+			}
 		},
-		async content(event, trigger, player) {
-			const card = trigger.card;
-			const number = get.number(card, player);
-			player.markAuto("yachai_yishuang", [number]);
-			player.storage.yachai_yishuang.sort((a, b) => a - b);
-			player.markSkill("yachai_yishuang");
-			const target = await player.chooseTarget("移霜：令一名角色重铸至多三张牌", (card, p, target) => true)
-				.set("ai", target => get.attitude(player, target) > 0 ? 1 : 0)
-				.forResult();
-			if (target.bool) {
-				const t = target.targets[0];
-				const cards = await t.chooseCard([1, 3], "he", lib.filter.cardRecastable, "重铸至多三张牌")
-					.set("ai", card => 6 - get.value(card))
-					.forResult();
-				if (cards.bool && cards.cards.length) {
-					await t.recast(cards.cards);
+		threat: 3
+	},
+	group: ["qunyou_guanwei_draw", "qunyou_guanwei_reset", "qunyou_guanwei_ai_core"],
+	subSkill: {
+		// 结算回合结束摸牌效果：X为本回合执行出牌阶段数-1
+		draw: {
+			trigger: {
+				global: "phaseEnd", // 当该角色回合结束时
+			},
+			forced: true,
+			filter: function(event, player) {
+				// 只要计数器大于0，说明成功触发过额外阶段，符合摸牌条件
+				return player.storage.qunyou_guanwei_count > 0;
+			},
+			async content(event, trigger, player) {
+				const x = player.storage.qunyou_guanwei_count;
+				if (x > 0) {
+					player.logSkill("qunyou_guanwei");
+					await player.draw(x);
 				}
+				player.storage.qunyou_guanwei_count = 0; // 及时销毁数据
 			}
 		},
-		onremove: true,
-		intro: { content: "已记录点数：$" },
-	},
-// === 柏舟 ===
-	yachai_baizhou: {
-		trigger: {
-			player: "damageBegin1",
-			source: "damageBegin1",
-		},
-		filter(event, player) {
-			return event.card && typeof get.number(event.card) === "number";
-		},
-		async content(event, trigger, player) {
-			const result = await player.chooseControl("+3", "-3")
-				.set("prompt", "柏舟：令此牌点数+3或-3（最小为A，最大为K）")
-				.forResult();
-			const delta = result.control === "+3" ? 3 : -3;
-			const card = trigger.card;
-			const num = Math.max(1, Math.min(13, get.number(card) + delta));
-			const owner = get.owner(card) || player;
-			owner.addTempSkill("yachai_baizhou_mod", "damageAfter");
-			owner.storage.yachai_baizhou_mod = { card, num };
-		},
-		ai: {
-			result: {
-				player: () => 1,
+		// 清空每回合各花色限一次的标记
+		reset: {
+			trigger: {
+				global: "phaseAfter", // 回合彻底完全结束后重置，最为安全
 			},
-		},
-	},
-	yachai_baizhou_mod: {
-		mod: {
-			cardnumber(card, player, num) {
-				const storage = player.storage.yachai_baizhou_mod;
-				if (storage && storage.card === card) {
-					return storage.num;
-				}
-			},
-		},
-	},
-// === 尽规 ===
-	yachai_jingui: {
-		audio: 2,
-		trigger: { global: ["loseAfter", "cardsDiscardAfter", "loseAsyncAfter", "equipAfter", "addJudgeAfter", "addToExpansionAfter"] },
-		direct: true,
-		filter(event, player) {
-			const cards = event.getd();
-			if (!cards || !cards.length) return false;
-			let target = event.player;
-			if ((!target || target.isDead()) && event.name === "cardsDiscard") {
-				const parent = event.getParent();
-				target = parent?.relatedEvent?.player || parent?.player;
-			}
-			if (!target || target.isDead()) return false;
-			if (target !== _status.currentPhase) return false;
-			if (player.storage.yachai_jingui_used?.includes(target.playerid)) return false;
-			return true;
-		},
-		async content(event, trigger, player) {
-			const cards = trigger.getd().filter(c => c && get.itemtype(c) === "card");
-			if (!cards.length) return;
-			let target = trigger.player;
-			if ((!target || !target.isIn()) && trigger.name === "cardsDiscard") {
-				const parent = trigger.getParent();
-				target = parent?.relatedEvent?.player || parent?.player;
-			}
-			if (!target || !target.isIn()) return;
-			if (!player.storage.yachai_jingui_used) player.storage.yachai_jingui_used = [];
-			player.storage.yachai_jingui_used.push(target.playerid);
-
-			const go = await player.chooseBool(get.prompt("yachai_jingui"), "选择一张牌交给" + get.translation(target)).forResult();
-			if (!go.bool) return;
-
-			const result = await player.chooseButton(["尽规：选择一张牌交给" + get.translation(target), cards])
-				.set("ai", button => 6 - get.value(button.link))
-				.forResult();
-			if (!result.bool || !result.links || !result.links.length) return;
-			const card = result.links[0];
-			card.storage.yachai_jingui = true;
-			await target.gain(card, "gain2");
-			target.addGaintag([card], "yachai_jingui_mark");
-			target.addTempSkill("yachai_jingui_effect", "phaseAfter");
-			if (!target.hasSkill("yachai_jingui_cleanup")) {
-				target.addSkill("yachai_jingui_cleanup");
+			forced: true,
+			popup: false,
+			content: function(event, trigger, player) {
+				player.storage.qunyou_guanwei_suits = [];
+				player.storage.qunyou_guanwei_count = 0;
 			}
 		},
-		group: ["yachai_jingui_reset"],
-		subSkill: {
-			reset: {
-				trigger: { global: "roundStart" },
-				forced: true,
-				popup: false,
-				filter(event, player) { return !!player.storage.yachai_jingui_used?.length; },
-				async content(event, trigger, player) { delete player.storage.yachai_jingui_used; },
-			},
-		},
-	},
-	yachai_jingui_effect: {
-		onremove(player, skill) {
-			const cards = player.getCards("hs");
-			for (const card of cards) {
-				if (card.storage?.yachai_jingui) {
-					card.removeGaintag("yachai_jingui_mark");
-					delete card.storage.yachai_jingui;
-				}
-			}
-		},
-		mod: {
-			targetInRange(card, player, target, current) {
-				if (card.storage?.yachai_jingui) return true;
-			},
-			cardUsable(card, player, num) {
-				if (card.storage?.yachai_jingui) return num + 999;
-			},
-		},
-	},
-	yachai_jingui_cleanup: {
-		charlotte: true,
-		trigger: { global: "loseAsyncAfter" },
-		forced: true,
-		popup: false,
-		silent: true,
-		filter(event, player) {
-			const cards = event.getl(player)?.cards2 || [];
-			return cards.some(c => get.itemtype(c) == "card" && c.storage?.yachai_jingui);
-		},
-		content(event, trigger, player) {
-			const cards = trigger.getl(player).cards2;
-			for (const card of cards) {
-				if (get.itemtype(card) == "card" && card.storage?.yachai_jingui) {
-					delete card.storage.yachai_jingui;
-					card.removeGaintag("yachai_jingui_mark");
-				}
-			}
-		},
-	},
-// === 节概 ===
-	yachai_jiegai: {
-		audio: 2,
-		locked: true,
-		forced: true,
-		trigger: { target: "useCardToTarget" },
-		filter(event, player) {
-			if (event.player === player) return false;
-			if (player.hasSkill("yachai_jiegai_mark")) return false;
-			if (event.player.inRange(player)) return false;
-			return true;
-		},
-		async content(event, trigger, player) {
-			player.addTempSkill("yachai_jiegai_mark", "phaseAfter");
-			const targets = trigger.getParent().targets;
-			targets.remove(player);
-		},
-		subSkill: {
-			mark: { charlotte: true },
-		},
-	},
-// === 势策 ===
-	yachai_shice: {
-		audio: 2,
-		trigger: { target: "useCardToTarget" },
-		filter(event, player) {
-			if (player.hasSkill("yachai_shice_mark")) return false;
-			if (!get.tag(event.card, "damage")) return false;
-			return true;
-		},
-		async content(event, trigger, player) {
-			player.addTempSkill("yachai_shice_mark", { global: "phaseAfter" });
-			const useCard = trigger.getParent();
-			const user = trigger.player;
-			const targets = useCard.targets.filter(t => t.isIn());
-			if (!targets.length) return;
-			const result = await player.chooseTarget("势策：令此牌的一个目标摸一张牌", true,
-				(card, p, t) => targets.includes(t))
-				.set("ai", target => get.attitude(player, target) > 0 ? 1 : -1)
-				.forResult();
-			if (!result.bool) return;
-			const t = result.targets[0];
-			await t.draw();
-			if (t !== player) {
-				player.addTempSkill("yachai_shice_check");
-				player.storage.yachai_shice_check_info = { user, t, useCard };
-			}
-		},
-		subSkill: {
-			mark: { charlotte: true },
-			check: {
-				trigger: { global: "useCardAfter" },
-				forced: true,
-				silent: true,
-				filter(event, player) {
-					const info = player.storage.yachai_shice_check_info;
-					return info && event === info.useCard;
-				},
-				content: async function (event, trigger, player) {
-					const info = player.storage.yachai_shice_check_info;
-					delete player.storage.yachai_shice_check_info;
-					player.removeSkill("yachai_shice_check");
-					const damages = game.getGlobalHistory("everything", evt =>
-						evt.name === "damage" && evt.getParent("useCard") === info.useCard);
-					const dmgPlayer = damages.some(e => e.player === player);
-					const dmgTarget = damages.some(e => e.player === info.t);
-					if (!dmgPlayer || !dmgTarget) {
-						await player.discardPlayerCard(info.user, "he", true);
+		// AI配合逻辑
+		ai_core: {
+			ai: {
+				// 1. 出牌顺序提升：发现手牌满足观微条件时，AI会极度优先将该花色的前两张牌连续打出
+				order: function(item, player) {
+					if (!player.isAI() || _status.currentPhase !== player) return;
+					const card = item.card;
+					if (!card || !player.canUse(card, player)) return;
+					
+					const guanweiMaster = player.getFriends().find(current => current.hasSkill("qunyou_guanwei"));
+					if (!guanweiMaster || !guanweiMaster.countCards("hes")) return;
+					
+					const suit = get.suit(card, player);
+					const usedSuits = guanweiMaster.storage.qunyou_guanwei_suits || [];
+					if (usedSuits.includes(suit)) return;
+					
+					const history = player.getHistory("useCard", function(evt) {
+						return evt.getParent("phaseUse") !== null;
+					});
+					
+					const allCards = player.getCards("h");
+					const usedCount = history.filter(evt => get.suit(evt.card, player) === suit).length;
+					const handCount = allCards.filter(c => get.suit(c, player) === suit && player.canUse(c, player)).length;
+					
+					// 如果（该阶段已出该花色 + 手牌还能出该花色）的总数 >= 2，说明这条路线可以配合观微，大幅提前优先级
+					if (usedCount + handCount >= 2) {
+						return 35; 
 					}
 				},
-			},
-		},
-	},
-// === 将明 ===
-	yachai_jiangming: {
-		audio: 2,
-		trigger: { player: "useCardAfter" },
-		filter(event, player) {
-			if (!event.cards || !event.cards.length) return false;
-			const cardNum = get.number(event.card);
-			if (typeof cardNum !== "number") return false;
-			if (!player.hasHistory("lose", evt => {
-				const parent = evt.relatedEvent || evt.getParent();
-				return evt.hs && evt.hs.length > 0 && parent == event;
-			})) return false;
-			const count = player.getStorage("yachai_jiangming_used").length;
-			if (count >= player.maxHp) return false;
-			const maxBefore = player.storage.yachai_jiangming_maxBefore;
-			if (count > 0 && typeof maxBefore === "number" && cardNum <= maxBefore) return false;
-			return true;
-		},
-		async content(event, trigger, player) {
-			const cardNum = get.number(trigger.card);
-			player.markAuto("yachai_jiangming_used", [trigger.card.cardid]);
-			const X = player.maxHp;
-			const revealed = get.cards(X);
-			await player.showCards(revealed, get.translation(player) + "发动了【将明】");
-			const candidates = revealed.filter(c =>
-				get.type2(c) !== "equip" && get.type2(c) !== "equip6" && get.number(c) > cardNum &&
-				lib.filter.cardEnabled(c, player) && game.hasPlayer(target => lib.filter.targetEnabled(c, player, target)));
-			if (!candidates.length) return;
-			const result = await player.chooseButton(["将明：选择要使用的牌（可多选）", candidates], [0, candidates.length])
-				.set("ai", button => {
-					const card = button.link;
-					return player.getUseValue(card);
-				})
-				.forResult();
-			if (!result.bool || !result.links || !result.links.length) return;
-			for (const card of result.links) {
-				await player.chooseUseTarget(card, true, false)
-					.set("prompt", "将明：使用" + get.translation(card))
-					.forResult();
+				// 2. 强行终止出牌：打完两张同花色之后，若AI再试图出杂色牌，底层核心会强制灌入“空过/取消”判定
+				chooseToUse: function(current, player) {
+					if (!player.isAI() || _status.currentPhase !== player) return;
+					
+					const guanweiMaster = player.getFriends().find(current => current.hasSkill("qunyou_guanwei"));
+					if (!guanweiMaster || !guanweiMaster.countCards("hes")) return;
+					
+					const history = player.getHistory("useCard", function(evt) {
+						return evt.getParent("phaseUse") !== null;
+					});
+					const usedSuits = guanweiMaster.storage.qunyou_guanwei_suits || [];
+					
+					// 扫描目前所有仍能用来配合观微的候选纯净路线
+					const allCards = player.getCards("h");
+					const validSuitMap = {};
+					lib.suit.forEach(suit => {
+						if (usedSuits.includes(suit)) return;
+						const usedCount = history.filter(evt => get.suit(evt.card, player) === suit).length;
+						const handCount = allCards.filter(c => get.suit(c, player) === suit && player.canUse(c, player)).length;
+						if (usedCount + handCount >= 2) {
+							validSuitMap[suit] = { used: usedCount, total: usedCount + handCount };
+						}
+					});
+
+					// 执行硬核拦截与否则放行：
+					if (history.length > 0) {
+						// 如果已经开始出牌，并且之前出的牌保持纯净
+						const firstSuit = get.suit(history[0].card, player);
+						const allSameSuit = history.every(evt => get.suit(evt.card, player) === firstSuit);
+						
+						if (allSameSuit && validSuitMap[firstSuit]) {
+							// 状态 A：如果在这个出牌阶段内，同花色已经【成功使用了至少2张】
+							if (history.length >= 2) {
+								// 此时如果AI想要打出杂色牌，立刻封死它的出牌可能，让它只能选择“结束阶段”
+								if (current && current.card && get.suit(current.card, player) !== firstSuit) {
+									if (_status.event && _status.event.name === 'chooseToUse') {
+										_status.event.result = { bool: false }; // 向底层主循环注入 取消 信号
+									}
+									return false;
+								}
+							} else {
+								// 状态 B：才出了1张，还没满2张。如果AI想混入别的花色，也予以驳回，逼它去用下一张同花色
+								if (current && current.card && get.suit(current.card, player) !== firstSuit) {
+									if (_status.event && _status.event.name === 'chooseToUse') {
+										_status.event.result = { bool: false };
+									}
+									return false;
+								}
+							}
+						}
+					} else {
+						// 如果阶段开局一张手牌都没打过，判断有没有能够做观微的计划
+						const hasValidPlan = Object.keys(validSuitMap).length > 0;
+						if (hasValidPlan) {
+							const bestSuit = Object.keys(validSuitMap)[0];
+							// 第一张牌如果想打别的杂色，拒绝，直到AI对准最优花色的牌开始打为止
+							if (current && current.card && get.suit(current.card, player) !== bestSuit) {
+								if (_status.event && _status.event.name === 'chooseToUse') {
+									_status.event.result = { bool: false };
+								}
+								return false;
+							}
+						}
+						// 【否则放行】：如果开局扫描后发现无法凑出任何2张同花色的牌，此段完全放行，AI可以按原生逻辑正常打光所有爆发。
+					}
+				}
 			}
-		},
-		group: ["yachai_jiangming_tracker", "yachai_jiangming_clear"],
-		subSkill: {
-			tracker: {
-				trigger: { player: "useCardAfter" },
-				forced: true,
-				popup: false,
-				silent: true,
-				filter(event, player) {
-					if (!event.cards || !event.cards.length) return false;
-					if (typeof get.number(event.card) !== "number") return false;
-					if (!player.hasHistory("lose", evt => {
-						const parent = evt.relatedEvent || evt.getParent();
-						return evt.hs && evt.hs.length > 0 && parent == event;
-					})) return false;
-					return true;
-				},
-				async content(event, trigger, player) {
-					const cardNum = get.number(trigger.card);
-					const oldMax = player.storage.yachai_jiangming_maxNum || 0;
-					player.storage.yachai_jiangming_maxBefore = oldMax;
-					player.storage.yachai_jiangming_maxNum = Math.max(cardNum, oldMax);
-				},
-			},
-			clear: {
-				trigger: { global: "phaseAfter" },
-				forced: true,
-				popup: false,
-				async content(event, trigger, player) {
-					player.storage.yachai_jiangming_used = [];
-					delete player.storage.yachai_jiangming_maxNum;
-					delete player.storage.yachai_jiangming_maxBefore;
-				},
-			},
-		},
+		}
+	}
+},
+
+qunyou_gongqing: {
+	audio: 2,
+	forced: true, // 锁定技
+	trigger: {
+		player: "damageBegin", // 触发时机：当你受到伤害时
 	},
-// === 柱鼎 ===
-	clanzhuding: {
-		audio: 2,
-		clanSkill: true,
-		locked: true,
-		forced: true,
-		usable: 1,
-		mark: true,
-		intro: {
-			content(storage, player) {
-				const t = player.storage.clanzhuding_type;
-				if (t === "basic") return "基本牌";
-				if (t === "trick") return "锦囊牌";
-				if (t === "equip") return "装备牌";
-				return "未选择";
-			},
-		},
-		trigger: { global: "useCardAfter" },
-		filter(event, player) {
-			if (!player.hasClan("琅琊诸葛氏")) return false;
-			const chosenType = player.storage.clanzhuding_type;
-			if (!chosenType) return false;
-			if (get.type2(event.card) !== chosenType) return false;
-			const useCard = event.getParent();
-			const parent = useCard?.getParent();
-			const skillName = parent?.name;
-			if (!skillName || !lib.skill[skillName]) return false;
-			if (!player.hasSkill(skillName)) return false;
-			return true;
-		},
-		async content(event, trigger, player) {
-			const toDraw = player.maxHp - player.countCards("h");
-			if (toDraw > 0) {
-				await player.draw(toDraw);
+	filter: function(event, player) {
+		// 必须存在合法的伤害来源
+		return event.source && event.source.isIn();
+	},
+	async content(event, trigger, player) {
+		const source = trigger.source;
+		const range = source.getAttackRange(); // 动态获取伤害来源当前的攻击范围
+		
+		if (range < 3) {
+			// 判断是否不是本回合首次受到伤害
+			const history = player.getHistory("damage");
+			// 过滤并排除掉当前正在触发、还未真正扣血结算的这笔伤害事件本身
+			const prevDamageCount = history.filter(evt => evt !== trigger).length;
+			
+			if (prevDamageCount > 0) {
+				trigger.cancel(); // 满足条件：防止此伤害
+				game.log(player, "触发锁定技【公清】，防止了来自", source, "的本次伤害");
 			}
-		},
-		group: ["clanzhuding_init"],
-		subSkill: {
-			init: {
-				trigger: { global: "gameStart" },
-				forced: true,
-				popup: false,
-				filter(event, player) {
-					if (!player.hasClan("琅琊诸葛氏")) return false;
-					return !player.storage.clanzhuding_type;
-				},
-				async content(event, trigger, player) {
-					const result = await player.chooseControl("basic", "trick", "equip")
-						.set("prompt", "柱鼎：选择一种牌的类别")
-						.set("ai", () => "basic")
-						.forResult();
-					player.storage.clanzhuding_type = result.control;
-				},
-			},
-		},
-	},
-};
+		} else if (range > 3) {
+			trigger.num++; // 满足条件：此伤害+1
+			game.log(player, "触发锁定技【公清】，使其受到的伤害值 +1");
+		}
+	}
+}
+}

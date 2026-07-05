@@ -313,6 +313,10 @@ export const skillTranslate = {
 	yachai_lihui: "励诲",
 	yachai_lihui_info:
 		"其他角色的摸牌阶段结束时，若其本阶段获得牌数不为2，你依次判定其判定区内的每张牌，然后将这些判定牌与判定结果牌交给一名其他角色。",
+	qunyou_guanwei:"观微",
+	qunyou_guanwei_info:"每回合各花色限一次，一名角色的出牌阶段结束后，若其此阶段使用过至少两张牌且这些牌花色均相同，你可以弃置一张牌，令其摸两张牌并立即执行一个额外的出牌阶段；其此回合结束时，你摸X张牌。(X为其本回合执行出牌阶段数-1）",
+	qunyou_gongqing:"公清",
+	qunyou_gongqing_info:"锁定技，当你受到伤害时，若伤害来源的攻击范围：小于3且你不是本回合首次受到伤害，防止此伤害；大于3，此伤害+1。",
 	yachai_shangwen: "尚文",
 	yachai_shangwen_info:
 		"其他角色的结束阶段，若其于本回合未造成过伤害，你可以将至多X张牌交给其。（X为你的体力值）",

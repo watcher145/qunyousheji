@@ -32,6 +32,8 @@ export const characterIntro = {
 	qunyou_yang_wang: "设计：西夏笠谷。<br>评价：有操作有强度",
 	qunyou_xian_hua: "设计：西夏笠谷。<br>评价：有操作有强度",
 	qunyou_sunce:"设计：西夏笠谷。<br>评价：",
+	qunyou_lvlingqi:"设计：西夏笠谷。<br>评价：",
+	qunyou_panjun:"设计：西夏笠谷。<br>评价：",
 	qunyou_mojiangwei: "设计：墨客。<br>评价：对牌序要求也太高了，对运气要求也高",
 	qunyou_guohuai: "设计：心乐之。<br>评价：沙摩柯和赵俨的私生子，其实强度不高，孩子们，我又卡基本牌了",
 	qunyou_diaochan: "设计：来自大宝规则集中宗族技的例子<br>评价：自己有黑桃就先给自己用",
