@@ -313,4 +313,32 @@ export const skillTranslate = {
 	yachai_lihui: "励诲",
 	yachai_lihui_info:
 		"其他角色的摸牌阶段结束时，若其本阶段获得牌数不为2，你依次判定其判定区内的每张牌，然后将这些判定牌与判定结果牌交给一名其他角色。",
+	yachai_shangwen: "尚文",
+	yachai_shangwen_info:
+		"其他角色的结束阶段，若其于本回合未造成过伤害，你可以将至多X张牌交给其。（X为你的体力值）",
+	yachai_gailan: "该览",
+	yachai_gailan_info:
+		"出牌阶段限一次，你可以弃置X张牌并观看一名角色的手牌，然后用至多X张手牌交换其中等量张牌。（X为你的体力值）",
+	yachai_yishuang: "移霜",
+	yachai_yishuang_info:
+		"当一张点数未被记录过的牌造成伤害后，你可以记录此牌的点数，并令一名角色重铸至多三张牌。",
+	yachai_baizhou: "柏舟",
+	yachai_baizhou_info:
+		"当你使用牌造成伤害或受到牌造成的伤害时，你可以令此牌点数+3或-3（最小为A，最大为K）。",
+	yachai_jingui: "尽规",
+	yachai_jingui_mark: "尽规",
+	yachai_jingui_info:
+		"一名角色的回合内，当其区域内首次有牌进入弃牌堆后，你可以令其获得其中一张，若如此做，其于本回合内使用此牌时无距离和次数限制。",
+	yachai_jiegai: "节概",
+	yachai_jiegai_info:
+		"锁定技，每回合首次成为其他角色使用牌的目标后，若你不在其攻击范围内，此牌对你无效。",
+	yachai_shice: "势策",
+	yachai_shice_info:
+		"每回合限一次，当你成为伤害牌的目标后，你可以令此牌的一个目标摸一张牌。然后若其不为你且此牌未对你与其造成伤害，你可以弃置使用者一张牌。",
+	yachai_jiangming: "将明",
+	yachai_jiangming_info:
+		"每回合限X次，当你使用手牌后，若此牌点数比你本回合此前使用过的手牌点数都大，你可以亮出牌堆顶的X张牌并依次使用其中任意张点数大于此牌点数的非装备牌。（X为你的体力上限）",
+	clanzhuding: "柱鼎",
+	clanzhuding_info:
+		"宗族技，锁定技，游戏开始时，你选择一种牌的类别，同族角色每回合首次通过武将牌上的技能使用此类牌时将手牌摸至体力上限。",
 };

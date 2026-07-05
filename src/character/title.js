@@ -53,4 +53,8 @@ export const characterTitle = {
 	yachaiclan_lukang: "奕世载美",
 	yachaiclan_luji: "龙跃于江",
 	yachaiclan_luyun: "荆衡杞梓",
+	yachaiclan_luji2: "驽马逸足",
+	yachaiclan_luyusheng: "邦士慕则",
+	yachaiclan_lukai: "格业忠勤",
+	yachaiclan_zhugeliang: "日月同悬",
 };
