@@ -57,5 +57,6 @@ export const characterIntro = {
 	yachaiclan_luyusheng: "设计：崖柴xxxF（B站）<br>",
 	yachaiclan_lukai: "设计：崖柴xxxF（B站）<br>",
 	yachaiclan_zhugeliang: "设计：崖柴xxxF（B站）<br>评价：原版强度并不高，将明亮出的牌并不一定总是能用，同时柱鼎又要求首次，你要用牌就得放弃柱鼎的补牌，只能说丞相就是鼎柱，宗族技只不过是人家没牌是补一下的工具罢了。<br>修改：加强将明，改成每回合限X次了，丞相理应如此",
+	qunyou_wangyun: "来源：BV12N9gBMEW2",
 	qunyou_zhouyu: "设计：寻辉逐烨<br>评价：前两个出牌阶段开无中，能出杀就出，后两个出牌阶段就开始烧人了。还是有概率空城的，要注意玩法，小心卧龙诸葛和无懈",
 };

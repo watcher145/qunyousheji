@@ -89,5 +89,6 @@ export const characterTranslate = {
 	yachaiclan_zhugeliang: "族诸葛亮",
 	yachaiclan_zhugeliang_prefix: "族",
 	qunyou_zhouyu: "周瑜",
-  qunyou_panjun: "潘濬",
+    qunyou_panjun: "潘濬",
+	qunyou_wangyun: "王允",
 };

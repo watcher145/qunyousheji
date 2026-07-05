@@ -345,4 +345,13 @@ export const skillTranslate = {
 	clanzhuding: "柱鼎",
 	clanzhuding_info:
 		"宗族技，锁定技，游戏开始时，你选择一种牌的类别，同族角色每回合首次通过武将牌上的技能使用此类牌时将手牌摸至体力上限。",
+	qunyou_lianchou: "连筹",
+	qunyou_lianchou_info:
+		"出牌阶段限一次，若你的手牌花色数恰为X，你可翻倍手牌数，并令你武将牌上第X个技能本回合视为未发动过。（X为本回合弃牌堆内牌数）",
+	qunyou_yuannan: "圆难",
+	qunyou_yuannan_info:
+		"每回合每项各限一次，出牌阶段或你可以通过重铸X张牌来使本回合弃牌堆集齐四种花色时，你可以重铸X张牌，视为使用或打出一张单目标非延时锦囊牌。（X为本回合弃牌堆内牌数）",
+	qunyou_huiqing: "晦倾",
+	qunyou_huiqing_info:
+		"你可将若干且至多X张牌当任意基本牌使用，若如此，则本回合发动此技能的转化底牌数需比上次发动时的少。（X为本回合弃牌堆内牌数）",
 };
