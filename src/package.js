@@ -28,6 +28,7 @@ function cloneAndPatchCards() {
 }
 
 const characterSortTranslate = {
+	zishubei: "自书杯",
 	qunyou_chenjunxieshi: "问鼎•陈郡谢氏",
 	qunyou_xingheshuo: "山河如梦•朔",
 	yachaiclan: "崖柴的族武将设",
@@ -37,11 +38,12 @@ const characterSortTranslate = {
 };
 
 const characterSort = {
+	zishubei: ["qunyou_liyan"],
 	qunyou_chenjunxieshi: ["qunyou_xiedaoyun", "qunyou_xiean", "qunyou_xiexuan", "qunyou_xielingyun", "qunyou_xieshi"],
     qunyou_xingheshuo: ["shanhe_zhangjiao", "shanhe_luzhi", "shanhe_dongzhuo"],
-	yachaiclan: ["yachaiclan_cuiyan", "yachaiclan_wangxiang", "yachaiclan_diaochan", "yachaiclan_wuyi", "yachaiclan_xunyu", "yachaiclan_luxun", "yachaiclan_lukang", "yachaiclan_luji", "yachaiclan_luyun"],
+	yachaiclan: ["yachaiclan_cuiyan", "yachaiclan_wangxiang", "yachaiclan_diaochan", "yachaiclan_wuyi", "yachaiclan_xunyu", "yachaiclan_luxun", "yachaiclan_lukang", "yachaiclan_luji", "yachaiclan_luyun", "yachaiclan_luji2", "yachaiclan_luyusheng", "yachaiclan_lukai", "yachaiclan_zhugeliang"],
 	qunyou_sinatsuriku: ["qunyou_yang_wang","qunyou_xian_hua","qunyou_sunce","qunyou_lvlingqi","qunyou_panjun"],
-	qunyou_gaijin: ["qunyou_zhugeliang", "qunyou_weiguanyu"],
+	qunyou_gaijin: ["qunyou_zhugeliang"],
 	qunyou_yongdong: ["qunyou_wuzhangfei", "qunyou_wanglang"],
 };
 
