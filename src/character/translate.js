@@ -91,4 +91,6 @@ export const characterTranslate = {
 	qunyou_zhouyu: "周瑜",
     qunyou_panjun: "潘濬",
 	qunyou_wangyun: "王允",
+	qunyou_liyan: "自书李严",
+	qunyou_liyan_prefix: "自书",
 };

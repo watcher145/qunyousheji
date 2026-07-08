@@ -8516,7 +8516,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 		filter(event, player) {
 			const count = qunyou_gainCount(event, player);
-			return count > 0 && !player.awakenedSkills.includes("qunyou_haoxian") && player.countCards("he") >= count && qunyou_haoxianCanGain(player, count);
+			return count > 0 && !player.awakenedSkills.includes("qunyou_haoxian") && player.countCards("he") >= count && qunyou_haoxianCanGain(player, count) && !(player.storage.qunyou_haoxian_record || []).includes(count);
 		},
 		async content(event, trigger, player) {
 			const count = qunyou_gainCount(trigger, player);
@@ -8527,6 +8527,9 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 			if (!result?.bool) {
 				return;
 			}
+			player.storage.qunyou_haoxian_record ??= [];
+			player.storage.qunyou_haoxian_record.push(count);
+			player.addTempSkill("qunyou_haoxian_record", "phaseAfter");
 			player.logSkill("qunyou_haoxian");
 			player.awakenSkill("qunyou_haoxian");
 			const discard = await player.chooseToDiscard("he", true, count).set("prompt", `豪贤：请弃置${count}张牌`).forResult();
@@ -8554,6 +8557,13 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 					await target.damage(player);
 				}
 			}
+		},
+		subSkill: {
+			record: {
+				onremove(player) {
+					player.storage.qunyou_haoxian_record = [];
+				},
+			},
 		},
 	},
 	qunyou_cuiping: {
@@ -10325,6 +10335,7 @@ clanqianzhang: {
 clanxunli: {
 	audio: 2,
 	clanSkill: true,
+	direct: true,
 	trigger: {
 		global: ["loseAfter", "equipAfter", "addJudgeAfter", "gainAfter", "loseAsyncAfter", "addToExpansionAfter"],
 	},
@@ -10351,6 +10362,10 @@ clanxunli: {
 	},
 	async content(event, trigger, player) {
 		const target = trigger._clanxunli_target || trigger.player;
+		const go = await player
+			.chooseBool(get.prompt("clanxunli"), "令" + get.translation(target) + "摸一张牌")
+			.forResult();
+		if (!go?.bool) return;
 		player.logSkill("clanxunli", target);
 		await target.draw();
 	},
@@ -10911,6 +10926,8 @@ qunyou_xiongzi: {
 		},
 		update: {
 			trigger: { global: "cardsDiscardAfter" },
+			forced: true,
+			popup: false,
 			filter(event, player) {
 				return player === game.phasePlayer;
 			},
@@ -11010,7 +11027,7 @@ yachai_bozui: {
 	audio: 2,
 	trigger: { target: "useCardToTarget" },
 	filter(event, player) {
-		return event.card.name == "sha" && event.player !== player;
+		return event.card.name == "sha" && event.player !== player && (player.countCards("e") > 0 || event.player.countCards("e") > 0);
 	},
 	async content(event, trigger, player) {
 		await player.swapEquip(trigger.player);
@@ -12131,5 +12148,349 @@ qunyou_huiqing: {
 	subSkill: {
 		record: { charlotte: true, onremove: true },
 	},
-}
+},
+qunyou_wuwei: {
+	audio: 2,
+	enable: ["chooseToUse", "chooseToRespond"],
+	group: ["qunyou_wuwei_target", "qunyou_wuwei_damage"],
+	filter(event, player) {
+		if (player.hasSkill("qunyou_wuwei_used")) return false;
+		if (!player.countCards("hes", { color: "red" })) return false;
+		for (var name of lib.inpile) {
+			var card = { name: name, isCard: true };
+			if (name == "sha") {
+				if (event.filterCard(get.autoViewAs(card, "unsure"), player, event)) return true;
+				for (var nature of lib.inpile_nature) {
+					card.nature = nature;
+					if (event.filterCard(get.autoViewAs(card, "unsure"), player, event)) return true;
+				}
+			} else if (get.type(name) == "trick") {
+				if (event.filterCard(get.autoViewAs(card, "unsure"), player, event)) return true;
+			}
+		}
+		return false;
+	},
+	hiddenCard(player, name) {
+		return (name == "sha" || get.type(name) == "trick") && !player.hasSkill("qunyou_wuwei_used") && player.countCards("hes", { color: "red" }) > 0;
+	},
+	chooseButton: {
+		dialog(event, player) {
+			var cards = [];
+			for (var name of lib.inpile) {
+				var card = { name: name, isCard: true };
+				if (name == "sha") {
+					if (event.filterCard(get.autoViewAs(card, "unsure"), player, event)) cards.push(["基本", "", "sha"]);
+					for (var nature of lib.inpile_nature) {
+						card.nature = nature;
+						if (event.filterCard(get.autoViewAs(card, "unsure"), player, event)) cards.push(["基本", "", "sha", nature]);
+					}
+				} else if (get.type(name) == "trick") {
+					if (event.filterCard(get.autoViewAs(card, "unsure"), player, event)) cards.push(["锦囊", "", name]);
+				}
+			}
+			return ui.create.dialog("武威", [cards, "vcard"]);
+		},
+		backup(links, player) {
+			return {
+				audio: "qunyou_wuwei",
+				filterCard: { color: "red" },
+				selectCard: [1, Infinity],
+				position: "hes",
+				popname: true,
+				check(card) { return 6 - get.value(card); },
+				viewAs: { name: links[0][2], nature: links[0][3], storage: { qunyou_wuwei: true } },
+				precontent() {
+					player.logSkill("qunyou_wuwei");
+					delete event.result.skill;
+					player.addTempSkill("qunyou_wuwei_used");
+					event.result.card.storage.qunyou_wuwei_x = event.result.cards.length;
+				},
+			};
+		},
+		prompt(links, player) {
+			return "将若干张红色牌当做" + (get.translation(links[0][3]) || "") + get.translation(links[0][2]) + "使用";
+		},
+	},
+	subSkill: {
+		used: { charlotte: true },
+		target: {
+			trigger: { player: "useCard2" },
+			forced: true,
+			charlotte: true,
+			filter(event, player) {
+				if (!event.card?.storage?.qunyou_wuwei) return false;
+				if (_status.currentPhase !== player) return false;
+				var X = event.card.storage.qunyou_wuwei_x || 0;
+				return X > 0 && game.hasPlayer(function (target) {
+					return lib.filter.targetEnabled2(event.card, player, target) && lib.filter.targetInRange(event.card, player, target);
+				});
+			},
+			async content(event, trigger, player) {
+				var X = trigger.card.storage.qunyou_wuwei_x;
+				var result = await player.chooseTarget({
+					prompt: "武威：为此牌选择1至" + get.cnNumber(X) + "名目标",
+					selectTarget: [1, X],
+					forced: true,
+					filterTarget(card, player, target) {
+						var card2 = get.event().card;
+						return lib.filter.targetEnabled2(card2, player, target) && lib.filter.targetInRange(card2, player, target);
+					},
+				}).set("card", trigger.card).set("ai", function (target) {
+					return get.damageEffect(target, player, player) > 0 ? 2 : 0.5;
+				}).forResult();
+				if (result.targets?.length) {
+					trigger.targets.length = 0;
+					trigger.targets.addArray(result.targets);
+				}
+			},
+		},
+		damage: {
+			trigger: { source: "damageBegin" },
+			forced: true,
+			charlotte: true,
+			filter(event, player) {
+				if (!event.card?.storage?.qunyou_wuwei) return false;
+				var useCardEvt = event.getParent("useCard");
+				return useCardEvt && useCardEvt.targets?.length === 1;
+			},
+			content(event, trigger, player) {
+				var X = trigger.card.storage.qunyou_wuwei_x || 0;
+				trigger.num += X;
+			},
+		},
+	},
+	ai: {
+		respondSha: true,
+		skillTagFilter(player) {
+			return !player.hasSkill("qunyou_wuwei_used") && player.countCards("hes", { color: "red" }) > 0;
+		},
+		order: 4,
+		result: { player: 1 },
+	},
+},
+qunyou_zhenxiang: {
+	audio: 2,
+	comboSkill: true,
+	trigger: { player: "useCard" },
+	filter(event, player) {
+		var isRed = get.color(event.card) == "red";
+		if (!isRed && event.cards?.length) {
+			isRed = event.cards.every(function (c) { return get.color(c) == "red"; });
+		}
+		if (!isRed) return false;
+		var evt = lib.skill.dcjianying.getLastUsed(player, event);
+		if (!evt || !evt.card || evt.qunyou_zhenxiang) return false;
+		var type = get.type(evt.card);
+		return type == "trick" || type == "delay";
+	},
+	async cost(event, trigger, player) {
+		event.result = await player.chooseBool(get.prompt2("qunyou_zhenxiang")).set("choice", true).forResult();
+	},
+	async content(event, trigger, player) {
+		trigger.set("qunyou_zhenxiang", true);
+		if (trigger.targets?.length) {
+			for (var target of trigger.targets.sortBySeat()) {
+				await target.draw(1);
+				await player.discardPlayerCard(target, "hej", [1, 1], true);
+				await target.damage(1, "thunder");
+			}
+		} else {
+			await player.draw(2);
+		}
+	},
+	ai: {
+		result: { player: 1 },
+	},
+	},
+qunyou_duliang: {
+	audio: 2,
+	trigger: { global: "phaseBeginStart" },
+	filter(event, player) {
+		return event.player !== player;
+	},
+	check(event, player) {
+		return get.attitude(player, event.player);
+	},
+	async content(event, trigger, player) {
+		const target = trigger.player;
+		const used = player.storage.qunyou_duliang_used;
+		if (used?.[0] && used?.[1]) return;
+		const X = target.maxHp;
+		let cards = get.cards(X);
+		if (!cards.length) return;
+		await game.cardsGotoOrdering(cards);
+
+		await target.viewCards(`${get.translation(player)}的【督粮】`, cards);
+
+		cards = cards.filterInD("od");
+		if (!cards.length) return;
+
+		const can1 = (player.storage.qunyou_duliang_used?.[0] || 0) < 1;
+		const can2 = (player.storage.qunyou_duliang_used?.[1] || 0) < 1;
+		if (!can1 && !can2) return;
+
+		const choices = [];
+		if (can1) choices.push("使用其中一张牌并跳过摸牌阶段");
+		if (can2) choices.push("摸牌阶段多摸一张，改为弃牌阶段后执行");
+		const choice = await player.chooseControl(choices).set("ai", function() {
+			const evt = _status.event.getParent("qunyou_duliang");
+			const target = evt?.trigger?.player;
+			if (!target) return 0;
+			if (get.attitude(get.player(), target) < 0) return 0;
+			if (target.hp <= 2 || target.countCards("h") <= 1) return 1;
+			return 0;
+		}).forResult();
+
+		if (choice.control.includes("使用")) {
+			if (!player.storage.qunyou_duliang_used) player.storage.qunyou_duliang_used = [0, 0];
+			player.storage.qunyou_duliang_used[0]++;
+
+			const result = await target
+				.chooseButton(["【督粮】选择一张使用", cards])
+				.set("filterButton", btn => target.hasUseTarget(btn.link))
+				.set("ai", button => get.value(button.link, target, "raw"))
+				.forResult();
+			if (result.bool) {
+				const card = result.links[0];
+				cards.remove(card);
+				target.$gain2(card, false);
+				await game.delayx();
+				await target.chooseUseTarget(true, card, false);
+			}
+			target.skip("phaseDraw");
+		} else {
+			if (!player.storage.qunyou_duliang_used) player.storage.qunyou_duliang_used = [0, 0];
+			player.storage.qunyou_duliang_used[1]++;
+
+			const phaseList = trigger.phaseList;
+			phaseList.splice(phaseList.indexOf("phaseDraw"), 1);
+			phaseList.splice(phaseList.indexOf("phaseDiscard") + 1, 0, "phaseDraw");
+			target.addTempSkill("qunyou_duliang_bonus", "phaseAfter");
+		}
+
+		if (cards.length) {
+			cards.reverse();
+			game.cardsGotoPile(cards, "insert");
+		}
+	},
+	reset(player) {
+		player.storage.qunyou_duliang_used = [0, 0];
+	},
+	subSkill: {
+		roundClear: {
+			trigger: { global: "roundStart" },
+			forced: true,
+			popup: false,
+			silent: true,
+			content() {
+				player.storage.qunyou_duliang_used = [0, 0];
+			},
+		},
+		bonus: {
+			trigger: { player: "phaseDrawBegin1" },
+			forced: true,
+			popup: false,
+			silent: true,
+			charlotte: true,
+			content() {
+				trigger.num++;
+			},
+		},
+	},
+},
+qunyou_xiaqing: {
+	audio: 2,
+	trigger: { global: "viewCardsBegin" },
+	filter(event, player) {
+		if (event.player === player) return false;
+		return event.cards?.length > 0;
+	},
+	check(event, player) {
+		if (!event.cards?.length || !player.countCards("h")) return 0;
+		const maxV = Math.max(...event.cards.map(c => get.value(c, player)));
+		const minH = Math.min(...player.getCards("h").map(c => get.value(c, player)));
+		return maxV > minH ? maxV - minH : 0;
+	},
+	direct: true,
+	async content(event, trigger, player) {
+		const cards = trigger.cards.slice();
+		if (!cards.length) return;
+		const handCards = player.getCards("h");
+		if (!handCards.length) return;
+
+		const go = await player
+			.chooseBool(get.prompt("qunyou_xiaqing"), "交换观看的牌")
+			.forResult();
+		if (!go?.bool) return;
+
+		await player.viewCards("狭情：观看的牌", cards);
+
+		const result = await player
+			.chooseToMove("狭情：选择要交换的牌（两侧等量）")
+			.set("list", [
+				["观看的牌", cards],
+				["我的手牌", handCards],
+			])
+			.set("filterMove", (from, to, moved) => {
+				if (typeof to == "number") return false;
+				const in0 = c => moved[0].includes(c);
+				const in1 = c => moved[1].includes(c);
+				if ((in0(from.link) && in0(to.link)) || (in1(from.link) && in1(to.link))) return false;
+				return true;
+			})
+			.set("processAI", function (list) {
+				const viewed = list[0][1].slice();
+				const hand = list[1][1].slice();
+				if (!viewed.length || !hand.length) return [viewed, hand];
+				viewed.sort((a, b) => get.value(b) - get.value(a));
+				hand.sort((a, b) => get.value(a) - get.value(b));
+				const num = Math.min(viewed.length, hand.length);
+				const toTake = viewed.slice(0, num);
+				const toGive = hand.slice(0, num);
+				return [
+					viewed.filter(c => !toTake.includes(c)).concat(toGive),
+					hand.filter(c => !toGive.includes(c)).concat(toTake),
+				];
+			})
+			.forResult();
+
+		const moved = result?.moved;
+		if (!moved?.[0]?.length || !moved?.[1]?.length) return;
+
+		const myTake = moved[1].filter(c => cards.includes(c));
+		const myGive = moved[0].filter(c => handCards.includes(c));
+		if (!myTake.length || !myGive.length) return;
+
+		await player.gain(myTake, "gain2");
+		if (myGive.length) {
+			await player.lose(myGive, ui.special).set("getlx", false);
+			await game.cardsGotoPile(myGive.slice().reverse(), "insert");
+		}
+
+		const cur = _status.currentPhase;
+		if (!cur?.isIn()) return;
+
+		const penalty = await cur.chooseControl(
+			"弃置一张牌，令" + get.translation(player) + "失去1点体力",
+			"交给" + get.translation(player) + "一张牌，令其重置【督粮】"
+		).set("ai", function() {
+			return get.attitude(cur, player) < 0 ? 0 : 1;
+		}).forResult();
+
+		if (penalty.control.includes("弃置")) {
+			await cur.chooseToDiscard("he", true);
+			await player.loseHp(1);
+		} else {
+			const giveResult = await cur.chooseCard("he", true, "交给" + get.translation(player) + "一张牌")
+				.set("ai", function(card) {
+					return -get.value(card, get.player());
+				})
+				.forResult();
+			if (giveResult.bool) {
+				await cur.give(giveResult.cards, player);
+			}
+			lib.skill.qunyou_duliang.reset(player);
+		}
+	},
+},
 }
