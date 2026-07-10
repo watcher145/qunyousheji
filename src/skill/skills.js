@@ -11889,6 +11889,100 @@ yachai_jiangming: {
 		},
 	},
 },
+// === 赝令 ===
+yachai_yanling: {
+	audio: 2,
+	trigger: { global: "useCardToPlayer" },
+	filter(event, player) {
+		if (!event.isFirstTarget) return false;
+		if (event.player === player) return false;
+		const card = event.card;
+		if (get.type2(card) !== "trick") return false;
+		if (get.type(card) !== "trick") return false;
+		if (!event.targets?.length) return false;
+		if (event.targets.length === 1 && event.targets[0] === player) return false;
+		return !player.hasSkill("yachai_yanling_used");
+	},
+	async cost(event, trigger, player) {
+		event.result = await player
+			.chooseBool(get.prompt(event.skill), "代替" + get.translation(trigger.player) + "成为此牌的使用者")
+			.forResult();
+	},
+	async content(event, trigger, player) {
+		trigger.getParent().player = player;
+		trigger.getParent().skill = "yachai_yanling";
+		game.log(player, "成为了", trigger.card, "的使用者");
+		player.addSkillLog("yachai_yuxu");
+		player.addTempSkill("yachai_yanling_used", "phaseAfter");
+	},
+	subSkill: {
+		used: { charlotte: true },
+	},
+},
+// === 非矫 ===
+yachai_feijiao: {
+	audio: 2,
+	locked: true,
+	trigger: { global: "shaMiss" },
+	filter(event, player) {
+		if (event.player === player) return false;
+		if (!event.target || event.target === player) return false;
+		return true;
+	},
+	async content(event, trigger, player) {
+		const attacker = trigger.player;
+		const defender = trigger.target;
+		const seat1 = game.findPlayer(current => current.getSeatNum() == 1);
+		if (!seat1) return;
+		const distA = get.distance(attacker, seat1, "absolute");
+		const distD = get.distance(defender, seat1, "absolute");
+		if (distA <= distD) {
+			await attacker.chooseToDiscard("he", true);
+		} else if (player.hasSkill("yachai_yuxu")) {
+			player.removeSkill("yachai_yuxu");
+			game.log(player, "失去了【誉虚】");
+		}
+	},
+},
+// === 誉虚 ===
+yachai_yuxu: {
+	audio: 2,
+	trigger: { player: "useCardAfter" },
+	filter(event, player) {
+		const evt = event.getParent("phaseUse");
+		return evt && evt.name === "phaseUse";
+	},
+	direct: true,
+	async content(event, trigger, player) {
+		if (player.storage.yachai_yuxu_next) {
+			player.storage.yachai_yuxu_next = false;
+			await player.chooseToDiscard("he", true);
+		} else {
+			const go = await player
+				.chooseBool("是否发动【誉虚】摸一张牌？")
+				.forResult();
+			if (go.bool) {
+				await player.draw();
+				player.storage.yachai_yuxu_next = true;
+			}
+		}
+	},
+	group: "yachai_yuxu_reset",
+	subSkill: {
+		reset: {
+			trigger: { global: "phaseUseBegin" },
+			forced: true,
+			popup: false,
+			silent: true,
+			async content(event, trigger, player) {
+				delete player.storage.yachai_yuxu_next;
+			},
+		},
+	},
+	onremove(player) {
+		delete player.storage.yachai_yuxu_next;
+	},
+},
 // === 柱鼎 ===
 clanzhuding: {
 	audio: 2,
@@ -11912,12 +12006,14 @@ clanzhuding: {
 		const chosenType = player.storage.clanzhuding_type;
 		if (!chosenType) return false;
 		if (get.type2(event.card) !== chosenType) return false;
-		const useCard = event.getParent();
-		const parent = useCard?.getParent();
-		const skillName = parent?.name;
-		if (!skillName || !lib.skill[skillName]) return false;
-		if (!player.hasSkill(skillName)) return false;
-		return true;
+		if (event.skill && player.hasSkill(event.skill)) return true;
+		let parent = event.parent;
+		while (parent) {
+			if (parent.name && lib.skill[parent.name] && player.hasSkill(parent.name)) return true;
+			if (parent.skill && player.hasSkill(parent.skill)) return true;
+			parent = parent.parent;
+		}
+		return false;
 	},
 	async content(event, trigger, player) {
 		const toDraw = player.maxHp - player.countCards("h");
