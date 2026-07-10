@@ -470,6 +470,15 @@ export const characterData = {
 		clans: ["琅琊诸葛氏"],
 		skills: ["yachai_shice","yachai_jiangming","clanzhuding"],
 	},
+	yachaiclan_zhugezhan: {
+		sex: "male",
+		group: "shu",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		clans: ["琅琊诸葛氏"],
+		skills: ["yachai_yanling","yachai_feijiao","clanzhuding"],
+	},
 	qunyou_zhouyu: {
 		sex: "male",
 		group: "wu",
