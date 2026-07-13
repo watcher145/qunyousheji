@@ -12041,6 +12041,338 @@ clanzhuding: {
 		},
 	},
 },
+// === 效戕 ===
+yachai_xiaoqiang: {
+	audio: 2,
+	enable: "phaseUse",
+	usable: 1,
+	filter(event, player) {
+		return player.countCards("he") > 0;
+	},
+	async content(event, trigger, player) {
+		let count = 0;
+
+		await player.chooseToDiscard(true, "he", player.countCards("he"));
+		count++;
+
+		if (player.hp > 1) {
+			const r2 = await player.chooseBool("是否执行第②项“失去体力至1点”？").forResult();
+			if (!r2.bool) return;
+			await player.loseHp(player.hp - 1);
+			count++;
+		}
+
+		if (!player.isTurnedOver()) {
+			const r3 = await player.chooseBool("是否执行第③项“翻至背面”？").forResult();
+			if (!r3.bool) return;
+			await player.turnOver();
+			count++;
+		}
+
+		const { targets, bool } = await player
+			.chooseTarget("选择【决斗】的目标", lib.filter.notMe).forResult();
+		if (!bool) return;
+		const target = targets[0];
+
+		for (let i = 0; i < count; i++) {
+			await player.useCard(new lib.element.VCard({ name: "juedou" }), target, "yachai_xiaoqiang");
+		}
+	},
+},
+// === 长殇 ===
+yachai_changshang: {
+	audio: 2,
+	locked: true,
+	forced: true,
+	trigger: { player: "damageAfter" },
+	async content(event, trigger, player) {
+		if (trigger._dyinged) {
+			await player.draw(2);
+		} else {
+			const cards = Array.from(ui.discardPile.childNodes).slice(-2);
+			await player.gain(cards, "gain2");
+		}
+	},
+	group: ["yachai_changshang_die"],
+	subSkill: {
+		die: {
+			trigger: { player: "die" },
+			forceDie: true,
+			forced: true,
+			async content(event, trigger, player) {
+				const { targets, bool } = await player
+					.chooseTarget("选择获得【长殇】的角色", lib.filter.notMe)
+					.set("forceDie", true)
+					.forResult();
+				if (bool) {
+					targets[0].addSkill("yachai_changshang");
+					game.log(targets[0], "获得了【长殇】");
+				}
+			},
+		},
+	},
+},
+// === 修睦 ===
+yachai_xiumu: {
+	audio: 2,
+	direct: true,
+	trigger: { global: "phaseZhunbei" },
+	async content(event, trigger, player) {
+		const current = trigger.player;
+		const countKey = "yachai_xiumu_count";
+
+		async function ask(user, target) {
+			if (!user.isAlive() || user === target) return;
+			const X = (lib.skill[countKey] || 0) + 1;
+			if (user.countCards("h") < X) return;
+			const go = await user
+				.chooseBool("是否对" + get.translation(target) + "发动【修睦】？")
+				.forResult();
+			if (!go.bool) return;
+
+			let cardName = "jiu";
+			if (target.isDamaged()) {
+				const c = await user
+					.chooseControl("桃", "酒")
+					.set("prompt", "修睦：选择转化的牌")
+					.forResult();
+				cardName = c.control === "桃" ? "tao" : "jiu";
+			}
+
+			const { cards, bool } = await user
+				.chooseCard(X, "h", true, "修睦：选择" + X + "张手牌")
+				.forResult();
+			if (!bool) return;
+
+			const vcard = get.autoViewAs({ name: cardName }, cards);
+			if (!lib.filter.cardEnabled(vcard, user, "forceEnable")) return;
+			if (!lib.filter.targetEnabled2(vcard, user, target)) return;
+			await user.useCard(vcard, cards, [target], "yachai_xiumu");
+
+			lib.skill[countKey] = (lib.skill[countKey] || 0) + 1;
+		}
+
+		if (current === player) {
+			const up = player.previousSeat;
+			const down = player.nextSeat;
+			if (up && up !== player && up.isAlive()) await ask(up, player);
+			if (down && down !== player && down.isAlive() && down !== up) await ask(down, player);
+		} else if (current === player.previousSeat || current === player.nextSeat) {
+			await ask(player, current);
+		}
+	},
+},
+// === 神交 ===
+yachai_shenjiao: {
+	audio: 2,
+	limited: true,
+	trigger: { player: "dying" },
+	async cost(event, trigger, player) {
+		event.result = await player
+			.chooseTarget(get.prompt2(event.skill), lib.filter.notMe)
+			.set("ai", target => get.attitude(player, target) > 0 ? 1 : 0)
+			.set("logSkill", event.skill)
+			.forResult();
+	},
+	async content(event, trigger, player) {
+		player.awakenSkill(event.name);
+		const target = event.targets[0];
+		if (!target || !target.isIn()) return;
+
+		const r = await target
+			.chooseBool("是否令" + get.translation(player) + "回复所有体力？")
+			.set("prompt", "若执行，你摸等量张牌且【修睦】视为未发动过。")
+			.forResult();
+
+		if (r.bool) {
+			const recovered = player.maxHp - player.hp;
+			await player.recover(recovered);
+			await target.draw(recovered);
+			lib.skill.yachai_xiumu_count = 0;
+		}
+	},
+},
+yachai_qiyi: {
+	enable: ["chooseToUse", "chooseToRespond"],
+	filter(event, player) {
+		if (!Array.isArray(event.respondTo)) return false;
+		const source = event.respondTo[0];
+		if (!source || source === player || !source.isAlive()) return false;
+		if (!source.countCards("h")) return false;
+		if (player.getStorage("yachai_qiyi_used").includes(source)) return false;
+		if (event.type === "wuxie" && event.info_map) {
+			const map = event.info_map;
+			if (map.isJudge) return false;
+			const targets = map.targets || (map.target ? [map.target] : []);
+			if (!targets.includes(player)) return false;
+		}
+		return true;
+	},
+	hiddenCard(player, name) {
+		const evt = _status.event;
+		if (Array.isArray(evt.respondTo)) {
+			const source = evt.respondTo[0];
+			if (!source || source === player || !source.countCards("h")) return false;
+			if (player.getStorage("yachai_qiyi_used").includes(source)) return false;
+			return source.countCards("h", { name }) > 0;
+		}
+		if (evt._info_map) {
+			const map = evt._info_map;
+			if (map.isJudge || !map.player) return false;
+			const source = map.player;
+			if (!source || source === player || !source.countCards("h")) return false;
+			if (player.getStorage("yachai_qiyi_used").includes(source)) return false;
+			const targets = map.targets || (map.target ? [map.target] : []);
+			if (!targets.includes(player)) return false;
+			return source.countCards("h", { name }) > 0;
+		}
+		return false;
+	},
+	hiddenWuxie(player, info) {
+		if (!info || !info.player || info.isJudge) return false;
+		const source = info.player;
+		if (!source || source === player || !source.isAlive()) return false;
+		if (!source.countCards("h")) return false;
+		if (player.getStorage("yachai_qiyi_used").includes(source)) return false;
+		const targets = info.targets || (info.target ? [info.target] : []);
+		if (!targets.includes(player)) return false;
+		return true;
+	},
+	chooseButton: {
+		dialog(event, player) {
+			const source = event.respondTo[0];
+			if (!source.countCards("h")) return;
+			player.logSkill("yachai_qiyi", source);
+			player.markAuto("yachai_qiyi_used", [source]);
+			return ui.create.dialog("岐嶷：选择" + get.translation(source) + "的手牌", source.getCards("h"));
+		},
+		filter(button, player) {
+			const evt = _status.event.getParent();
+			console.log("[岐嶷filter] _status.event:", _status.event?.name);
+			console.log("[岐嶷filter] evt.name:", evt?.name, "evt.respondTo:", evt?.respondTo?.[0]?.name, evt?.respondTo?.[1]?.name);
+			console.log("[岐嶷filter] evt.filterCard类型:", typeof evt?.filterCard, "是否函数:", typeof evt?.filterCard === "function");
+			const source = evt.respondTo[0];
+			const cardName = get.name(button.link, source);
+			console.log("[岐嶷filter] button.link卡名:", cardName, "原始名:", button.link.name, "nature:", get.nature(button.link, source));
+			const virtualCard = { name: cardName, nature: get.nature(button.link, source), isCard: true };
+			let result;
+			try {
+				result = evt.filterCard(virtualCard, player, evt);
+				console.log("[岐嶷filter] filterCard结果:", result);
+			} catch (e) {
+				console.log("[岐嶷filter] filterCard报错:", e.message);
+				result = false;
+			}
+			return result;
+		},
+		check(button) {
+			const evt = _status.event.getParent();
+			const source = evt.respondTo[0];
+			return -get.value(button.link, source);
+		},
+		backup(links, player) {
+			const card = links[0];
+			const source = _status.event.respondTo[0];
+			return {
+				viewAs: {
+					name: get.name(card, source),
+					nature: get.nature(card, source),
+					isCard: true,
+				},
+				card: card,
+				source: source,
+				filterCard: () => false,
+				selectCard: -1,
+				log: false,
+				async precontent(event, trigger, player) {
+					const backup = lib.skill.yachai_qiyi_backup;
+					event.result.card = backup.card;
+					event.result.cards = [backup.card];
+				}
+			};
+		},
+		ai: {
+			respondSha: true,
+			respondShan: true,
+			skillTagFilter(player, tag) {
+				const name = "s" + tag.slice("respondS".length);
+				return lib.skill.yachai_qiyi.hiddenCard(player, name);
+			}
+		}
+	},
+	content() {},
+	subSkill: {
+		used: {
+			charlotte: true,
+			onremove: true,
+			mark: true,
+			marktext: "嶷",
+			intro: {
+				content: (storage = []) => `已触发岐嶷的角色：${get.translation(storage.toUniqued())}`,
+			},
+		},
+	},
+},
+yachai_chengshi: {
+	enable: "phaseUse",
+	usable: 1,
+	group: "yachai_chengshi_damageCheck",
+	filter(event, player) {
+		return game.hasPlayer(target => target !== player);
+	},
+	async content(event, trigger, player) {
+		const r1 = await player
+			.chooseTarget("逞师：选择一名其他角色作为目标", lib.filter.notMe)
+			.forResult();
+		if (!r1.bool) return;
+		const targetA = r1.targets[0];
+
+		const r2 = await player
+			.chooseTarget("逞师：选择弃牌来源角色", (card, player, target) => {
+				return target !== targetA && target.countCards("he") > 0;
+			})
+			.forResult();
+		if (!r2.bool) return;
+		const discardFrom = r2.targets[0];
+
+		await player.discardPlayerCard(discardFrom, "he", true);
+
+		const sha = { name: "sha", isCard: true };
+		if (!player.canUse(sha, targetA, false, false)) return;
+		player.storage.yachai_chengshi_tracker = { damaged: false };
+		await player.useCard(sha, targetA, false, "yachai_chengshi");
+		const { damaged } = player.storage.yachai_chengshi_tracker;
+		delete player.storage.yachai_chengshi_tracker;
+
+		if (damaged) {
+			player.storage.yachai_qiyi_used = [];
+			player.unmarkSkill("yachai_qiyi_used");
+		} else if (discardFrom !== player) {
+			const sha2 = { name: "sha", isCard: true };
+			if (discardFrom.canUse(sha2, player, false, false)) {
+				await discardFrom.useCard(sha2, player, false);
+			}
+		}
+	},
+	subSkill: {
+		damageCheck: {
+			trigger: { source: "damage" },
+			forced: true,
+			popup: false,
+			silent: true,
+			filter(event, player) {
+				if (!player.storage.yachai_chengshi_tracker) return false;
+				return event.getParent("useCard")?.skill === "yachai_chengshi";
+			},
+			content() {
+				player.storage.yachai_chengshi_tracker.damaged = true;
+			},
+		},
+	},
+	ai: {
+		result: { player: 1 },
+	},
+},
 qunyou_lianchou: {
 	enable: "phaseUse",
 	usable: 1,
@@ -12587,6 +12919,295 @@ qunyou_xiaqing: {
 			}
 			lib.skill.qunyou_duliang.reset(player);
 		}
+	},
+},
+// ====== 迫标记 ======
+yachai_po: {
+	marktext: "迫",
+	intro: { content: "mark" },
+},
+
+// ====== 浸势 ======
+yachai_jinshi: {
+	trigger: { global: "damageAfter" },
+	filter(event, player) {
+		const damaged = event.player;
+		const source = event.source;
+		if (damaged !== player && damaged.countGainableCards(player, "e") > 0) return true;
+		if (source && source !== player && source.countGainableCards(player, "e") > 0) return true;
+		return false;
+	},
+	async content(event, trigger, player) {
+		const damaged = trigger.player;
+		const source = trigger.source;
+		const targets = [];
+		if (damaged !== player && damaged.countGainableCards(player, "e") > 0) targets.push(damaged);
+		if (source && source !== player && source.countGainableCards(player, "e") > 0) targets.push(source);
+		if (!targets.length) return;
+		let target;
+		if (targets.length === 1) target = targets[0];
+		else {
+			const r = await player.chooseTarget("浸势：选择获得装备的角色", (card, p, t) => targets.includes(t)).forResult();
+			if (!r.bool) return;
+			target = r.targets[0];
+		}
+		const result = await player.gainPlayerCard(target, "e", true).forResult();
+		if (result?.bool && result.cards?.length) {
+			const card = result.cards[0];
+			if (player.getCards("h").includes(card) && get.type(card) === "equip") {
+				await player.chooseUseTarget(card, true, "nopopup");
+			}
+		}
+		player.addMark("yachai_po", 1);
+		if (player.countMark("yachai_po") >= 3 && !player.hasSkill("yachai_nilv")) {
+			await game.delayx();
+			player.logSkill("yachai_faji");
+			player.awakenSkill("yachai_faji");
+			player.removeSkill("yachai_jinshi");
+			player.addSkill("yachai_nilv");
+			const r2 = await player.chooseTarget("发机：选择一名其他角色", (card, p, t) => t !== p).forResult();
+			if (r2.bool && r2.targets?.length) {
+				const t = r2.targets[0];
+				player.storage.yachai_faji_target = t;
+				t.addSkill("yachai_faji_mark");
+				player.addSkill("yachai_faji_damage");
+				player.addSkill("yachai_faji_remove");
+				player.addSkill("yachai_faji_clear");
+			}
+		}
+	},
+},
+
+// ====== 发机 ======
+yachai_faji: {
+	awaken: true,
+},
+yachai_faji_damage: {
+	trigger: { source: "damageBegin1" },
+	filter(event, player) {
+		const target = player.storage.yachai_faji_target;
+		return target && event.player === target;
+	},
+	forced: true,
+	charlotte: true,
+	async content(event, trigger, player) {
+		trigger.num++;
+	},
+},
+yachai_faji_remove: {
+	trigger: { player: "damageBegin3" },
+	filter(event, player) {
+		const target = player.storage.yachai_faji_target;
+		return target && event.source === target;
+	},
+	forced: true,
+	charlotte: true,
+	async content(event, trigger, player) {
+		player.removeMark("yachai_po", 1);
+	},
+},
+yachai_faji_clear: {
+	trigger: { global: "damageAfter" },
+	filter(event, player) {
+		const target = player.storage.yachai_faji_target;
+		if (!target) return false;
+		return event.hasNature("thunder") && (event.player === player || event.player === target);
+	},
+	forced: true,
+	charlotte: true,
+	forceDie: true,
+	async content(event, trigger, player) {
+		const target = player.storage.yachai_faji_target;
+		if (target) target.removeSkill("yachai_faji_mark");
+		player.removeSkill("yachai_faji_damage");
+		player.removeSkill("yachai_faji_remove");
+		player.removeSkill("yachai_faji_clear");
+		delete player.storage.yachai_faji_target;
+	},
+},
+
+yachai_faji_mark: {
+	mark: true,
+	intro: { content: "诞神与你塔塔开" },
+},
+
+// ====== 逆旅 ======
+yachai_nilv: {
+	enable: "phaseUse",
+	usable: 1,
+	filter(event, player) {
+		return player.countMark("yachai_po") > 0;
+	},
+	async content(event, trigger, player) {
+		player.removeMark("yachai_po", 1);
+		const choice = await player.chooseControl("视为使用基本牌", "造成伤害").forResult();
+		if (choice.control === "视为使用基本牌") {
+			const list = [];
+			for (const name of lib.inpile) {
+				if (get.type(name) !== "basic") continue;
+				if (player.hasUseTarget({ name, isCard: true }, true, false)) list.push(["基本", "", name]);
+			}
+			if (!list.length) return;
+			const btn = await player.chooseButton(["逆旅：视为使用一张基本牌", [list, "vcard"]], true)
+				.set("filterButton", b => get.player().hasUseTarget({ name: b.link[2], isCard: true }, true, false))
+				.forResult();
+			if (!btn?.bool || !btn.links?.length) return;
+			await player.chooseUseTarget({ name: btn.links[0][2], isCard: true }, true, false)
+				.set("prompt", "逆旅：视为使用【" + get.translation(btn.links[0][2]) + "】")
+				.forResult();
+		} else {
+			const X = player.storage.yachai_nilv_lastSeat || game.players.length;
+			const valid = game.filterPlayer(t => t !== player && t.getSeatNum() < X);
+			if (!valid.length) return;
+			const r = await player.chooseTarget(valid, "逆旅：对一名角色造成1点伤害（座位号需小于" + X + "）").forResult();
+			if (!r?.bool || !r.targets?.length) return;
+			const t = r.targets[0];
+			player.storage.yachai_nilv_lastSeat = t.getSeatNum();
+			await t.damage();
+		}
+	},
+},
+// ====== 流罹 ======
+yachai_liuliu: {
+	forced: true,
+	trigger: { player: "useCardToTarget" },
+	init(player, skill) {
+		if (!player.storage.yachai_liuliu_groups) {
+			player.storage.yachai_liuliu_groups = [player.group];
+		}
+	},
+	async content(event, trigger, player) {
+		const phase = trigger.getParent("phase");
+		if (phase) {
+			player.storage.yachai_liuliu_turn = phase.player;
+			player.addTempSkill("yachai_liuliu_end", "phaseBeginStartAfter");
+		}
+	},
+	subSkill: {
+		end: {
+			trigger: { global: "phaseAfter" },
+			forced: true,
+			filter(event, player) {
+				return event.player === player.storage.yachai_liuliu_turn;
+			},
+			async content(event, trigger, player) {
+				delete player.storage.yachai_liuliu_turn;
+				player.storage.yachai_liuliu_groups = player.storage.yachai_liuliu_groups || [];
+				const groups = lib.group.filter(g => g !== "shen" && !player.storage.yachai_liuliu_groups.includes(g));
+				if (!groups.length) {
+					const toRemove = player.getSkills(null, false, false).filter(sk => {
+						const info = get.info(sk);
+						return !info || !info.charlotte;
+					});
+					await player.removeSkills(toRemove);
+					player.addSkill("yachai_beixuan");
+					return;
+				}
+				const result = await player.chooseControl(groups)
+					.set("prompt", "流罹：选择要变更的势力")
+					.forResult();
+				const newGroup = result.control;
+				player.storage.yachai_liuliu_groups.push(newGroup);
+				await player.changeGroup(newGroup);
+				const choice = await player.chooseControl("视为使用基本牌", "从牌堆或弃牌堆中选择一张坐骑牌使用")
+					.set("prompt", "流罹：选择一项")
+					.forResult();
+				if (choice.control === "视为使用基本牌") {
+					const list = [];
+					for (const name of lib.inpile) {
+						if (get.type(name) !== "basic") continue;
+						if (player.hasUseTarget({ name, isCard: true }, true, false)) {
+							list.push(["基本", "", name]);
+						}
+					}
+					if (list.length) {
+						if (list.length === 1) {
+							await player.chooseUseTarget({ name: list[0][2], isCard: true }, true, false)
+								.set("prompt", "流罹：视为使用【" + get.translation(list[0][2]) + "】")
+								.forResult();
+						} else {
+							const btn = await player.chooseButton(["流罹：视为使用一张基本牌", [list, "vcard"]], true)
+								.set("filterButton", b => get.player().hasUseTarget({ name: b.link[2], isCard: true }, true, false))
+								.forResult();
+							if (btn?.bool && btn.links?.length) {
+								await player.chooseUseTarget({ name: btn.links[0][2], isCard: true }, true, false)
+									.set("prompt", "流罹：视为使用【" + get.translation(btn.links[0][2]) + "】")
+									.forResult();
+							}
+						}
+					}
+				} else {
+					const mounts = [];
+					for (const card of ui.cardPile.childNodes) {
+						if (["equip3", "equip4"].includes(get.subtype(card))) mounts.push(card);
+					}
+					for (const card of ui.discardPile.childNodes) {
+						if (["equip3", "equip4"].includes(get.subtype(card))) mounts.push(card);
+					}
+					if (mounts.length) {
+						let chosen;
+						if (mounts.length === 1) chosen = mounts[0];
+						else {
+							const r = await player.chooseButton(["流罹：选择一张坐骑牌", [mounts, "card"]], true).forResult();
+							if (r?.bool && r.links?.length) chosen = r.links[0];
+						}
+						if (chosen) {
+							await player.chooseUseTarget(chosen, true, "nopopup").forResult();
+						}
+					}
+				}
+			},
+		},
+	},
+},
+
+// ====== 背玄 ======
+yachai_beixuan: {
+	enable: "phaseUse",
+	usable: 1,
+	async content(event, trigger, player) {
+		const present = new Set();
+		game.countPlayer(p => {
+			if (p.group) present.add(p.group);
+		});
+		const allGroups = lib.group.filter(g => g !== "shen");
+		const missing = allGroups.filter(g => !present.has(g));
+		const X = Math.max(1, missing.length);
+		await player.draw(X);
+		player.addSkill("yachai_beixuan_block");
+		player.addSkill("yachai_beixuan_clear");
+	},
+	subSkill: {
+		block: {
+			trigger: { player: "gainBegin" },
+			forced: true,
+			popup: false,
+			filter(event, player) {
+				return event.getParent("draw")?.player === player;
+			},
+			async content(event, trigger, player) {
+				trigger.cancel();
+			},
+			charlotte: true,
+		},
+		clear: {
+			trigger: {
+				player: "loseAfter",
+				global: ["equipAfter", "addJudgeAfter", "gainAfter", "loseAsyncAfter", "addToExpansionAfter"],
+			},
+			forced: true,
+			popup: false,
+			filter(event, player) {
+				if (player.countCards("h")) return false;
+				const evt = event.getl(player);
+				return evt && evt.hs && evt.hs.length;
+			},
+			async content(event, trigger, player) {
+				player.removeSkill("yachai_beixuan_block");
+				player.removeSkill("yachai_beixuan_clear");
+			},
+			charlotte: true,
+		},
 	},
 },
 }
