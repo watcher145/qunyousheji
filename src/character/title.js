@@ -59,5 +59,10 @@ export const characterTitle = {
 	yachaiclan_lukai: "格业忠勤",
 	yachaiclan_zhugeliang: "日月同悬",
 	yachaiclan_zhugezhan: "掣近掎远",
+	yachaiclan_zhugeshang: "跨父轶祖",
+	yachaiclan_zhugejin: "才猷骏懋",
+	yachaiclan_zhugeke: "枉恪罔逊",
+	yachaiclan_zhugedan: "著勋齾铓",
+	yachaiclan_zhugeliang2: "彪炳人寰",
 	qunyou_wangyun: "今魂兴魄",
 };

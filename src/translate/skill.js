@@ -375,4 +375,39 @@ export const skillTranslate = {
 	qunyou_xiaqing: "狭情",
 	qunyou_xiaqing_info:
 		"其他角色观看牌时，你可令这些牌对你也可见，并用任意张手牌交换其中等量张牌；若如此做，当前回合角色可以选择一项：1.弃置一张牌，令你失去1点体力；2.交给你一张牌，令你重置【督粮】。",
+	yachai_xiaoqiang: "效戕",
+	yachai_xiaoqiang_info:
+		"出牌阶段限一次，你可以依次执行以下任意项并视为对同一目标使用等量张【决斗】：①弃置所有牌；②失去体力至1点；③翻至背面。",
+	yachai_changshang: "长殇",
+	yachai_changshang_info:
+		"锁定技，当你受到伤害后，若你因此/未因此进入过濒死状态，你从牌堆顶/弃牌堆顶摸两张牌。你死亡时，令一名角色获得本技能。",
+	yachai_xiumu: "修睦",
+	yachai_xiumu_info:
+		"你/你的上下家的准备阶段，你的上下家/你可以将X张手牌当【桃】或【酒】对当前回合角色使用。（X为本局游戏此技能的发动次数）",
+	yachai_shenjiao: "神交",
+	yachai_shenjiao_info:
+		`限定技，当你进入濒死状态时，你可以令一名其他角色选择是否令你回复所有体力，若其执行，其摸等量张牌且${get.poptip("yachai_xiumu")}视为未发动过。`,
+	yachai_qiyi: "岐嶷",
+	yachai_qiyi_info:
+		"每名角色限一次，当你需要响应目标为你的牌时，你可以观看使用者的手牌并选择其中一张牌响应之。",
+	yachai_chengshi: "逞师",
+	yachai_chengshi_info:
+		`出牌阶段限一次，你可以选择一名其他角色，然后弃置另一名角色的一张牌并视为你对该角色使用一张【杀】。若此【杀】造成了伤害，则${get.poptip("yachai_qiyi")}视为未发动过；否则被弃牌的其他角色视为对你使用一张【杀】。`,
+	yachai_po: "迫",
+	yachai_jinshi: "浸势",
+	yachai_jinshi_info:
+		`一名角色受到伤害时，你可以获得其或来源装备区内的一张装备牌并使用之，然后获得1枚"迫"标记。`,
+	yachai_faji: "发机",
+	yachai_faji_mark: "发机",
+	yachai_faji_info:
+		`觉醒技，当"迫"的数量达到3枚时，你失去${get.poptip("yachai_jinshi")}并获得${get.poptip("yachai_nilv")}，然后你须选择一名其他角色，当你对其/其对你造成伤害时，此伤害+1/移去1枚"迫"，直到你或其受到雷电伤害后。`,
+	yachai_nilv: "逆旅",
+	yachai_nilv_info:
+		`出牌阶段限一次，你可以移去1枚"迫"，然后视为使用一张基本牌或对一名座位号小于X的角色造成1点伤害。（X为你上次以此法选择角色的座位号，初次发动可以任选）`,
+	yachai_liuliu: "流罹",
+	yachai_liuliu_info:
+		`锁定技，你成为过牌的目标的回合结束时，你变更为一个未成为过的势力，选择一项：1.视为使用一张基本牌；2.从牌堆或弃牌堆中选择一张坐骑牌使用。然后若所有势力你均成为过，你失去武将牌上所有的技能并获得${get.poptip("yachai_beixuan")}。`,
+	yachai_beixuan: "背玄",
+	yachai_beixuan_info:
+		`出牌阶段限一次，你可以摸X张牌，然后直到你失去最后的手牌前，你不能摸牌。（X为场上没有的势力数且至少为1）`,
 };
