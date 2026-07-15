@@ -13680,7 +13680,93 @@ qunyou_jinlu: {
 					await player.damage(result.targets[0], X, "fire");
 				}
 			},
+			backup: {},
 		},
+	},
+},
+
+// === 上兵 ===
+qunyou_shangbing: {
+	audio: 2,
+	enable: ["chooseToUse", "chooseToRespond"],
+	filter(event, player) {
+		return player.countCards("h") >= 2;
+	},
+	chooseButton: {
+		dialog(event, player) {
+			var list = [];
+			for (var name of lib.inpile) {
+				if (get.type(name) !== "basic") continue;
+				if (event.filterCard(get.autoViewAs({ name }, "unsure"), player, event)) {
+					list.push(["基本", "", name]);
+				}
+			}
+			if (event.filterCard(get.autoViewAs({ name: "wuxie" }, "unsure"), player, event)) {
+				list.push(["锦囊", "", "wuxie"]);
+			}
+			return ui.create.dialog("上兵", [list, "vcard"], "hidden");
+		},
+		filter(button, player) {
+			var evt = _status.event.getParent();
+			return evt.filterCard({ name: button.link[2], isCard: true }, player, evt);
+		},
+		check(button) {
+			if (_status.event.getParent().type != "phase") return 1;
+			var player = _status.event.player;
+			return player.getUseValue({ name: button.link[2] }, null, true);
+		},
+		backup(links, player) {
+			return {
+				filterCard(card, player) { return get.position(card) === "h"; },
+				selectCard() { return _status.event.player.countCards("h") - 1; },
+				position: "h",
+				viewAs: { name: links[0][2], isCard: true },
+				popname: true,
+				precontent() {
+					player.storage.qunyou_shangbing_lastName = event.result.card.name;
+					player.storage.qunyou_shangbing_lastCount = event.result.cards.length;
+				},
+			};
+		},
+		prompt(links, player) {
+			return "将" + get.cnNumber(player.countCards("h") - 1) + "张手牌当【" + get.translation(links[0][2]) + "】使用或打出";
+		},
+	},
+	hiddenCard(player, name) {
+		if (player.countCards("h") < 2) return false;
+		if (name === "wuxie") return true;
+		if (get.type(name) === "basic") return true;
+		return false;
+	},
+	group: "qunyou_shangbing_lose",
+	ai: {
+		respondSha: true,
+		respondShan: true,
+		save: true,
+		skillTagFilter(player, tag) {
+			return player.countCards("h") >= 2;
+		},
+		order: 1,
+		result: { player: 1 },
+	},
+	subSkill: {
+		lose: {
+			trigger: { player: "loseAfter" },
+			filter(event, player) {
+				const hs = event.getl(player)?.hs;
+				return hs?.length === 1 && !player.countCards("h") && player.storage.qunyou_shangbing_lastName;
+			},
+			async content(event, trigger, player) {
+				const card = trigger.getl(player).hs[0];
+				await player.showCards(card, get.translation(player) + "发动了【上兵】");
+				const lastName = player.storage.qunyou_shangbing_lastName;
+				if (lastName && get.name(card) === lastName) {
+					const X = player.storage.qunyou_shangbing_lastCount || 0;
+					if (X > 0) await player.draw(X);
+				}
+			},
+		},
+		backup: {},
 	},
 },
 }
