@@ -1,4 +1,4 @@
-import { lib } from "noname";
+import { lib, game } from "noname";
 import dynamicTranslates from "./translate/dynamicTranslate.js";
 
 /**
@@ -36,6 +36,12 @@ export function precontent() {
 		color: "#dbdbdb",
         nature: "glodenmm",
 	});
+	// 注册汉势力
+	game.addGroup("han", "汉", "汉势力", {
+		color: "#FAD6A2",
+		image: "ext:群友设计/image/card/group_han.png",
+	});
+
 	// 来自活动武将扩展
 	lib.poptip.add({
 		name: "奋武技",

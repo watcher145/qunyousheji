@@ -65,4 +65,7 @@ export const characterTitle = {
 	yachaiclan_zhugedan: "著勋齾铓",
 	yachaiclan_zhugeliang2: "彪炳人寰",
 	qunyou_wangyun: "今魂兴魄",
+	qunyou_zishuliyan: "鄙情逐利",
+	qunyou_zishulvju: "克绍堂构",
+	qunyou_zishuxunyu: "君去香留",
 };

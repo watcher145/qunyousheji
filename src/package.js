@@ -38,7 +38,7 @@ const characterSortTranslate = {
 };
 
 const characterSort = {
-	zishubei: ["qunyou_liyan"],
+	zishubei: ["qunyou_zishuliyan", "qunyou_zishulvju", "qunyou_zishuxunyu", "qunyou_zishuwangguan"],
 	qunyou_chenjunxieshi: ["qunyou_xiedaoyun", "qunyou_xiean", "qunyou_xiexuan", "qunyou_xielingyun", "qunyou_xieshi"],
     qunyou_xingheshuo: ["shanhe_zhangjiao", "shanhe_luzhi", "shanhe_dongzhuo"],
 	yachaiclan: ["yachaiclan_cuiyan", "yachaiclan_wangxiang", "yachaiclan_diaochan", "yachaiclan_wuyi", "yachaiclan_xunyu",
