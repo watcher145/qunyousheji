@@ -17,7 +17,12 @@
 | `src/card/data.js` | 扩展卡牌定义 |
 | `src/card/translate.js` | 卡牌名与 `*_info` |
 | `src/card/patchAssets.js` | 卡牌插画 `ext:群友设计/image/card/...` |
-| `src/skill/skills.js` | 技能对象 `lib.skill` 内容 |
+| `src/skill/index.js` | 合并 4 个技能文件为 `lib.skill` |
+| `src/skill/helpers.js` | 技能工具函数 |
+| `src/skill/yachai.js` | 崖柴系技能 (`yachai_*`) |
+| `src/skill/clan.js` | 宗族技 (`clan*`) |
+| `src/skill/qunsai.js` | 群赛（目前有：自书杯 + 问鼎·陈郡谢氏 + 山河如梦·朔） 技能 |
+| `src/skill/sanshe.js` | 散设 — 其余 `qunyou_*` 技能 |
 | `src/translate/skill.js` | 技能译名与 `*_info` |
 | `src/translate/dynamicTranslate.js` | 局内动态描述（可选） |
 
@@ -34,7 +39,7 @@
 1. `src/character/data.js` 增加 id 与 `skills` 数组  
 2. `src/character/translate.js` 增加译名（及可选 `id_prefix`）  
 3. `title.js` / `intro.js` 按需补充  
-4. `src/skill/skills.js` 与 `src/translate/skill.js` 写入技能与描述  
+4. 根据技能所属组别写入 `src/skill/{yachai,clan,qunsai,sanshe}.js`，译名写入 `src/translate/skill.js`  
 5. 放入立绘与（若有）阵亡配音，并更新 `extension.js` 的 `files.character` / `files.audio`
 
 ## 添加一张扩展牌

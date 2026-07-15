@@ -6,7 +6,7 @@ import { patchCharacterAssets } from "./character/patchAssets.js";
 import { cardData } from "./card/data.js";
 import { cardTranslate } from "./card/translate.js";
 import { patchCardPackImages } from "./card/patchAssets.js";
-import { skills } from "./skill/skills.js";
+import { skills } from "./skill/index.js";
 import { skillTranslate } from "./translate/skill.js";
 
 function cloneAndPatchCharacters() {
