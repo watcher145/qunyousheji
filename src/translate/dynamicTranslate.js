@@ -1,6 +1,7 @@
 import { lib, get, _status } from "noname";
 
 const blue = (text) => `<span class="bluetext">${text}</span>`;
+const phaseName = (id) => blue(get.translation(id).replace("阶段", ""));
 
 const dynamicTranslates = {
 	qunyou_miaoyu(player, skill) {
@@ -47,6 +48,18 @@ const dynamicTranslates = {
 			.replace("若与你上使用牌点数递减", blue("若与你上使用牌点数递减"))
 			.replace("则弃置所有手牌摸1张牌", blue("则弃置所有手牌摸1张牌"))
 			.replace("并减1点体力上限", blue("并减1点体力上限"));
+	},
+	qunyou_mitu(player, skill) {
+		const left = player?.storage?.qunyou_mitu_left;
+		const right = player?.storage?.qunyou_mitu_right;
+		if (!left?.length || !right?.length) {
+			return lib.translate[`${skill}_info`] || "";
+		}
+		const rules = [];
+		for (let i = 0; i < 3; i++) {
+			rules.push(`于${phaseName(left[i])}后，下个阶段改为执行${phaseName(right[i])}`);
+		}
+		return `锁定技，你的回合开始时，按以下三条规则重新排列阶段顺序：${rules.join("；")}。`;
 	},
 };
 

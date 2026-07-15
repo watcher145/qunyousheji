@@ -64,5 +64,9 @@ export const characterIntro = {
 	yachaiclan_zhugedan: "设计：崖柴xxxF（B站）<br>评价：完全的反贼位，而且根本没有后期，不过在现在几轮结束游戏的时代倒是意外的适合",
 	yachaiclan_zhugeliang2: "设计：崖柴xxxF（B站）<br>评价：",
 	qunyou_wangyun: "来源：BV12N9gBMEW2",
+	qunyou_zishuliyan: "设计：城北徐公 <br>评价：",
+	qunyou_zishulvju: "设计：环己醇 <br>评价：",
 	qunyou_zhouyu: "设计：寻辉逐烨<br>评价：前两个出牌阶段开无中，能出杀就出，后两个出牌阶段就开始烧人了。还是有概率空城的，要注意玩法，小心卧龙诸葛和无懈",
+	qunyou_zishuxunyu: "设计：天任 <br>评价：",
+	qunyou_zishuwangguan: "设计：环己醇",
 };
