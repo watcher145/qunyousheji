@@ -69,4 +69,6 @@ export const characterIntro = {
 	qunyou_zhouyu: "设计：寻辉逐烨<br>评价：前两个出牌阶段开无中，能出杀就出，后两个出牌阶段就开始烧人了。还是有概率空城的，要注意玩法，小心卧龙诸葛和无懈",
 	qunyou_zishuxunyu: "设计：天任 <br>评价：",
 	qunyou_zishuwangguan: "设计：环己醇",
+	xiaobai_lizhaoyi: "设计：小叶子<br>评价：",
+	qunyou_dongzhuo: "设计：滑溜溜<br>评价：",
 };

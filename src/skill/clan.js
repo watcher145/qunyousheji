@@ -2,6 +2,7 @@ import { lib, game, get, ui, _status } from "noname";
 
 // 宗族技 — clan*
 export const skills = {
+// === 沦佚 ===
 clanlunyi: {
 	audio: 2,
 	clanSkill: true,
@@ -41,6 +42,7 @@ clanlunyi: {
 	},
 },
 
+// === 潜章 ===
 clanqianzhang: {
 	audio: 2,
 	clanSkill: true,
@@ -85,6 +87,7 @@ clanqianzhang: {
 	},
 },
 
+// === 训礼 ===
 clanxunli: {
 	audio: 2,
 	clanSkill: true,
@@ -124,6 +127,7 @@ clanxunli: {
 	},
 },
 
+// === 柱鼎 ===
 clanzhuding: {
 	audio: 2,
 	clanSkill: true,
@@ -140,7 +144,7 @@ clanzhuding: {
 			return "未选择";
 		},
 	},
-	trigger: { global: "useCardAfter" },
+	trigger: { global: "useCard" },
 	filter(event, player) {
 		if (!player.hasClan("琅琊诸葛氏")) return false;
 		const chosenType = player.storage.clanzhuding_type;

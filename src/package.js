@@ -35,6 +35,7 @@ const characterSortTranslate = {
 	qunyou_sinatsuriku:"西夏笠谷",
 	qunyou_gaijin:"有问题的设计",
 	qunyou_yongdong:"能永动的武将",
+	xiaobai: "小白杯",
 };
 
 const characterSort = {
@@ -47,6 +48,7 @@ const characterSort = {
 	qunyou_sinatsuriku: ["qunyou_yang_wang","qunyou_xian_hua","qunyou_sunce","qunyou_lvlingqi","qunyou_panjun"],
 	qunyou_gaijin: ["qunyou_zhugeliang"],
 	qunyou_yongdong: ["qunyou_wuzhangfei", "qunyou_wanglang"],
+	xiaobai: ["xiaobai_lizhaoyi"],
 };
 
 /**

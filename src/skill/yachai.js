@@ -2,6 +2,7 @@ import { lib, game, get, ui, _status } from "noname";
 
 // 崖柴系技能 — yachai_*
 export const skills = {
+// === 尚文 ===
 	yachai_shangwen: {
 		audio: 2,
 		trigger: { global: "phaseJieshuBegin" },
@@ -25,6 +26,7 @@ export const skills = {
 		},
 	},
 
+// === 该览 ===
 	yachai_gailan: {
 		audio: 2,
 		enable: "phaseUse",
@@ -75,6 +77,7 @@ export const skills = {
 		},
 	},
 
+// === 清界 ===
 	yachai_qingjie: {
 	audio: 2,
 	enable: "phaseUse",
@@ -208,6 +211,7 @@ export const skills = {
 	},
 },
 
+// === 鉴识 ===
 yachai_jianshi: {
 	enable: "phaseUse",
 	usable: 1,
@@ -275,6 +279,7 @@ yachai_jianshi: {
 	},
 },
 
+// === 时变 ===
 yachai_shibian: {
 	audio: 2,
 	locked: true,
@@ -315,6 +320,7 @@ yachai_shibian: {
 	},
 },
 
+// === 陈训 ===
 yachai_chenxun: {
 	audio: 2,
 	usable: 1,
@@ -357,6 +363,7 @@ yachai_chenxun: {
 	},
 },
 
+// === 砺剑 ===
 yachai_lijian: {
 	audio: 2,
 	enable: "phaseUse",
@@ -408,6 +415,7 @@ yachai_lijian: {
 	},
 },
 
+// === 蹚祸 ===
 yachai_tanghuo: {
 	audio: 2,
 	locked: true,
@@ -437,6 +445,7 @@ yachai_tanghuo: {
 	},
 },
 
+// === 潜礁 ===
 yachai_qianjiao: {
 	audio: 2,
 	enable: "phaseUse",
@@ -461,6 +470,7 @@ yachai_qianjiao: {
 	},
 },
 
+// === 暗潮 ===
 yachai_anchao: {
 	audio: 2,
 	global: "yachai_anchao_global",
@@ -567,6 +577,7 @@ yachai_anchao: {
 	},
 },
 
+// === 诣降 ===
 yachai_yijiang: {
 	audio: 2,
 	trigger: { global: "phaseUseBegin" },
@@ -613,6 +624,7 @@ yachai_yijiang: {
 	},
 },
 
+// === 解任 ===
 yachai_jieren: {
 	audio: 2,
 	trigger: { player: "useCardAfter" },
@@ -657,6 +669,7 @@ yachai_jieren: {
 	},
 },
 
+// === 赍志 ===
 yachai_jizi: {
 	audio: 2,
 	forced: true,
@@ -694,6 +707,7 @@ yachai_jizi: {
 	},
 },
 
+// === 推诚 ===
 yachai_tuicheng: {
 	audio: 2,
 	forced: true,
@@ -743,6 +757,7 @@ yachai_tuicheng: {
 	},
 },
 
+// === 萦香 ===
 yachai_yingxiang: {
 	audio: 2,
 	forced: true,
@@ -796,6 +811,7 @@ yachai_yingxiang: {
 	},
 },
 
+// === 驳罪 ===
 yachai_bozui: {
 	audio: 2,
 	trigger: { target: "useCardToTarget" },
@@ -815,6 +831,7 @@ yachai_bozui: {
 	},
 },
 
+// === 和戍 ===
 yachai_heshu: {
 	audio: 2,
 	global: "yachai_heshu_global",
@@ -881,6 +898,7 @@ yachai_heshu: {
 	},
 },
 
+// === 辨亡 ===
 yachai_bianwang: {
 	audio: 2,
 	trigger: { global: "damageSource" },
@@ -916,6 +934,7 @@ yachai_bianwang: {
 	},
 },
 
+// === 纳剑 ===
 yachai_najian: {
 	audio: 2,
 	check: () => true,
@@ -996,6 +1015,7 @@ yachai_najian: {
 		},
 	},
 
+// === 忤言 ===
 	yachai_wuyan: {
 		trigger: { global: "gainAfter" },
 		check(event, player) {
@@ -1098,6 +1118,7 @@ yachai_najian: {
 		},
 	},
 
+// === 励诲 ===
 	yachai_lihui: {
 		trigger: { global: "phaseDrawAfter" },
 		filter(event, player) {
@@ -1134,6 +1155,7 @@ yachai_najian: {
 		},
 	},
 
+// === 移霜 ===
 yachai_yishuang: {
 	trigger: { global: "damageSource" },
 	filter(event, player) {
@@ -1167,6 +1189,7 @@ yachai_yishuang: {
 	intro: { content: "已记录点数：$" },
 },
 
+// === 柏舟 ===
 yachai_baizhou: {
 	trigger: {
 		player: "damageBegin1",
@@ -1230,6 +1253,7 @@ yachai_baizhou_mod: {
 	},
 },
 
+// === 尽规 ===
 yachai_jingui: {
 	audio: 2,
 	trigger: { global: ["loseAfter", "cardsDiscardAfter", "loseAsyncAfter", "equipAfter", "addJudgeAfter", "addToExpansionAfter"] },
@@ -1332,6 +1356,7 @@ yachai_jingui_cleanup: {
 	},
 },
 
+// === 节概 ===
 yachai_jiegai: {
 	audio: 2,
 	locked: true,
@@ -1353,6 +1378,7 @@ yachai_jiegai: {
 	},
 },
 
+// === 势策 ===
 yachai_shice: {
 	audio: 2,
 	trigger: { target: "useCardToTarget" },
@@ -1406,6 +1432,7 @@ yachai_shice: {
 	},
 },
 
+// === 将明 ===
 yachai_jiangming: {
 	audio: 2,
 	trigger: { player: "useCardAfter" },
@@ -1483,6 +1510,7 @@ yachai_jiangming: {
 	},
 },
 
+// === 赝令 ===
 yachai_yanling: {
 	audio: 2,
 	trigger: { global: "useCardToPlayer" },
@@ -1516,6 +1544,7 @@ yachai_yanling: {
 	},
 },
 
+// === 非矫 ===
 yachai_feijiao: {
 	audio: 2,
 	locked: true,
@@ -1541,6 +1570,7 @@ yachai_feijiao: {
 	},
 },
 
+// === 誉虚 ===
 yachai_yuxu: {
 	audio: 2,
 	trigger: { player: "useCardAfter" },
@@ -1581,6 +1611,7 @@ yachai_yuxu: {
 	},
 },
 
+// === 效戕 ===
 	yachai_xiaoqiang: {
 	audio: 2,
 	enable: "phaseUse",
@@ -1598,18 +1629,20 @@ yachai_yuxu: {
 			const r2 = await player.chooseBool("是否执行第②项“失去体力至1点”？")
 				.set("ai", () => player.hp > 3 ? 1 : 0)
 				.forResult();
-			if (!r2.bool) return;
-			await player.loseHp(player.hp - 1);
-			count++;
+			if (r2.bool) {
+				await player.loseHp(player.hp - 1);
+				count++;
+			}
 		}
 
 		if (!player.isTurnedOver()) {
 			const r3 = await player.chooseBool("是否执行第③项“翻至背面”？")
 				.set("ai", () => player.isTurnedOver() ? 0 : 1)
 				.forResult();
-			if (!r3.bool) return;
-			await player.turnOver();
-			count++;
+			if (r3.bool) {
+				await player.turnOver();
+				count++;
+			}
 		}
 
 		const { targets, bool } = await player
@@ -1629,6 +1662,7 @@ yachai_yuxu: {
 	},
 },
 
+// === 长殇 ===
 yachai_changshang: {
 	audio: 2,
 	locked: true,
@@ -1663,6 +1697,7 @@ yachai_changshang: {
 	},
 },
 
+// === 修睦 ===
 yachai_xiumu: {
 	audio: 2,
 	direct: true,
@@ -1723,6 +1758,7 @@ yachai_xiumu: {
 	},
 },
 
+// === 神交 ===
 yachai_shenjiao: {
 	audio: 2,
 	limited: true,
@@ -1754,6 +1790,7 @@ yachai_shenjiao: {
 	},
 },
 
+// === 岐嶷 ===
 yachai_qiyi: {
 	enable: ["chooseToUse", "chooseToRespond"],
 	filter(event, player) {
@@ -1876,6 +1913,7 @@ yachai_qiyi: {
 	},
 },
 
+// === 逞师 ===
 yachai_chengshi: {
 	enable: "phaseUse",
 	usable: 1,
@@ -1949,11 +1987,13 @@ yachai_chengshi: {
 	},
 },
 
+// === 迫 ===
 yachai_po: {
 	marktext: "迫",
 	intro: { content: "mark" },
 },
 
+// === 浸势 ===
 yachai_jinshi: {
 	trigger: { global: "damageAfter" },
 	filter(event, player) {
@@ -2011,6 +2051,7 @@ yachai_jinshi: {
 	},
 },
 
+// === 发机 ===
 yachai_faji: {
 	awaken: true,
 },
@@ -2066,6 +2107,7 @@ yachai_faji_mark: {
 	intro: { content: "诞神与你塔塔开" },
 },
 
+// === 逆旅 ===
 yachai_nilv: {
 	enable: "phaseUse",
 	usable: 1,
@@ -2125,6 +2167,7 @@ yachai_nilv: {
 	},
 },
 
+// === 流罹 ===
 yachai_liuliu: {
 	forced: true,
 	trigger: { target: "useCardToTarget" },
@@ -2243,6 +2286,7 @@ yachai_liuliu: {
 	},
 },
 
+// === 背玄 ===
 yachai_beixuan: {
 	enable: "phaseUse",
 	usable: 1,

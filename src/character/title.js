@@ -68,4 +68,6 @@ export const characterTitle = {
 	qunyou_zishuliyan: "鄙情逐利",
 	qunyou_zishulvju: "克绍堂构",
 	qunyou_zishuxunyu: "君去香留",
+	xiaobai_lizhaoyi: "兰女同烬",
+	qunyou_dongzhuo: "奸覆四海",
 };
