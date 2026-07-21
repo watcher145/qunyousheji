@@ -3,6 +3,7 @@ import { getTurnDiscardCards, jinluSwapUI, qunyou_beixuan_cancelEvent, qunyou_bi
 
 // 群赛角色的技能
 export const skills = {
+// === 灵镇 ===
 	qunyou_lingzhen: {
 		audio: 2,
 		enable: "phaseUse",
@@ -33,6 +34,7 @@ export const skills = {
 		},
 	},
 
+// === 灵震 ===
 	qunyou_lingzhen2: {
 		audio: 2,
 		enable: "phaseUse",
@@ -61,6 +63,7 @@ export const skills = {
 		},
 	},
 
+// === 咏絮 ===
 	qunyou_yongxu: {
 		audio: 2,
 		trigger: { player: ["useCard", "respond"] },
@@ -131,6 +134,7 @@ export const skills = {
 		},
 	},
 
+// === 妙喻 ===
 	qunyou_miaoyu: {
 		audio: 2,
 		locked: false,
@@ -283,6 +287,7 @@ export const skills = {
 		},
 	},
 
+// === 养晦 ===
 	qunyou_yanghui: {
 		audio: 2,
 		trigger: {
@@ -304,6 +309,7 @@ export const skills = {
 		},
 	},
 
+// === 雅量 ===
 	qunyou_yaliang: {
 		audio: 2,
 		mark: true,
@@ -417,6 +423,7 @@ export const skills = {
 		},
 	},
 
+// === 树泽 ===
 	qunyou_shuze: {
 		audio: 2,
 		clanSkill: true,
@@ -459,6 +466,7 @@ export const skills = {
 		},
 	},
 
+// === 击渡 ===
 	qunyou_jidu: {
 		audio: 2,
 		trigger: { player: "phaseZhunbeiBegin" },
@@ -569,6 +577,7 @@ export const skills = {
 		},
 	},
 
+// === 兵主 ===
 	qunyou_bingzhu: {
 		audio: 2,
 		enable: "chooseToUse",
@@ -727,6 +736,7 @@ export const skills = {
 		},
 	},
 
+// === 悖玄 ===
 	qunyou_beixuan: {
 		audio: 2,
 		enable: "phaseUse",
@@ -804,6 +814,7 @@ export const skills = {
 		},
 	},
 
+// === 归物 ===
 	qunyou_guiwu: {
 		audio: 2,
 		trigger: { player: "useCard1" },
@@ -852,6 +863,7 @@ export const skills = {
 		},
 	},
 
+// === 碎坚 ===
 	qunyou_suijian: {
 		audio: 2,
 		enable: "phaseUse",
@@ -927,6 +939,7 @@ export const skills = {
 		},
 	},
 
+// === 传道 ===
 qunyou_chuandao: {
     audio: 2,
     enable: "phaseUse",
@@ -1026,6 +1039,7 @@ qunyou_chuandao: {
     },
 },
 
+// === 募众 ===
 qunyou_muzhong: {
     audio: 2,
     enable: "phaseUse",
@@ -1086,6 +1100,7 @@ qunyou_muzhong: {
     },
 },
 
+// === 镇叛 ===
 qunyou_zhenpan: {
 	audio: 2,
 	trigger: { player: "phaseZhunbeiBegin" },
@@ -1125,6 +1140,7 @@ qunyou_zhenpan: {
 	},
 },
 
+// === 镇叛·禁 ===
 qunyou_zhenpan_ban: {
 	charlotte: true,
 	onremove: true,
@@ -1147,6 +1163,7 @@ qunyou_zhenpan_ban: {
 	intro: { content: (storage) => "本回合不能使用或打出" + (storage || []).map(s => get.translation(s)).join("、") + "的牌" },
 },
 
+// === 抗辩 ===
 qunyou_kangbian: {
 	audio: 2,
 	trigger: { player: "useCardToPlayer", global: "useCardToPlayer" },
@@ -1219,6 +1236,7 @@ qunyou_kangbian: {
 	},
 },
 
+// === 抗辩·拼点 ===
 qunyou_kangbian_pindian: {
 	name: "抗辩·拼点",
 	direct: true,
@@ -1244,6 +1262,7 @@ qunyou_kangbian_pindian: {
 	},
 },
 
+// === 隐山 ===
 qunyou_yinshan: {
 	audio: 2,
 	trigger: { player: "phaseJieshuBegin" },
@@ -1272,6 +1291,7 @@ qunyou_yinshan: {
 	},
 },// 绮武
 
+// === 拥立 ===
 qunyou_yongli: {
 	audio: 2,
 	trigger: { global: "roundStart" },
@@ -1320,6 +1340,7 @@ qunyou_yongli: {
 	},
 },
 
+// === 讨佞 ===
 qunyou_taoning: {
 	audio: 2,
 	trigger: { player: "useCardToPlayer" },
@@ -1349,6 +1370,7 @@ qunyou_taoning: {
 	},
 },
 
+// === 扶主 ===
 qunyou_fuzhu: {
 	audio: 2,
 	trigger: { source: "damageAfter" },
@@ -1390,6 +1412,7 @@ qunyou_fuzhu: {
 	},
 },
 
+// === 陨没 ===
 qunyou_yunmo: {
 	audio: 2,
 	trigger: { player: "damageBegin2" },
@@ -1402,6 +1425,7 @@ qunyou_yunmo: {
 	},
 },
 
+// === 督粮 ===
 qunyou_duliang: {
 	audio: 2,
 	trigger: { global: "phaseBeginStart" },
@@ -1499,6 +1523,7 @@ qunyou_duliang: {
 	},
 },
 
+// === 狭情 ===
 qunyou_xiaqing: {
 	audio: 2,
 	trigger: { global: "viewCardsBegin" },
@@ -1595,6 +1620,7 @@ qunyou_xiaqing: {
 	},
 },
 
+// === 逆浪 ===
 qunyou_nilang: {
 	trigger: { global: "useCardAfter" },
 	filter(event, player) {
@@ -1636,6 +1662,7 @@ qunyou_nilang: {
 	},
 },
 
+// === 空馨 ===
 qunyou_kongxin: {
 	trigger: { target: "useCardToTarget" },
 	forced: true,
@@ -1652,6 +1679,7 @@ qunyou_kongxin: {
 	},
 },
 
+// === 上照 ===
 qunyou_shangzhao: {
 	trigger: { global: "loseAfter" },
 	forced: true,
@@ -1675,16 +1703,16 @@ qunyou_shangzhao: {
 		otherParty.when({ global: "phaseJieshuBegin" })
 			.filter(evt => evt.player === currentTurn)
 			.step(async (event, trigger, player) => {
-				if (!player.countCards("h") || !currentTurn.isIn()) return;
-				const { bool, cards } = await player.chooseCard("h", true, "将一张手牌当【无中生有】对" + get.translation(currentTurn) + "使用")
+				if (!player.countCards("h") || !loser.isIn()) return;
+				const { bool, cards } = await player.chooseCard("h", true, "将一张手牌当【无中生有】对" + get.translation(loser) + "使用")
 					.set("ai", card => {
 						const player2 = _status.event.player;
-						return get.attitude(player2, currentTurn) > 0 ? -get.value(card) : get.value(card);
+						return get.attitude(player2, loser) > 0 ? -get.value(card) : get.value(card);
 					})
 					.forResult();
 				if (!bool || !cards?.length) return;
-				player.storage.qunyou_shangzhao_noRespond = player.countCards("h") > currentTurn.countCards("h");
-				await player.useCard({ name: "wuzhong" }, cards, currentTurn, "qunyou_shangzhao");
+				player.storage.qunyou_shangzhao_noRespond = player.countCards("h") > loser.countCards("h");
+				await player.useCard({ name: "wuzhong" }, cards, loser, "qunyou_shangzhao");
 				delete player.storage.qunyou_shangzhao_noRespond;
 			});
 	},
@@ -1692,9 +1720,9 @@ qunyou_shangzhao: {
 		used: { charlotte: true },
 		norespond: {
 			charlotte: true,
-			trigger: { player: "useCard1" },
+			trigger: { global: "useCard1" },
 			filter(event, player) {
-				return event.skill == "qunyou_shangzhao" && player.storage.qunyou_shangzhao_noRespond;
+				return event.skill == "qunyou_shangzhao" && event.player.storage.qunyou_shangzhao_noRespond;
 			},
 			forced: true,
 			popup: false,
@@ -1708,6 +1736,7 @@ qunyou_shangzhao: {
 	},
 },
 
+// === 迷途 ===
 qunyou_mitu: {
 	trigger: { player: "phaseBegin" },
 	forced: true,
@@ -1729,6 +1758,7 @@ qunyou_mitu: {
 	},
 },
 
+// === 燼路 ===
 qunyou_jinlu: {
 	trigger: { player: ["useCardAfter", "damageAfter"] },
 	filter(event, player) {
@@ -1780,4 +1810,179 @@ qunyou_jinlu: {
 		},
 	},
 },
-};
+// === 鸷刎 ===
+xiaobai_zhiwen: {
+	audio: 2,
+	enable: "phaseUse",
+	filter(event, player) {
+		var restrict = player.storage.xiaobai_zhiwen_restrict;
+		var canThree = !restrict || restrict.method !== "last" ? player.countCards("hes") >= 3 : false;
+		var canLast = !restrict || restrict.method !== "three" ? player.countCards("h") === 1 : false;
+		if (!canThree && !canLast) return false;
+		if (restrict?.name) {
+			if (!lib.filter.cardEnabled({ name: restrict.name, isCard: true }, player, event)) return false;
+			return player.hasUseTarget({ name: restrict.name, isCard: true }, null, false);
+		}
+		return (lib.filter.cardEnabled({ name: "sha", isCard: true }, player, event) && player.hasUseTarget({ name: "sha", isCard: true }, null, false))
+			|| (lib.filter.cardEnabled({ name: "juedou", isCard: true }, player, event) && player.hasUseTarget({ name: "juedou", isCard: true }, null, false));
+	},
+	async content(event, trigger, player) {
+		// 选择牌面 + 转化方式
+		var restrict = player.storage.xiaobai_zhiwen_restrict;
+		var list = [];
+		var names = restrict?.name ? [restrict.name] : ["sha", "juedou"];
+		for (var name of names) {
+			if (player.countCards("hes") >= 3 && (!restrict || restrict.method !== "last")) {
+				list.push([get.type(name), "", name, "three"]);
+			}
+			if (player.countCards("h") === 1 && (!restrict || restrict.method !== "three")) {
+				list.push([get.type(name), "", name, "last"]);
+			}
+		}
+		var dialog = ui.create.dialog("鸷刎", [list, "vcard"], "hidden");
+		var chooseResult = await player.chooseButton(dialog, true).forResult();
+		if (!chooseResult.bool) return;
+		var cardName = chooseResult.links[0][2];
+		var isLast = chooseResult.links[0][3] === "last";
+
+		// 选择选项
+		var optResult = await player.chooseControl("选项一", "选项二", "选项三", "cancel2")
+			.set("choiceList", [
+				"下次仅能以另一种方式转化",
+				"下次仅能转化为另一种牌名",
+				"背水"
+			])
+			.set("prompt", "鸷刎：选择一项")
+			.set("ai", function() { return "cancel2" })
+			.forResult();
+		if (optResult.control === "cancel2") return;
+
+		// 设置下次限制
+		var st = {};
+		if (optResult.index === 0 || optResult.index === 2) {
+			st.method = isLast ? "three" : "last";
+		}
+		if (optResult.index === 1 || optResult.index === 2) {
+			st.name = cardName === "sha" ? "juedou" : "sha";
+		}
+		if (Object.keys(st).length) {
+			player.storage.xiaobai_zhiwen_restrict = st;
+			player.markSkill("xiaobai_zhiwen_restrict");
+		}
+
+		// 背水：此牌对其他角色造成的伤害+1
+		if (optResult.index === 2) {
+			player.addTempSkill("xiaobai_zhiwen_backwater_bonus", { player: "useCardAfter" });
+		}
+
+		// 选牌并印牌使用
+		var cardResult = await player.chooseCard(isLast ? "h" : "hes", isLast ? 1 : 3, true).set("prompt", "鸷刎：选择" + (isLast ? "一张手牌" : "三张牌") + "转化").forResult();
+		if (!cardResult.bool) return;
+		var vcard = get.autoViewAs({ name: cardName, isCard: true, storage: { xiaobai_zhiwen: true, isLast } });
+		var chooseEvt = player.chooseUseTarget(vcard, cardResult.cards, false, true);
+		chooseEvt.logSkill = "xiaobai_zhiwen";
+		await chooseEvt;
+	},
+	mod: {
+		cardUsable(card, player, num) {
+			if (card?.storage?.xiaobai_zhiwen) return Infinity;
+		},
+	},
+	subSkill: {
+		backwater_bonus: {
+			trigger: { player: "useCard", source: "damageBegin1" },
+			forced: true,
+			popup: false,
+			charlotte: true,
+			filter(event, player) {
+				if (event.skill === "xiaobai_zhiwen") return true;
+				return event.target !== player && player.storage.xiaobai_zhiwen_backwater_active;
+			},
+			async content(event, trigger, player) {
+				if (trigger.skill === "xiaobai_zhiwen") {
+					player.storage.xiaobai_zhiwen_backwater_active = true;
+				} else {
+					trigger.num++;
+				}
+			},
+			onremove(player) {
+				delete player.storage.xiaobai_zhiwen_backwater_active;
+			},
+		},
+		restrict: {
+			charlotte: true,
+			onremove(player, skill) {
+				delete player.storage[skill];
+			},
+			mark: true,
+			marktext: "鸷",
+			intro: {
+				content(storage, player) {
+					if (!storage) return "无限制";
+					var parts = [];
+					if (storage.method) {
+						parts.push(storage.method === "last" ? "仅能用最后一张手牌转化" : "仅能用三张牌转化");
+					}
+					if (storage.name) {
+						parts.push("仅能转化" + get.translation(storage.name));
+					}
+					return parts.length ? "下次发动鸷刎" + parts.join("") : "无限制";
+				},
+			},
+		},
+	},
+},
+
+// === 泯念 ===
+xiaobai_minnian: {
+	audio: 2,
+	trigger: { player: "dying" },
+	filter(event, player) {
+		return !player.hasSkill("xiaobai_minnian_used");
+	},
+	async content(event, trigger, player) {
+		player.addTempSkill("xiaobai_minnian_used", { player: "phaseAfter" });
+		const diff = player.maxHp - player.countCards("h");
+		if (diff > 0) {
+			await player.draw(diff);
+		} else if (diff < 0) {
+			await player.loseToDiscardpile(player.getCards("h").randomGets(-diff));
+		}
+		const targetResult = await player.chooseTarget(2, true, "泯念：横置两名角色").forResult();
+		if (targetResult.bool && targetResult.targets.length) {
+			for (const target of targetResult.targets) {
+				if (!target.isLinked()) {
+					await target.link(true);
+				}
+			}
+			if (targetResult.targets.includes(player) && player.hp < 1) {
+				await player.recover(1 - player.hp);
+			}
+		}
+	},
+	subSkill: {
+		used: {
+			charlotte: true,
+		},
+	},
+},
+
+// === 俱焚 ===
+xiaobai_jufen: {
+	audio: 2,
+	limited: true,
+	skillAnimation: true,
+	animationColor: "fire",
+	enable: "phaseUse",
+	filter(event, player) {
+		return player.countCards("h") === 0;
+	},
+	async content(event, trigger, player) {
+		player.awakenSkill("xiaobai_jufen");
+		await player.damage(player, 1, "fire");
+		if (_status.discarded?.length) {
+			await player.gain(Array.from(_status.discarded), "gain2");
+		}
+	},
+},
+}

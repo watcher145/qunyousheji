@@ -111,4 +111,7 @@ export const characterTranslate = {
 	qunyou_zishuxunyu_prefix: "自书",
 	qunyou_zishuwangguan: "自书王瓘",
 	qunyou_zishuwangguan_prefix: "自书",
+	xiaobai_lizhaoyi: "小白李昭仪",
+	xiaobai_lizhaoyi_prefix: "小白",
+	qunyou_dongzhuo: "董卓",
 };

@@ -5,6 +5,10 @@ import dynamicTranslates from "./translate/dynamicTranslate.js";
  * 扩展加载时执行：可在此注册 lib.namePrefix、合并 lib.dynamicTranslate 等
  */
 export function precontent() {
+	lib.namePrefix.set("小白", {
+		color: "#FFFFFF",
+		nature: "glodenmm",
+	});
 	lib.namePrefix.set("自书", {
 		color: "#c8cdd1",
 		nature: "inkmm",

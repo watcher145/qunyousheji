@@ -63,6 +63,7 @@ import {
 
 // 散设 — 其余 qunyou_* 技能
 export const skills = {
+// === 审时 ===
 	qunyou_shenshi: {
 		audio: 2,
 		trigger: { target: "useCardToTargeted" },
@@ -234,6 +235,7 @@ export const skills = {
 		},
 	},
 
+// === 荐降 ===
 	qunyou_jianjiang: {
 		audio: 2,
 		trigger: { global: "phaseJieshuBegin" },
@@ -540,6 +542,7 @@ export const skills = {
 		},
 	},
 
+// === 浑随 ===
 	qunyou_hunsui: {
 		audio: 2,
 		dutySkill: true,
@@ -702,6 +705,7 @@ export const skills = {
 		},
 	},
 
+// === 才若 ===
 	qunyou_cairuo: {
 		audio: 2,
 		locked: true,
@@ -891,6 +895,7 @@ export const skills = {
 		},
 	},
 
+// === 扶风 ===
 	qunyou_fufeng: {
 		audio: 2,
 		locked: true,
@@ -1037,6 +1042,7 @@ export const skills = {
 		},
 	},
 
+// === 游龙 ===
 	qunyou_youlong: {
 		audio: 2,
 		trigger: { player: "useCardAfter" },
@@ -1087,6 +1093,7 @@ export const skills = {
 		},
 	},
 
+// === 覆阵 ===
 	qunyou_fuzhen: {
 		audio: 2,
 		// 每回合限一次（同胆持 olsbdanchi：usable 1；选「否」不消耗次数）
@@ -1237,6 +1244,7 @@ export const skills = {
 		},
 	},
 
+// === 摧升 ===
 	qunyou_cuisheng: {
 		audio: 2,
 		trigger: { player: "useCardAfter" },
@@ -1301,6 +1309,7 @@ export const skills = {
 		},
 	},
 
+// === 荣国 ===
 	qunyou_rongguo: {
 		audio: 2,
 		enable: "phaseUse",
@@ -1399,6 +1408,7 @@ export const skills = {
 		},
 	},
 
+// === 龙绝 ===
 	qunyou_longjue: {
 		audio: 2,
 		chargeSkill: 7,
@@ -1515,6 +1525,7 @@ export const skills = {
 		},
 	},
 
+// === 毅勇 ===
 	qunyou_yiyong: {
 		audio: 2,
 		trigger: { player: "useCard" },
@@ -1593,6 +1604,7 @@ export const skills = {
 		},
 	},
 
+// === 定仪 ===
 	qunyou_dingyi: {
 		audio: 2,
 		zhuanhuanji: true,
@@ -1719,6 +1731,7 @@ export const skills = {
 		},
 	},
 
+// === 知天 ===
 	qunyou_zhitian: {
 		audio: 2,
 		trigger: {
@@ -1747,6 +1760,7 @@ export const skills = {
 		},
 	},
 
+// === 智绝 ===
 	qunyou_zhijue: {
 		audio: 2,
 		enable: ["chooseToUse", "chooseToRespond"],
@@ -1900,6 +1914,7 @@ export const skills = {
 		},
 	},
 
+// === 制朝 ===
 	qunyou_zhichao: {
 		audio: 2,
 		trigger: { player: "loseAfter", global: "loseAsyncAfter" },
@@ -1983,6 +1998,7 @@ export const skills = {
 		},
 	},
 
+// === 暮心 ===
 	qunyou_muxin: {
 		audio: 2,
 		enable: "phaseUse",
@@ -2094,6 +2110,7 @@ export const skills = {
 		},
 	},
 
+// === 苍霄 ===
 	qunyou_cangxiao: {
 		audio: 2,
 		trigger: { player: "gainAfter" },
@@ -2152,6 +2169,7 @@ export const skills = {
 		},
 	},
 
+// === 焚辎 ===
 	qunyou_fenzi: {
 		audio: 2,
 		enable: "phaseUse",
@@ -2241,6 +2259,7 @@ export const skills = {
 		},
 	},
 
+// === 独胜 ===
 	qunyou_dusheng: {
 		audio: 2,
 		enable: "phaseUse",
@@ -2317,6 +2336,7 @@ export const skills = {
 		},
 	},
 
+// === 移陵 ===
 	qunyou_yiling: {
 		audio: 2,
 		comboSkill: true,
@@ -2427,6 +2447,7 @@ export const skills = {
 		},
 	},
 
+// === 夷业 ===
 	qunyou_yiye: {
 		audio: 2,
 		comboSkill: true,
@@ -2517,6 +2538,7 @@ export const skills = {
 		},
 	},
 
+// === 秉德 ===
 	qunyou_bingde: {
 		audio: 2,
 		enable: "phaseUse",
@@ -2539,6 +2561,7 @@ export const skills = {
 		},
 	},
 
+// === 酒思 ===
 	qunyou_jiusi: {
 		audio: 2,
 		enable: "chooseToUse",
@@ -2602,6 +2625,7 @@ export const skills = {
 		},
 	},
 
+// === 酾才 ===
 	qunyou_shicai: {
 		audio: 2,
 		locked: true,
@@ -2677,6 +2701,7 @@ export const skills = {
 		},
 	},
 
+// === 愁辞 ===
 	qunyou_chouci: {
 		audio: 2,
 		ai: {
@@ -2814,6 +2839,7 @@ export const skills = {
 		},
 	},
 
+// === 琼赋 ===
 	qunyou_qionfu: {
 		audio: 2,
 		ai: {
@@ -2862,6 +2888,7 @@ export const skills = {
 		},
 	},
 
+// === 诈夺 ===
 	qunyou_zhaduo: {
 		audio: 2,
 		trigger: { player: "phaseZhunbeiBegin" },
@@ -2934,6 +2961,7 @@ export const skills = {
 		},
 	},
 
+// === 鼓舌 ===
 	qunyou_gushe: {
 		audio: 2,
 		enable: "phaseUse",
@@ -3015,6 +3043,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 作保 ===
 	qunyou_zuobao: {
 		audio: 2,
 		trigger: { player: "damageBegin4" },
@@ -3042,6 +3071,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 险战 ===
 	qunyou_xianzhan: {
 		audio: 2,
 		zhuanhuanji: true,
@@ -3102,6 +3132,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 周旋 ===
 	qunyou_zhouxuan: {
 		audio: 2,
 		zhuanhuanji: true,
@@ -3144,6 +3175,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 孤胆 ===
 	qunyou_gudan: {
 		audio: 2,
 		zhuanhuanji: true,
@@ -3199,6 +3231,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 胆破 ===
 	qunyou_danpo: {
 		audio: 2,
 		enable: ["chooseToUse", "chooseToRespond"],
@@ -3336,6 +3369,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 岌城 ===
 	qunyou_jicheng: {
 		audio: 2,
 		enable: "phaseUse",
@@ -3443,6 +3477,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 凶搏 ===
 	qunyou_xiongbo: {
 		audio: 2,
 		ai: {
@@ -3532,6 +3567,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 矜伐 ===
 	qunyou_jinfa: {
 		audio: 2,
 		ai: {
@@ -3616,6 +3652,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 翱月 ===
 	qunyou_aoyue: {
 		audio: 2,
 		limited: true,
@@ -3704,6 +3741,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 隽鸣 ===
 	qunyou_junming: {
 		audio: 2,
 		ai: {
@@ -3804,6 +3842,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 纸虎 ===
 	qunyou_zhihu: {
 		audio: 2,
 		forced: true,
@@ -3909,6 +3948,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 危台 ===
 	qunyou_weitai: {
 		audio: 2,
 		forced: true,
@@ -3986,6 +4026,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 屡战 ===
 	qunyou_luzhan: {
 		audio: 2,
 		ai: {
@@ -4168,6 +4209,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 兴世 ===
 	qunyou_xingshi: {
 		audio: 2,
 		ai: {
@@ -4240,6 +4282,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 权谋 ===
 	qunyou_quanmou: {
 		audio: 2,
 		trigger: { player: "gainAfter", global: "loseAsyncAfter" },
@@ -4297,6 +4340,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 化盟 ===
 	qunyou_huameng: {
 		audio: 2,
 		trigger: { source: "damageBegin4" },
@@ -4419,6 +4463,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 诈书 ===
 	qunyou_zhashu: {
 		audio: 2,
 		enable: "phaseUse",
@@ -4501,6 +4546,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 妯娌 ===
 	qunyou_zhouli: {
 		audio: 2,
 		ai: {
@@ -4537,6 +4583,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 蕴贤 ===
 	qunyou_yunxian: {
 		audio: 2,
 		ai: {
@@ -4593,6 +4640,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 同弦 ===
 	qunyou_tongxian: {
 		audio: 2,
 		trigger: { global: "useCardAfter" },
@@ -4662,6 +4710,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 灵玉 ===
 	qunyou_lingyu: {
 		audio: 2,
 		trigger: { player: "useCard" },
@@ -4725,6 +4774,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 青盟 ===
 	qunyou_qingmeng: {
     audio: 2,
     trigger: { player: "damageBegin" },
@@ -4777,6 +4827,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
         }
     },
 
+// === 灼躯 ===
 	qunyou_zhuoqu: {
 		audio: 2,
 		enable: "chooseToUse",
@@ -4979,6 +5030,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 孤我 ===
 	qunyou_guwo: {
 		audio: 2,
 		forced: true,
@@ -5022,6 +5074,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 躇步 ===
 	qunyou_chubu: {
 		audio: 2,
 		forced: true,
@@ -5069,6 +5122,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 精策 ===
 	qunyou_jingce: {
 		audio: 2,
 		ai: {
@@ -5139,6 +5193,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 翩仪 ===
 	qunyou_pianyi: {
 		audio: 2,
 		enable: "phaseUse",
@@ -5234,6 +5289,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 	},
 	},
 
+// === 恣胜 ===
 	qunyou_zisheng: {
 		audio: 2,
 		locked: true,
@@ -5305,6 +5361,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 显略 ===
 	qunyou_xianlue: {
 		audio: 2,
 		locked: true,
@@ -5340,6 +5397,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 豪贤 ===
 	qunyou_haoxian: {
 		audio: 2,
 		limited: true,
@@ -5414,6 +5472,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 翠屏 ===
 	qunyou_cuiping: {
 		audio: 2,
 		locked: true,
@@ -5449,6 +5508,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 滔威 ===
 	qunyou_taowei: {
 		audio: 2,
 		comboSkill: true,
@@ -5556,6 +5616,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 撼国 ===
 	qunyou_hanguo: {
 		audio: 2,
 		locked: true,
@@ -5607,6 +5668,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		},
 	},
 
+// === 冠勇 ===
 qunyou_sc1_guanyong: {
     audio: "ext:群友设计/audio:2", // 直接使用音频文件名
     trigger: { global: "damageEnd" }, // 一名角色受到伤害后
@@ -5766,6 +5828,7 @@ qunyou_sc1_guanyong_clear: {
     },
 },
 
+// === 平征 ===
 qunyou_sc1_pingzheng: {
     audio: 2,
     ai: {
@@ -5860,6 +5923,7 @@ qunyou_sc1_pingzheng: {
     }
 },
 
+// === 轻捷 ===
 qunyou_qingjie: {
     audio: 2,
     trigger: { player: "useCardAfter" },
@@ -5903,6 +5967,7 @@ qunyou_qingjie: {
     },
 },
 
+// === 骤劫 ===
 qunyou_zhoujie: {
     audio: 2,
     enable: "phaseUse",
@@ -5950,6 +6015,7 @@ qunyou_zhoujie: {
     },
 },
 
+// === 起义 ===
 qunyou_qiyi: {
     audio: 2,
     group: ["qunyou_qiyi_gain", "qunyou_qiyi_loss"],
@@ -6027,6 +6093,7 @@ qunyou_qiyi: {
     },
 },
 
+// === 施符 ===
 qunyou_shifu: {
     audio: 2,
     trigger: { global: "gainAfter" },
@@ -6264,6 +6331,7 @@ qunyou_qinzhan_attack: {
     }
 },
 
+// === 构陷 ===
 qunyou_gouxian: {
 	audio: 2,
 	trigger: { player: "useCard2" },
@@ -6377,6 +6445,7 @@ qunyou_gouxian: {
 	},
 },
 
+// === 雄姿 ===
 qunyou_xiongzi: {
 	audio: 2,
 	trigger: { player: "phaseBegin" },
@@ -6517,6 +6586,7 @@ qunyou_xiongzi: {
 	},
 },
 
+// === 众矢 ===
 qunyou_zhongshi: {
 	audio: 2,
 	shiwuSkill: true,
@@ -6807,6 +6877,7 @@ qunyou_gongqing: {
 	}
 },
 
+// === 连筹 ===
 qunyou_lianchou: {
 	enable: "phaseUse",
 	usable: 1,
@@ -6832,6 +6903,7 @@ qunyou_lianchou: {
 	},
 },
 
+// === 圆难 ===
 qunyou_yuannan: {
 	enable: "phaseUse",
 	filter(event, player) {
@@ -6946,6 +7018,7 @@ qunyou_yuannan: {
 	},
 },
 
+// === 晦倾 ===
 qunyou_huiqing: {
 	enable: ["chooseToUse", "chooseToRespond"],
 	filter(event, player) {
@@ -7034,6 +7107,7 @@ qunyou_huiqing: {
 	},
 },
 
+// === 武威 ===
 qunyou_wuwei: {
 	audio: 2,
 	enable: ["chooseToUse", "chooseToRespond"],
@@ -7154,6 +7228,7 @@ qunyou_wuwei: {
 	},
 },
 
+// === 震襄 ===
 qunyou_zhenxiang: {
 	audio: 2,
 	comboSkill: true,
@@ -7189,6 +7264,7 @@ qunyou_zhenxiang: {
 	},
 	},
 
+// === 上兵 ===
 qunyou_shangbing: {
 	audio: 2,
 	enable: ["chooseToUse", "chooseToRespond"],
@@ -7272,4 +7348,104 @@ qunyou_shangbing: {
 		backup: {},
 	},
 },
-};
+// === 视势 ===
+	qunyou_shishi: {
+		audio: 2,
+		enable: "phaseUse",
+		filter(event, player) {
+			return !player.hasSkill("qunyou_shishi_disabled") && player.countCards("he") >= 3;
+		},
+		viewAs: { name: "dongzhuxianji", isCard: true, storage: { qunyou_shishi: true } },
+		filterCard: true,
+		selectCard: 3,
+		position: "he",
+		prompt: "将三张牌当【洞烛先机】使用",
+		check(card) { return 1 / get.value(card); },
+		group: "qunyou_shishi_fire",
+		subSkill: {
+			fire: {
+				audio: "qunyou_shishi",
+				trigger: { player: "useCardAfter" },
+				filter(event, player) {
+					if (event.card?.name != "dongzhuxianji") return false;
+					return event.card?.storage?.qunyou_shishi;
+				},
+				direct: true,
+				async content(event, trigger, player) {
+					const targetResult = await player.chooseTarget({
+						prompt: "选择一名角色，令其视为使用一张【火攻】",
+						forced: true,
+					}).forResult();
+					if (!targetResult.bool) return;
+					const fireChar = targetResult.targets[0];
+					const huogong_card = get.autoViewAs({ name: "huogong", isCard: true });
+					if (!fireChar.hasUseTarget(huogong_card)) return;
+					const fireTargetResult = await fireChar.chooseTarget({
+						prompt: get.translation(fireChar) + "请选择【火攻】的目标",
+						filterTarget(card, player, target) {
+							return player.canUse(get.autoViewAs({ name: "huogong", isCard: true }), target);
+						},
+						forced: true,
+					}).forResult();
+					if (!fireTargetResult.bool) return;
+					const fireTarget = fireTargetResult.targets[0];
+					await fireChar.useCard(huogong_card, fireTarget, false);
+					const counts = [
+						player.countCards("h"),
+						fireChar.countCards("h"),
+						fireTarget.countCards("h"),
+					];
+					if (counts[0] !== counts[1] || counts[0] !== counts[2]) {
+						player.addTempSkill("qunyou_shishi_disabled", { player: "phaseAfter" });
+						player.popup("视势已失效");
+					}
+				},
+			},
+			disabled: {
+				charlotte: true,
+			},
+		},
+	},
+
+// === 击稷 ===
+	qunyou_jiji: {
+		audio: 2,
+		trigger: {
+			player: "loseAfter",
+			global: ["gainAfter", "equipAfter", "addJudgeAfter", "loseAsyncAfter", "addToExpansionAfter"],
+		},
+		filter(event, player) {
+			if (!player.isIn()) return false;
+			if (event.getg?.(player)?.length) return true;
+			if (event.getl?.(player)?.hs?.length) return true;
+			return false;
+		},
+		direct: true,
+		async content(event, trigger, player) {
+			let change = 0;
+			if (trigger.getg?.(player)?.length) {
+				change = trigger.getg(player).length;
+			} else if (trigger.getl?.(player)?.hs?.length) {
+				change = trigger.getl(player).hs.length;
+			}
+			if (!change) return;
+			const myHand = player.countCards("h");
+			const targets = game.filterPlayer(p =>
+				p != player && p.isIn() && Math.abs(p.countCards("h") - myHand) === change
+			);
+			if (!targets.length) return;
+			const str = targets.map(t => get.translation(t) + "（" + t.countCards("h") + "张）").join("，");
+			const result = await player.chooseBool(
+				get.prompt("qunyou_jiji"),
+				"手牌数变化" + change + "点，可对" + str + "各造成1点伤害"
+			).set("ai", () => {
+				return targets.some(t => get.damageEffect(t, player, player) > 0);
+			}).forResult();
+			if (!result.bool) return;
+			player.logSkill("qunyou_jiji");
+			for (const target of targets) {
+				await target.damage(player);
+			}
+		},
+	},
+}
