@@ -1165,7 +1165,26 @@ yachai_yishuang: {
 		if (typeof number !== "number") return false;
 		return !player.getStorage("yachai_yishuang").includes(number);
 	},
-	check: () => 1,
+	check(event, player) {
+		const card = event.card;
+		const number = get.number(card, player);
+		if (typeof number !== "number") return 0;
+		const selfCan = player.countCards("he", c => {
+			if (!player.canRecast(c)) return false;
+			const pos = get.position(c);
+			const zoneCount = pos === "h" ? player.countCards("h") :
+				pos === "e" ? player.countCards("e") : 1;
+			const xunli = zoneCount === 1 && player.hasClan("吴郡陆氏") ? 2 : 0;
+			return 6 - get.value(c) + xunli > 0;
+		}) > 0;
+		if (selfCan) return 1;
+		for (const target of game.players) {
+			if (target === player || get.attitude(player, target) <= 0) continue;
+			if (target.countCards("he", c => target.canRecast(c) && 6 - get.value(c) > 0) > 0)
+				return 1;
+		}
+		return 0;
+	},
 	async content(event, trigger, player) {
 		const card = trigger.card;
 		const number = get.number(card, player);
@@ -1178,7 +1197,14 @@ yachai_yishuang: {
 		if (target.bool) {
 			const t = target.targets[0];
 			const cards = await t.chooseCard([1, 3], "he", lib.filter.cardRecastable, "重铸至多三张牌")
-				.set("ai", card => 6 - get.value(card))
+				.set("ai", card => {
+					let val = get.value(card);
+					let pos = get.position(card);
+					let zoneCount = pos === "h" ? t.countCards("h") :
+						pos === "e" ? t.countCards("e") : 1;
+					const xunli = zoneCount === 1 && t.hasClan("吴郡陆氏") ? 2 : 0;
+					return 6 - val + xunli;
+				})
 				.forResult();
 			if (cards.bool && cards.cards.length) {
 				await t.recast(cards.cards);
@@ -1217,10 +1243,14 @@ yachai_baizhou: {
 				if (!curNum || typeof curNum !== "number") return 0;
 				const plus = Math.max(1, Math.min(13, curNum + 3));
 				const minus = Math.max(1, Math.min(13, curNum - 3));
-				const pOk = !recorded.includes(plus);
-				const mOk = !recorded.includes(minus);
-				if (pOk && !mOk) return 0;
-				if (!pOk && mOk) return 1;
+				const rareScore = n => {
+					if (recorded.includes(n)) return 0;
+					const damageCounts = [0, 4, 2, 2, 4, 4, 4, 8, 7, 5, 8, 3, 1, 2];
+					return 10 - damageCounts[n];
+				};
+				const pScore = rareScore(plus);
+				const mScore = rareScore(minus);
+				if (pScore !== mScore) return pScore > mScore ? 0 : 1;
 				const att = get.attitude(player, trigger.source || trigger.player);
 				if (trigger.name === "damageBegin1") {
 					if (att > 0) return curNum <= 6 ? 0 : 1;
@@ -1847,22 +1877,10 @@ yachai_qiyi: {
 		},
 		filter(button, player) {
 			const evt = _status.event.getParent();
-			console.log("[岐嶷filter] _status.event:", _status.event?.name);
-			console.log("[岐嶷filter] evt.name:", evt?.name, "evt.respondTo:", evt?.respondTo?.[0]?.name, evt?.respondTo?.[1]?.name);
-			console.log("[岐嶷filter] evt.filterCard类型:", typeof evt?.filterCard, "是否函数:", typeof evt?.filterCard === "function");
 			const source = evt.respondTo[0];
 			const cardName = get.name(button.link, source);
-			console.log("[岐嶷filter] button.link卡名:", cardName, "原始名:", button.link.name, "nature:", get.nature(button.link, source));
-			const virtualCard = { name: cardName, nature: get.nature(button.link, source), isCard: true };
-			let result;
-			try {
-				result = evt.filterCard(virtualCard, player, evt);
-				console.log("[岐嶷filter] filterCard结果:", result);
-			} catch (e) {
-				console.log("[岐嶷filter] filterCard报错:", e.message);
-				result = false;
-			}
-			return result;
+			const vcard = get.autoViewAs({ name: cardName, nature: get.nature(button.link, source) }, "unsure");
+			return evt.filterCard(vcard, player, evt);
 		},
 		check(button) {
 			const evt = _status.event.getParent();

@@ -418,7 +418,7 @@ export const skillTranslate = {
 		"锁定技，当你成为牌的目标后，若此牌无法被响应或此牌的使用者为你，你回复1点体力。若你未受伤，改为摸两张牌并失去2点体力。",
 	qunyou_shangzhao: "上照",
 	qunyou_shangzhao_info:
-		"锁定技，你或一号位每轮首次失去装备区内牌后，另一方需于当前回合结束阶段将一张手牌当【无中生有】对当前回合角色使用。若其手牌数大于此牌目标的手牌数，此牌无法被响应。",
+		"锁定技，你或一号位每轮首次失去装备区内牌后，另一方需于当前回合结束阶段将一张手牌当【无中生有】对另一方使用。若其手牌数大于此牌目标的手牌数，此牌无法被响应。",
 	qunyou_mitu: "迷途",
 	qunyou_mitu_info:
 		"锁定技，你的回合开始时，按三条规则重新排列阶段顺序。",
@@ -443,4 +443,26 @@ export const skillTranslate = {
 	qunyou_jiji: "击稷",
 	qunyou_jiji_info:
 		"你手牌数变动后，你可对所有与你手牌数差为你本次变动的值的角色各造成一点伤害。",
+	qunyou_gengdu: "耕读",
+	qunyou_gengdu_info:
+		"你的每阶段开始时，若你手牌数大于手牌上限，你可以将此阶段改为弃牌阶段；否则你可以将此阶段改为摸牌阶段。",
+	clanzuguan: "族冠",
+	clanzuguan_info:
+		"宗族技，你一次性失去多张牌后，若没有角色处于濒死状态，你可以令一名同族角色使用其中一张牌。",
+	qiufeng_liugong: "六宫",
+	qiufeng_liugong_info:
+		"锁定技，你的初始手牌共六张且两张一组明置。当你失去牌后而且这些牌本回合首次变得花色均不相同后，你将其中一张牌当任意非伤害普通锦囊牌在当前结算结束后使用，再从牌堆底将现存的每组补至两张，耗尽的组补至一张并明置。",
+	visible_qiufeng_liugong: "invisible",
+	qiufeng_liugong_wai: "外宫",
+	qiufeng_liugong_nei: "内宫",
+	qiufeng_liugong_zhong: "中宫",
+	qiufeng_sanqing: "三清",
+	qiufeng_sanqing_info:
+		"锁定技，准备阶段，你判定三次，若你本回合使用的手牌类型顺序均符合判定牌的类型顺序循环，手牌结算后将之置于牌堆顶。",
+	qunyou_zhilian: "织连",
+	qunyou_zhilian_info:
+		"连招技（四张花色不同的牌），你可以令一名角色回复1点体力。连招中断时，你可以重铸两张牌，将被重铸牌的花色加入到连招进度。",
+	qunyou_chousu: "愁訴",
+	qunyou_chousu_info:
+		"你仅被一种颜色的牌指定过的阶段结束时，你摸一张牌且可以使用一张牌，若使用的牌为另一颜色，重复此流程。",
 };
