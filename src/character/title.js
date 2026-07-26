@@ -69,5 +69,7 @@ export const characterTitle = {
 	qunyou_zishulvju: "克绍堂构",
 	qunyou_zishuxunyu: "君去香留",
 	xiaobai_lizhaoyi: "兰女同烬",
-	qunyou_dongzhuo: "奸覆四海",
+	qunyou_zuzhugejun: "三珠之隐根",
+	qiufeng_zhangqiyin: "三六大道",
+	qunyou_zishupanshu: "瑶台遗韵",
 };

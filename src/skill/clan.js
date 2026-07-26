@@ -185,4 +185,44 @@ clanzhuding: {
 		},
 	},
 },
+
+// === 族冠 ===
+	clanzuguan: {
+		audio: 2,
+		clanSkill: true,
+		trigger: { player: "loseAfter" },
+		filter(event, player) {
+			if (!player.hasClan("琅琊诸葛氏")) return false;
+			if (game.hasPlayer(i => i.isDying())) return false;
+			const cards = event.getl(player)?.cards2;
+			if (!cards || cards.length < 2) return false;
+			const ind = cards.filter(c => get.position(c, true) === "d");
+			if (!ind.length) return false;
+			return game.hasPlayer(t =>
+				t.hasClan("琅琊诸葛氏") && ind.some(c => t.hasUseTarget(c))
+			);
+		},
+		async content(event, trigger, player) {
+			const cards = trigger.getl(player).cards2
+				.filter(c => get.position(c, true) === "d");
+			const tr = await player.chooseTarget(
+				get.prompt("clanzuguan"), (c, f, t) => t.hasClan("琅琊诸葛氏")
+			).forResult();
+			if (!tr.bool) return;
+			const target = tr.targets[0];
+			const usable = cards.filter(c => target.hasUseTarget(c));
+			if (!usable.length) return;
+			const cr = await target.chooseButton(
+				["族冠：选择使用其中一张牌", usable]
+			).set("filterButton", b => _status.event.player.hasUseTarget(b.link))
+			.forResult();
+			if (!cr.bool) return;
+			target.$gain2(cr.links[0], false);
+			await game.delayx();
+			await target.chooseUseTarget(true, cr.links[0], false);
+		},
+		ai: {
+			threaten: 2,
+		},
+	},
 };

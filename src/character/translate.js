@@ -114,4 +114,10 @@ export const characterTranslate = {
 	xiaobai_lizhaoyi: "小白李昭仪",
 	xiaobai_lizhaoyi_prefix: "小白",
 	qunyou_dongzhuo: "董卓",
+	qunyou_zuzhugejun: "族诸葛均",
+	qunyou_zuzhugejun_prefix: "族",
+	qiufeng_zhangqiyin: "秋风张琪瑛",
+	qiufeng_zhangqiyin_prefix: "秋风",
+	qunyou_zishupanshu: "自书潘淑",
+	qunyou_zishupanshu_prefix: "自书",
 };

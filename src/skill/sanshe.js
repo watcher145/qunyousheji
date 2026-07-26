@@ -7448,4 +7448,31 @@ qunyou_shangbing: {
 			}
 		},
 	},
+// === 耕读 ===
+	qunyou_gengdu: {
+		audio: 2,
+		trigger: { player: "phaseChange" },
+		direct: true,
+		filter(event, player) {
+			const phaseBase = event.phaseList[event.num].split("|")[0].split("-")[0];
+			if (phaseBase.startsWith("skip")) return false;
+			if (player.countCards("h") > player.getHandcardLimit())
+				return phaseBase !== "phaseDiscard";
+			else
+				return phaseBase !== "phaseDraw";
+		},
+		async content(event, trigger, player) {
+			const over = player.countCards("h") > player.getHandcardLimit();
+			const phaseBase = trigger.phaseList[trigger.num].split("|")[0].split("-")[0];
+			const phaseCN = { phaseZhunbei: "准备", phaseJudge: "判定", phaseDraw: "摸牌", phaseUse: "出牌", phaseDiscard: "弃牌", phaseJieshu: "结束" }[phaseBase];
+			const r = await player.chooseBool(get.prompt("qunyou_gengdu"),
+				`将${phaseCN}阶段改为${over ? "弃牌" : "摸牌"}阶段`
+			).forResult();
+			if (!r.bool) return;
+			trigger.phaseList[trigger.num] = `${over ? "phaseDiscard" : "phaseDraw"}|${event.name}`;
+		},
+		ai: {
+			threaten: 2,
+		},
+	},
 }

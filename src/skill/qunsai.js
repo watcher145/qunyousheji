@@ -1985,4 +1985,383 @@ xiaobai_jufen: {
 		}
 	},
 },
+// === 六宫 ===
+qiufeng_liugong: {
+	audio: 2,
+	trigger: {
+		global: ["gameDrawBegin", "phaseBefore"],
+		player: "enterGame"
+	},
+	forced: true,
+	popup: false,
+	filter(event, player) {
+		if (event.name == "gameDraw") return true;
+		return (event.name != "phase" || game.phaseNumber == 0) && !player.getCards("h").some(c => c.hasGaintag("qiufeng_liugong_wai"));
+	},
+	async content(event, trigger, player) {
+		if (trigger.name == "gameDraw") {
+			const numx = trigger.num;
+			trigger.num = function (p) {
+				const base = typeof numx == "function" ? numx(p) : numx;
+				return p === player ? 6 : base;
+			};
+			return;
+		}
+		const hs = player.getCards("h").slice(0, 6);
+		for (let i = 0; i < 3; i++) {
+			const group = ["wai", "nei", "zhong"][i];
+			player.addGaintag(hs.slice(i * 2, i * 2 + 2), "qiufeng_liugong_" + group);
+		}
+		player.addShownCards(hs, "visible_qiufeng_liugong");
+	},
+	group: ["qiufeng_liugong_trigger", "qiufeng_liugong_reset"],
+},
+qiufeng_liugong_trigger: {
+	audio: "qiufeng_liugong",
+	trigger: { player: "loseAfter" },
+	forced: true,
+	filter(event, player) {
+		if (player.storage.qiufeng_liugong_triggered) {
+			console.log("六宫 filter FAIL: triggered=" + player.storage.qiufeng_liugong_triggered);
+			return false;
+		}
+		const remaining = player.getCards("h").filter(c =>
+			["wai", "nei", "zhong"].some(g => c.hasGaintag("qiufeng_liugong_" + g))
+		);
+		if (!remaining.length) {
+			console.log("六宫 filter FAIL: no remaining liugong cards");
+			return false;
+		}
+		const suits = remaining.map(c => get.suit(c));
+		if (new Set(suits).size !== suits.length) {
+			console.log("六宫 filter FAIL: suits not all different, suits=" + suits.join(","));
+			return false;
+		}
+		console.log("六宫 filter PASS! remaining=" + remaining.length + " suits=" + suits.join(","));
+		return true;
+	},
+	async content(event, trigger, player) {
+		player.storage.qiufeng_liugong_triggered = true;
+
+		const doFlow = async () => {
+			if (!player.getCards("h").some(c =>
+				["wai", "nei", "zhong"].some(g => c.hasGaintag("qiufeng_liugong_" + g))
+			)) return;
+			const liugongCards = player.getCards("h", c =>
+				["wai", "nei", "zhong"].some(g => c.hasGaintag("qiufeng_liugong_" + g))
+			);
+			console.log("六宫 liugongCards 数量=" + liugongCards.length);
+			console.log("六宫 chooseButton 选牌前");
+			console.log("六宫 isMine=" + player.isUnderControl() + " isOnline=" + (player.isOnline && player.isOnline()));
+			console.log("六宫 tempEvent=" + (_status.eventManager.tempEvent?.name || "null"));
+			console.log("六宫 getStartedEvent=" + (_status.eventManager.getStartedEvent()?.name || "null"));
+			const btnEvt = player.chooseButton(
+				["选择一张六宫牌", [liugongCards, "card"]]
+			).set("ai", c => Math.random());
+			console.log("六宫 btnEvt.parent=" + (btnEvt.parent?.name || "null"));
+			console.log("六宫 btnEvt.player=" + (btnEvt.player?.name || btnEvt.player || "null"));
+			const cardRes = await btnEvt.forResult();
+			console.log("六宫 chooseButton 选牌后 cardRes=" + cardRes + " bool=" + cardRes?.bool);
+			if (!cardRes.bool) return;
+			const chosen = cardRes.links[0];
+			const list = get.inpileVCardList((info) => {
+				if (info[0] !== "trick") return false;
+				const name = info[2];
+				const cardInfo = lib.card[name];
+				return !cardInfo?.delay && !cardInfo?.notarget && !get.tag({ name }, "damage");
+			});
+			if (!list.length) return;
+			console.log("六宫 chooseButton 选锦囊前 list.length=" + list.length);
+			console.log("六宫 2nd tempEvent=" + (_status.eventManager.tempEvent?.name || "null"));
+			console.log("六宫 2nd getStartedEvent=" + (_status.eventManager.getStartedEvent()?.name || "null"));
+			await game.delayx();
+			const trickEvt = player.chooseButton(
+				["六宫：选择一张普通锦囊牌", [list, "vcard"]], true
+			).set("ai", button => {
+				return player.getUseValue({ name: button.link[2], isCard: true });
+			});
+			console.log("六宫 2nd btnEvt.parent=" + (trickEvt.parent?.name || "null"));
+			const trickRes = await trickEvt.forResult();
+			console.log("六宫 chooseButton 选锦囊后 trickRes=" + trickRes + " bool=" + trickRes?.bool);
+			if (!trickRes.bool) return;
+			const trickName = trickRes.links[0][2];
+			await player.chooseUseTarget({ name: trickName, isCard: true }, [chosen], true).forResult();
+			for (const group of ["wai", "nei", "zhong"]) {
+				const tag = "qiufeng_liugong_" + group;
+				const existing = player.getCards("h").filter(c => c.hasGaintag(tag));
+				const need = 2 - existing.length;
+				if (need <= 0) continue;
+				const drawn = [];
+				for (let i = 0; i < need && ui.cardPile.childNodes.length; i++) {
+					drawn.push(ui.cardPile.lastChild);
+				}
+				if (drawn.length) {
+					await player.gain(drawn, "gain2");
+					player.addGaintag(drawn, tag);
+					player.addShownCards(drawn, "visible_qiufeng_liugong");
+				}
+			}
+		};
+
+		let parent = trigger.getParent();
+		while (parent && ["lose", "loseAfter", "loseBefore"].includes(parent.name)) {
+			parent = parent.getParent();
+		}
+		console.log("六宫 content: trigger.getParent=" + trigger.getParent()?.name + " parent=" + (parent?.name || "null") + " _triggered=" + parent?._triggered);
+		if (parent && parent.name && !parent.name.endsWith("After")) {
+			const afterName = parent.name + "After";
+			console.log("六宫 走 player.when 延迟, afterName=" + afterName);
+			const whenObj = player.when({ global: afterName }).filter(evt => {
+				const result = evt === parent;
+				console.log("六宫 when filter: evt=" + evt.name + " evt===parent=" + result + " evt._triggered=" + evt._triggered);
+				return result;
+			}).step(async () => {
+				console.log("六宫 when 触发, 执行 doFlow");
+				await doFlow();
+				console.log("六宫 when doFlow 完成");
+			});
+		} else {
+			console.log("六宫 走 else 立即执行");
+			await doFlow();
+			console.log("六宫 else doFlow 完成");
+		}
+	},
+},
+qiufeng_liugong_reset: {
+	trigger: { global: "phaseBeginStart" },
+	forced: true,
+	silent: true,
+	content() {
+		delete player.storage.qiufeng_liugong_triggered;
+	},
+},
+// === 三清 ===
+qiufeng_sanqing: {
+	audio: 2,
+	trigger: { player: "phaseZhunbeiBegin" },
+	forced: true,
+	async content(event, trigger, player) {
+		const types = [];
+		for (let i = 0; i < 3; i++) {
+			const result = await player.judge(card => 0).forResult();
+			if (result.card) {
+				types.push(get.type2(result.card, player));
+			}
+		}
+		player.storage.qiufeng_sanqing_cycle = types;
+		player.storage.qiufeng_sanqing_pos = 0;
+		player.storage.qiufeng_sanqing_broken = false;
+	},
+	mark: true,
+	intro: {
+		content: (storage, player) => {
+			const cycle = player.storage.qiufeng_sanqing_cycle;
+			if (!cycle?.length) return;
+			const names = { basic: "基本", trick: "锦囊", equip: "装备" };
+			const pos = player.storage.qiufeng_sanqing_pos || 0;
+			const broken = player.storage.qiufeng_sanqing_broken;
+			const str = cycle.map((t, i) => {
+				const name = names[t] || t;
+				return i === pos ? `<b>${name}</b>` : name;
+			}).join("→");
+			return "三清 [" + (broken ? "<s>" + str + "</s>" : str) + "]";
+		},
+	},
+	group: ["qiufeng_sanqing_check", "qiufeng_sanqing_clear"],
+},
+qiufeng_sanqing_check: {
+	trigger: { player: "useCardAfter" },
+	forced: true,
+	filter(event, player) {
+		if (player.storage.qiufeng_sanqing_broken) return false;
+		const cycle = player.storage.qiufeng_sanqing_cycle;
+		if (!cycle?.length) return false;
+		if (!event.cards?.length) return false;
+		return event.cards[0].original === "h";
+	},
+	content(event, trigger, player) {
+		const cycle = player.storage.qiufeng_sanqing_cycle;
+		const pos = player.storage.qiufeng_sanqing_pos || 0;
+		const card = trigger.cards[0];
+		const type = get.type2(trigger.card, player);
+		if (type !== cycle[pos]) {
+			player.storage.qiufeng_sanqing_broken = true;
+			return;
+		}
+		player.storage.qiufeng_sanqing_pos = (pos + 1) % 3;
+		const curPos = get.position(card, true);
+		if (curPos === "d") {
+			ui.discardPile.removeChild(card);
+		}
+		card.fix();
+		ui.cardPile.insertBefore(card, ui.cardPile.firstChild);
+	},
+},
+qiufeng_sanqing_clear: {
+	trigger: { player: "phaseAfter" },
+	forced: true,
+	silent: true,
+	content() {
+		delete player.storage.qiufeng_sanqing_cycle;
+		delete player.storage.qiufeng_sanqing_pos;
+		delete player.storage.qiufeng_sanqing_broken;
+	},
+},
+
+// === 织连 ===
+qunyou_zhilian: {
+	audio: 2,
+	comboSkill: true,
+	mark: true,
+	marktext: "织",
+	intro: {
+		content: (storage, player) => {
+			const data = player.storage.qunyou_zhilian_data;
+			if (!data) return "连招未开始";
+			const suits = data.suits.map(s => get.translation(s)).join("、");
+			return `进度 ${data.suits.length}/4${suits.length ? " · " + suits : ""}`;
+		},
+	},
+	trigger: { player: "useCardAfter" },
+	forced: true,
+	popup: false,
+	priority: 20,
+	filter(event, player) {
+		const data = player.storage.qunyou_zhilian_data;
+		if (data && data.suits.length >= 4) return false;
+		return true;
+	},
+	async content(event, trigger, player) {
+		if (!player.storage.qunyou_zhilian_data)
+			player.storage.qunyou_zhilian_data = { suits: [] };
+		const data = player.storage.qunyou_zhilian_data;
+		const suit = get.suit(trigger.card);
+		if (suit === "none" || suit === "unsure") return;
+		if (!data.suits.includes(suit)) {
+			data.suits.push(suit);
+			if (data.suits.length >= 4)
+				trigger.qunyou_zhilian_complete = true;
+		} else {
+			data.suits = data.suits.filter(s => s !== suit);
+			const result = await player
+				.chooseCard(
+					"织连：连招中断，是否重铸两张牌以继续？",
+					2, "he",
+					(card) => {
+						if (!player.canRecast(card)) return false;
+						if (ui.selected.cards.length && get.type(card) !== get.type(ui.selected.cards[0]))
+							return false;
+						return true;
+					}
+				)
+				.set("ai", card => 6 - get.value(card))
+				.forResult();
+			if (result.bool) {
+				await player.recast(result.cards);
+				for (const card of result.cards) {
+					const s = get.suit(card);
+					if (s !== "none" && s !== "unsure" && !data.suits.includes(s))
+						data.suits.push(s);
+				}
+				if (data.suits.length >= 4)
+					trigger.qunyou_zhilian_complete = true;
+			} else {
+				delete player.storage.qunyou_zhilian_data;
+			}
+		}
+	},
+	group: ["qunyou_zhilian_resolve", "qunyou_zhilian_clear"],
+},
+qunyou_zhilian_resolve: {
+	charlotte: true,
+	trigger: { player: "useCardAfter" },
+	forced: true,
+	popup: false,
+	priority: 10,
+	filter(event) {
+		return !!event.qunyou_zhilian_complete;
+	},
+	async content(event, trigger, player) {
+		const result = await player
+			.chooseTarget("织连：连招完成！令一名角色回复1点体力")
+			.set("ai", target => -get.attitude(player, target))
+			.forResult();
+		if (result.bool) {
+			await result.targets[0].recover();
+		}
+		delete player.storage.qunyou_zhilian_data;
+	},
+},
+qunyou_zhilian_clear: {
+	charlotte: true,
+	trigger: { player: "phaseUseAfter" },
+	forced: true,
+	popup: false,
+	filter(event, player) {
+		return !!player.storage.qunyou_zhilian_data;
+	},
+	content(event, trigger, player) {
+		delete player.storage.qunyou_zhilian_data;
+	},
+},
+
+// === 愁訴 ===
+qunyou_chousu: {
+	trigger: {
+		global: [
+			"phaseZhunbeiEnd", "phaseJudgeEnd", "phaseDrawEnd",
+			"phaseUseEnd", "phaseDiscardEnd", "phaseJieshuEnd",
+		],
+	},
+	filter(event, player) {
+		const colors = player.getStorage("qunyou_chousu_colors");
+		return colors.length > 0 && new Set(colors).size === 1;
+	},
+	async content(event, trigger, player) {
+		const colors = player.getStorage("qunyou_chousu_colors");
+		const otherColor = colors[0] === "red" ? "black" : "red";
+		player.removeStorage("qunyou_chousu_colors");
+		while (true) {
+			await player.draw(1);
+			const result = await player
+				.chooseToUse({
+					prompt: "愁訴：使用一张" + (otherColor === "red" ? "红色" : "黑色") + "牌以继续流程",
+					filterCard: function (card, player, event) {
+						return lib.filter.filterCard.apply(this, arguments);
+					},
+				})
+				.forResult();
+			if (!result.bool) break;
+			const color = get.color(result.card);
+			if (color !== otherColor) break;
+		}
+	},
+	group: ["qunyou_chousu_record", "qunyou_chousu_clear"],
+	subSkill: {
+		record: {
+			trigger: { target: "useCardToTargeted" },
+			forced: true,
+			popup: false,
+			content(event, trigger, player) {
+				const color = get.color(trigger.card);
+				if (color === "red" || color === "black") {
+					player.markAuto("qunyou_chousu_colors", [color]);
+				}
+			},
+		},
+		clear: {
+			trigger: {
+				global: [
+					"phaseBeginStart",
+					"phaseChange",
+				],
+			},
+			forced: true,
+			popup: false,
+			content(event, trigger, player) {
+				player.removeStorage("qunyou_chousu_colors");
+			},
+		},
+	},
+},
 }
