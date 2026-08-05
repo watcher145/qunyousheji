@@ -12,18 +12,36 @@ export const skills = {
 			if (target === player) return false;
 			if (player.countCards("he") === 0) return false;
 			return target.getHistory("sourceDamage").length === 0;
-		},
-		async content(event, trigger, player) {
-			const target = trigger.player;
-			const X = player.hp;
-			const result = await player
-				.chooseCard(get.prompt("yachai_shangwen", target), [1, X], "he", card => true)
-				.set("ai", card => -get.value(card))
-				.forResult();
-			if (!result.bool) return;
-			player.logSkill("yachai_shangwen", target);
-			await player.give(result.cards, target);
-		},
+	},
+	check(event, player) {
+		const target = event.player;
+		if (target === player) return 0;
+		if (player.countCards("he") === 0) return 0;
+		const att = get.attitude(player, target);
+		if (att <= 0) return 0;
+		const handCount = player.countCards("he");
+		if (handCount > player.hp) return 2;
+		if (handCount > Math.floor(player.hp * 0.5)) return 1;
+		return 0;
+	},
+	async content(event, trigger, player) {
+		const target = trigger.player;
+		const X = player.hp;
+		const result = await player
+			.chooseCard(get.prompt("yachai_shangwen", target), [1, X], "he", card => true)
+			.set("ai", card => {
+				let val = get.value(card);
+				const pos = get.position(card);
+				const zoneCount = pos === "h" ? player.countCards("h") :
+					pos === "e" ? player.countCards("e") : 1;
+				if (zoneCount === 1 && player.hasClan("吴郡陆氏")) val -= 3;
+				return -val;
+			})
+			.forResult();
+		if (!result.bool) return;
+		player.logSkill("yachai_shangwen", target);
+		await player.give(result.cards, target);
+	},
 	},
 
 // === 该览 ===
@@ -38,7 +56,12 @@ export const skills = {
 			const X = player.hp;
 			const discardResult = await player
 				.chooseCard("该览：弃置" + get.cnNumber(X) + "张牌", X, "h", card => true)
-				.set("ai", card => -get.value(card))
+				.set("ai", card => {
+					let val = get.value(card);
+					const zoneCount = player.countCards("h");
+					if (zoneCount === X && player.hasClan("吴郡陆氏")) val -= 3;
+					return -val;
+				})
 				.forResult();
 			if (!discardResult.bool) return;
 			await player.discard(discardResult.cards);
@@ -58,7 +81,7 @@ export const skills = {
 			await player.viewHandcards(target);
 			const ownResult = await player
 				.chooseCard("该览：选择至多" + get.cnNumber(X) + "张手牌用于交换", [0, X], "h", card => true)
-				.set("ai", card => (isFriend ? 1 : -1) * get.value(card, player))
+				.set("ai", card => -get.value(card, player))
 				.forResult();
 			if (!ownResult.bool || !ownResult.cards?.length) return;
 			const ownCards = ownResult.cards;
@@ -72,7 +95,14 @@ export const skills = {
 			await player.swapHandcards(target, ownCards, targetResult2.links);
 		},
 		ai: {
-			order: 6,
+			order(skill, player) {
+				const handCount = player.countCards("h");
+				const hp = player.hp;
+				if (handCount < hp) return 0;
+				if (handCount > hp + 2 && player.hasCard(c => get.value(c) <= 5, "h")) return 10;
+				if (handCount > hp + 1) return 8;
+				return 4;
+			},
 			result: { player: 1 },
 		},
 	},
@@ -224,10 +254,15 @@ yachai_jianshi: {
 	},
 	ai: {
 		order: 5,
-		result: { target: 1 },
+		result: {
+			target(player, target) {
+				if (player.countCards("hse") <= 1) return 0;
+				return 1;
+			},
+		},
 	},
 	async content(event, trigger, player) {
-		const result = await player.chooseCard("hse", "展示一张牌").set("ai", card => -get.value(card)).forResult();
+		const result = await player.chooseCard("hse", "展示一张牌").set("ai", card => 20 - get.value(card)).forResult();
 		if (!result.bool || !result.cards || !result.cards.length) return;
 		const card = result.cards[0];
 		await player.showCards(card);
@@ -982,6 +1017,7 @@ yachai_najian: {
 			trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 			forced: true,
 			popup: false,
+			silent: true,
 			filter(event, player) {
 				const data = player.storage.yachai_najian_data;
 				if (!data) return false;
@@ -1180,8 +1216,14 @@ yachai_yishuang: {
 		if (selfCan) return 1;
 		for (const target of game.players) {
 			if (target === player || get.attitude(player, target) <= 0) continue;
-			if (target.countCards("he", c => target.canRecast(c) && 6 - get.value(c) > 0) > 0)
-				return 1;
+			if (target.countCards("he", c => {
+				if (!target.canRecast(c)) return false;
+				const pos = get.position(c);
+				const zoneCount = pos === "h" ? target.countCards("h") :
+					pos === "e" ? target.countCards("e") : 1;
+				const xunli = zoneCount === 1 && target.hasClan("吴郡陆氏") ? 2 : 0;
+				return 6 - get.value(c) + xunli > 0;
+			}) > 0) return 1;
 		}
 		return 0;
 	},
@@ -1192,7 +1234,17 @@ yachai_yishuang: {
 		player.storage.yachai_yishuang.sort((a, b) => a - b);
 		player.markSkill("yachai_yishuang");
 		const target = await player.chooseTarget("移霜：令一名角色重铸至多三张牌", (card, p, target) => true)
-			.set("ai", target => get.attitude(player, target) > 0 ? 1 : 0)
+			.set("ai", target => {
+				if (target.countCards("he", c => {
+					if (!target.canRecast(c)) return false;
+					const pos = get.position(c);
+					const zoneCount = pos === "h" ? target.countCards("h") :
+						pos === "e" ? target.countCards("e") : 1;
+					const xunli = zoneCount === 1 && target.hasClan("吴郡陆氏") ? 2 : 0;
+					return 6 - get.value(c) + xunli > 0;
+				}) === 0) return 0;
+				return get.attitude(player, target) > 0 ? 1 : 0;
+			})
 			.forResult();
 		if (target.bool) {
 			const t = target.targets[0];

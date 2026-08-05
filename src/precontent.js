@@ -5,12 +5,16 @@ import dynamicTranslates from "./translate/dynamicTranslate.js";
  * 扩展加载时执行：可在此注册 lib.namePrefix、合并 lib.dynamicTranslate 等
  */
 export function precontent() {
+	lib.namePrefix.set("3D", {
+		color: "#90EE90",
+		nature: "orangemm",
+	});
 	lib.namePrefix.set("秋风", {
 		color: "#CD4500",
 		nature: "firemm",
 	});
 	lib.namePrefix.set("小白", {
-		color: "#FFFFFF",
+		color: "#333333",
 		nature: "glodenmm",
 	});
 	lib.namePrefix.set("自书", {
@@ -43,6 +47,14 @@ export function precontent() {
 	lib.namePrefix.set("朔", {
 		color: "#dbdbdb",
         nature: "glodenmm",
+	});
+	lib.namePrefix.set("新", {
+		color: "#fefedc",
+		nature: "shenmm",
+	});
+	lib.namePrefix.set("西夏", {
+		color: "#A6968B",
+		nature: "blackmm",
 	});
 	// 注册汉势力
 	game.addGroup("han", "汉", "汉势力", {

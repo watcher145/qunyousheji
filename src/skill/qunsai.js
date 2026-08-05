@@ -1430,15 +1430,16 @@ qunyou_duliang: {
 	audio: 2,
 	trigger: { global: "phaseBeginStart" },
 	filter(event, player) {
-		return event.player !== player;
+		if (event.player === player) return false;
+		const used = player.storage.qunyou_duliang_used;
+		if (used?.[0] && used?.[1]) return false;
+		return true;
 	},
 	check(event, player) {
 		return get.attitude(player, event.player);
 	},
 	async content(event, trigger, player) {
 		const target = trigger.player;
-		const used = player.storage.qunyou_duliang_used;
-		if (used?.[0] && used?.[1]) return;
 		const X = target.maxHp;
 		let cards = get.cards(X);
 		if (!cards.length) return;
@@ -1636,7 +1637,7 @@ qunyou_nilang: {
 		await player.draw();
 		const name = get.name(trigger.card, false);
 		if (name === "sha") {
-			const cardResult = await player.chooseCard("he", card => get.type(card) === "equip" && player.hasUseTarget(card), "逆浪：选择一张装备牌使用")
+			const cardResult = await player.chooseCard("h", card => get.type(card) === "equip" && player.hasUseTarget(card), "逆浪：选择一张装备牌使用")
 				.set("ai", card => 4 + player.getUseValue(card))
 				.forResult();
 			if (cardResult.bool && cardResult.cards?.length) {
@@ -1645,11 +1646,11 @@ qunyou_nilang: {
 				await player.loseHp(1);
 			}
 		} else {
-			const shaCards = player.getCards("he", card => get.name(card) === "sha");
+			const shaCards = player.getCards("h", card => get.name(card) === "sha");
 			if (!shaCards.length) {
 				await player.loseHp(1);
 			} else {
-				const cardResult = await player.chooseCard("he", card => get.name(card) === "sha", "逆浪：选择一张【杀】使用")
+				const cardResult = await player.chooseCard("h", card => get.name(card) === "sha", "逆浪：选择一张【杀】使用")
 					.set("ai", card => player.getUseValue({ name: "sha" }))
 					.forResult();
 				if (cardResult.bool && cardResult.cards?.length) {
@@ -2363,5 +2364,426 @@ qunyou_chousu: {
 			},
 		},
 	},
+},
+
+// === 猫眼 ===
+threed_cat_eye: {
+	locked: true,
+	init(player, skill) {
+		lib.translate.threed_cat_mark = "invisible";
+		lib.translate.threed_cat_bottom = "牌堆底";
+		game.filterPlayer(target => target !== player).forEach(target => {
+			lib.translate["threed_cat_from_" + target.name] = get.translation(target);
+		});
+		if (!player.storage.threed_cat_bottom_card) {
+			player.storage.threed_cat_bottom_card = null;
+		}
+		if (!Array.isArray(player.storage.threed_cat_gained_cards)) {
+			player.storage.threed_cat_gained_cards = [];
+		}
+		if (!Array.isArray(player.storage.threed_cat_used_types)) {
+			player.storage.threed_cat_used_types = [];
+		}
+		player.addSkill(skill + "_view");
+		player.addSkill(skill + "_sync");
+		player.addSkill(skill + "_phase");
+		player.addSkill(skill + "_roundReset");
+		player.addSkill(skill + "_gain");
+	},
+	onremove(player, skill) {
+		lib.skill.threed_cat_eye.clearAll(player);
+		player.removeSkill(skill + "_view");
+		player.removeSkill(skill + "_sync");
+		player.removeSkill(skill + "_phase");
+		player.removeSkill(skill + "_roundReset");
+		player.removeSkill(skill + "_gain");
+	},
+	getCatCards(player) {
+		return player.getCards("s", card => {
+			if (!card.gaintag) return false;
+			return card.gaintag.some(tag => tag.startsWith("threed_cat_"));
+		});
+	},
+	getRealCards(player) {
+		const result = [];
+		const bottom = player.storage.threed_cat_bottom_card;
+		if (bottom && get.position(bottom, true) === "c") {
+			result.push(bottom);
+		}
+		for (const card of player.storage.threed_cat_gained_cards || []) {
+			if (card && get.position(card, true) != null && get.position(card, true) !== "d") {
+				result.push(card);
+			}
+		}
+		return result;
+	},
+	clearFakeCards(player, ids) {
+		const cards = player.getCards("s", card => {
+			if (!card.gaintag || !card.gaintag.some(tag => tag.startsWith("threed_cat_"))) return false;
+			return !ids || ids.includes(card._cardid);
+		});
+		game.deleteFakeCards(cards);
+	},
+	syncCards(player) {
+		const real = lib.skill.threed_cat_eye.getRealCards(player);
+		const realIds = real.map(card => card.cardid);
+		const fakeCards = lib.skill.threed_cat_eye.getCatCards(player);
+		const staleFakes = fakeCards.filter(card => !realIds.includes(card._cardid));
+		if (staleFakes.length) {
+			lib.skill.threed_cat_eye.clearFakeCards(player, staleFakes.map(card => card._cardid));
+		}
+		const bottom = player.storage.threed_cat_bottom_card;
+		if (bottom && get.position(bottom, true) !== "c") {
+			player.storage.threed_cat_bottom_card = null;
+			lib.skill.threed_cat_eye.addBottomCard(player);
+		}
+		player.storage.threed_cat_gained_cards = (player.storage.threed_cat_gained_cards || []).filter(card => {
+			return card && get.position(card, true) != null && get.position(card, true) !== "d";
+		});
+		return lib.skill.threed_cat_eye.getRealCards(player);
+	},
+	clearAll(player) {
+		lib.skill.threed_cat_eye.clearFakeCards(player);
+		player.storage.threed_cat_bottom_card = null;
+		player.storage.threed_cat_gained_cards = [];
+	},
+	addBottomCard(player) {
+		const cards = get.bottomCards(1, true);
+		if (!cards.length) return;
+		player.storage.threed_cat_bottom_card = cards[0];
+		game.addCardKnower(cards, player);
+		player.directgains(game.createFakeCards(cards), null, ["threed_cat_mark", "threed_cat_bottom"]);
+	},
+	addGainedCard(player, target, card) {
+		if (!card) return;
+		const pos = get.position(card, true);
+		if (pos == null) return;
+		const bottom = player.storage.threed_cat_bottom_card;
+		if (bottom && bottom.cardid === card.cardid) return;
+		const gained = player.storage.threed_cat_gained_cards || [];
+		if (gained.some(cardx => cardx.cardid === card.cardid)) return;
+		gained.push(card);
+		player.storage.threed_cat_gained_cards = gained;
+		game.addCardKnower([card], player);
+		const fromTag = "threed_cat_from_" + target.name;
+		if (!lib.translate[fromTag]) {
+			lib.translate[fromTag] = get.translation(target);
+		}
+		player.directgains(game.createFakeCards([card]), null, ["threed_cat_mark", fromTag]);
+	},
+	isTypeUsed(player, card) {
+		const usedTypes = player.storage.threed_cat_used_types || [];
+		return usedTypes.includes(get.type2(card, player));
+	},
+	recordType(player, card) {
+		const type = get.type2(card, player);
+		if (["basic", "trick", "equip"].includes(type)) {
+			const list = player.storage.threed_cat_used_types || [];
+			if (!list.includes(type)) {
+				list.push(type);
+				player.storage.threed_cat_used_types = list;
+			}
+		}
+	},
+	getGainedPairs(event, player) {
+		const pairs = [];
+		if (event.name === "loseAsync") {
+			if (Array.isArray(event.gain_list)) {
+				for (const [target, cards] of event.gain_list) {
+					if (target !== player && target.isIn && cards?.length) {
+						for (const card of cards) pairs.push([target, card]);
+					}
+				}
+			}
+		} else {
+			if (event.player !== player && event.player?.isIn && event.cards?.length) {
+				for (const card of event.cards) pairs.push([event.player, card]);
+			}
+		}
+		return pairs;
+	},
+	mod: {
+		cardEnabled(card, player) {
+			if (player !== _status.currentPhase) return;
+			const fakeCards = lib.skill.threed_cat_eye.getCatCards(player);
+			const target = card?.cards?.length ? card.cards[0] : card;
+			if (fakeCards.includes(target) && lib.skill.threed_cat_eye.isTypeUsed(player, target)) {
+				return false;
+			}
+		},
+	},
+	group: ["threed_cat_eye_view", "threed_cat_eye_sync", "threed_cat_eye_phase", "threed_cat_eye_roundReset", "threed_cat_eye_gain"],
+	subSkill: {
+		view: {
+			charlotte: true,
+			forced: true,
+			popup: false,
+			firstDo: true,
+			trigger: {
+				player: ["useCardBegin", "respondBefore"],
+			},
+			filter(event, player) {
+				const fakeCards = lib.skill.threed_cat_eye.getCatCards(player);
+				return event.cards?.some(card => fakeCards.includes(card));
+			},
+			async content(event, trigger, player) {
+				const fakeCards = lib.skill.threed_cat_eye.getCatCards(player);
+				const realCards = lib.skill.threed_cat_eye.syncCards(player);
+				const usedFakes = [];
+				const usedIds = [];
+				trigger.cards = trigger.cards.map(card => {
+					if (!fakeCards.includes(card)) return card;
+					const real = realCards.find(cardx => cardx.cardid === card._cardid);
+					if (real) {
+						usedFakes.push(card);
+						usedIds.push(real.cardid);
+						return real;
+					}
+					return card;
+				});
+				if (trigger.card?.cards) {
+					trigger.card.cards = trigger.cards;
+				}
+				if (usedIds.length) {
+					player.storage.threed_cat_gained_cards = (player.storage.threed_cat_gained_cards || []).filter(card => !usedIds.includes(card.cardid));
+					lib.skill.threed_cat_eye.clearFakeCards(player, usedIds);
+					if (trigger.name === "useCard") {
+						lib.skill.threed_cat_eye.recordType(player, trigger.card);
+					}
+					await game.cardsGotoOrdering(trigger.cards.filter(card => usedIds.includes(card.cardid) && get.position(card, true) === "c"));
+					lib.skill.threed_cat_eye.syncCards(player);
+				}
+				game.deleteFakeCards(usedFakes);
+			},
+			"skill_id": "threed_cat_eye_view",
+			sub: true,
+			sourceSkill: "threed_cat_eye",
+			"_priority": 0,
+		},
+		sync: {
+			charlotte: true,
+			forced: true,
+			silent: true,
+			popup: false,
+			trigger: {
+				global: ["gainEnd", "equipEnd", "addJudgeEnd", "loseEnd", "loseAsyncEnd", "addToExpansionEnd", "cardsGotoOrderingBegin", "cardsDiscardAfter", "loseToDiscardpile"],
+			},
+		filter(event, player) {
+			const bottom = player.storage.threed_cat_bottom_card;
+			const gained = player.storage.threed_cat_gained_cards || [];
+			const cards = event.cards || [];
+			if (bottom && cards.some(card => card.cardid === bottom.cardid)) return true;
+			if (gained.length && cards.some(card => gained.some(g => g.cardid === card.cardid))) return true;
+			return false;
+		},
+			content(event, trigger, player) {
+				lib.skill.threed_cat_eye.syncCards(player);
+			},
+			"skill_id": "threed_cat_eye_sync",
+			sub: true,
+			sourceSkill: "threed_cat_eye",
+			"_priority": 1,
+		},
+		phase: {
+			charlotte: true,
+			trigger: {
+				player: ["phaseBegin", "phaseAfter"],
+			},
+			forced: true,
+			popup: false,
+			silent: true,
+			content(event, trigger, player) {
+				if (event.triggername === "phaseBegin") {
+					lib.skill.threed_cat_eye.addBottomCard(player);
+				} else {
+					lib.skill.threed_cat_eye.clearAll(player);
+				}
+			},
+			"skill_id": "threed_cat_eye_phase",
+			sub: true,
+			sourceSkill: "threed_cat_eye",
+			"_priority": 0,
+		},
+		roundReset: {
+			charlotte: true,
+			trigger: {
+				global: "roundStart",
+			},
+			forced: true,
+			popup: false,
+			silent: true,
+			content(event, trigger, player) {
+				player.storage.threed_cat_used_types = [];
+			},
+			"skill_id": "threed_cat_eye_roundReset",
+			sub: true,
+			sourceSkill: "threed_cat_eye",
+			"_priority": 0,
+		},
+		gain: {
+			charlotte: true,
+			forced: true,
+			silent: true,
+			popup: false,
+			trigger: {
+				global: ["gainAfter", "equipAfter", "addJudgeAfter", "loseAsyncAfter", "addToExpansionAfter"],
+			},
+			filter(event, player) {
+				if (_status.currentPhase !== player) return false;
+				return lib.skill.threed_cat_eye.getGainedPairs(event, player).length > 0;
+			},
+			content(event, trigger, player) {
+				const pairs = lib.skill.threed_cat_eye.getGainedPairs(trigger, player);
+				for (const [target, card] of pairs) {
+					lib.skill.threed_cat_eye.addGainedCard(player, target, card);
+				}
+			},
+			"skill_id": "threed_cat_eye_gain",
+			sub: true,
+			sourceSkill: "threed_cat_eye",
+			"_priority": 0,
+		},
+	},
+	"skill_id": "threed_cat_eye",
+	"_priority": 0,
+},
+
+// === 享恶 ===
+threed_xiang_e: {
+	audio: 2,
+	trigger: { player: "phaseDiscardEnd" },
+	direct: true,
+	filter(event, player) {
+		return game.hasPlayer(target => target !== player);
+	},
+	async content(event, trigger, player) {
+		const discarded = [];
+		player.getHistory("lose", evt => {
+			if (evt.type === "discard" && evt.getParent("phaseDiscard") === trigger) {
+				discarded.addArray(evt.cards);
+			}
+		});
+		if (!discarded.length) {
+			const result = await player
+				.chooseTarget(get.prompt2("threed_xiang_e"), "令一名其他角色执行一个弃牌阶段", lib.filter.notMe)
+				.set("ai", target => get.attitude(player, target) * (target.countCards("he") - target.getHandcardLimit()))
+				.forResult();
+			if (result?.bool && result.targets?.length) {
+				const target = result.targets[0];
+				player.logSkill("threed_xiang_e", target);
+				const next = target.phaseDiscard();
+				event.next.remove(next);
+				trigger.next.push(next);
+			}
+		} else {
+			const result = await player
+				.chooseTarget(get.prompt2("threed_xiang_e"), "令一名角色发动【崩坏】", lib.filter.all)
+				.set("ai", target => -get.attitude(player, target) * (target.hp === target.maxHp ? 2 : 1))
+				.forResult();
+			if (result?.bool && result.targets?.length) {
+				const target = result.targets[0];
+				player.logSkill("threed_xiang_e", target);
+				const { control } = await target
+					.chooseControl("baonue_hp", "baonue_maxHp", function(event2, player2) {
+						if (player2.hp == player2.maxHp) {
+							return "baonue_hp";
+						}
+						if (player2.hp < player2.maxHp - 1 || player2.hp <= 2) {
+							return "baonue_maxHp";
+						}
+						return "baonue_hp";
+					})
+					.set("prompt", "崩坏：失去1点体力或减1点体力上限")
+					.forResult();
+				if (control == "baonue_hp") {
+					await target.loseHp();
+				} else {
+					await target.loseMaxHp(true);
+				}
+			}
+		}
+	},
+	"skill_id": "threed_xiang_e",
+	"_priority": 0,
+},
+
+// === 织乱 ===
+threed_zhi_luan: {
+	audio: 2,
+	enable: "chooseToUse",
+	filterCard(card, player) {
+		if (get.name(card) !== "sha") {
+			return false;
+		}
+		const catCards = lib.skill.threed_cat_eye.getCatCards(player);
+		if (catCards.includes(card) && lib.skill.threed_cat_eye.isTypeUsed(player, { name: "jiedao", isCard: true })) {
+			return false;
+		}
+		return true;
+	},
+	position: "hes",
+	viewAsFilter(player) {
+		const catCards = lib.skill.threed_cat_eye.getCatCards(player);
+		const trickUsed = lib.skill.threed_cat_eye.isTypeUsed(player, { name: "jiedao", isCard: true });
+		return player.countCards("hes", card => {
+			if (get.name(card) !== "sha") {
+				return false;
+			}
+			if (catCards.includes(card) && trickUsed) {
+				return false;
+			}
+			return true;
+		});
+	},
+	viewAs: { name: "jiedao" },
+	check(card) {
+		return 5 - get.value(card);
+	},
+	onuse(result, player) {
+		player.addTempSkill("threed_zhi_luan_effect");
+	},
+	subSkill: {
+		effect: {
+			trigger: { player: "gainBefore" },
+			forced: true,
+			popup: false,
+			charlotte: true,
+			filter(event, player) {
+				const jiedao = event.getParent("jiedao");
+				if (!jiedao || jiedao.skill !== "threed_zhi_luan" || !jiedao.addedTarget?.isIn()) {
+					return false;
+				}
+				const cards = event.cards || [];
+				return cards.length > 0 && cards.some(card => get.subtypes(card)?.includes("equip1"));
+			},
+			async content(event, trigger, player) {
+				const jiedao = trigger.getParent("jiedao");
+				const target = jiedao.target;
+				const addedTarget = jiedao.addedTarget;
+				const go = await player
+					.chooseBool(get.prompt2("threed_zhi_luan"), `改为：你获得${get.translation(target)}一张牌，${get.translation(target)}获得${get.translation(addedTarget)}一张牌，${get.translation(addedTarget)}从牌堆底摸一张牌`)
+					.set("ai", () => addedTarget && addedTarget.isIn() ? 1 : 0)
+					.forResult();
+				if (!go?.bool) {
+					return;
+				}
+				trigger.cancel();
+				player.logSkill("threed_zhi_luan");
+				await player.gainPlayerCard({ target, position: "he", forced: true });
+				if (target.isIn() && addedTarget.isIn() && addedTarget.hasGainableCards(target, "he")) {
+					await target.gainPlayerCard({ target: addedTarget, position: "he", forced: true });
+				}
+				if (addedTarget.isIn()) {
+					await addedTarget.draw(1, "bottom");
+				}
+			},
+			"skill_id": "threed_zhi_luan_effect",
+			sub: true,
+			sourceSkill: "threed_zhi_luan",
+			"_priority": 0,
+		},
+	},
+	"skill_id": "threed_zhi_luan",
+	"_priority": 0,
 },
 }

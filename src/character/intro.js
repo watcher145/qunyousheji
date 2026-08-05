@@ -31,7 +31,7 @@ export const characterIntro = {
 	qunyou_zhonghui: "设计：熏鱼不爱果子。修改：欢愉与希望<br>评价：我也不知道我改的好不好，总之比原版强了。",
 	qunyou_yang_wang: "设计：西夏笠谷。<br>评价：有操作有强度",
 	qunyou_xian_hua: "设计：西夏笠谷。<br>评价：有操作有强度",
-	qunyou_sunce:"设计：西夏笠谷。<br>评价：",
+	qunyou_xxsunce:"设计：西夏笠谷。<br>评价：",
 	qunyou_lvlingqi:"设计：西夏笠谷。<br>评价：",
 	qunyou_panjun:"设计：西夏笠谷。<br>评价：",
 	qunyou_mojiangwei: "设计：墨客。<br>评价：对牌序要求也太高了，对运气要求也高",
@@ -74,4 +74,9 @@ export const characterIntro = {
 	qunyou_zuzhugejun: "来源：BV1nmK26EEr3<br>评价：",
 	qiufeng_zhangqiyin: "设计：门冬<br>评价：",
 	qunyou_zishupanshu: "设计：yyuan<br>评价：",
+	qunyou_taishici: "设计：阿桔是我<br>评价：",
+	qunyou_sunce: "设计：罗晓翳不是海龟螺猫（B站）",
+	qunyou_guotu: "设计：烦不烦（B站）",
+	qunyou_liuchen: "设计：-黎明-Dawn（B站）",
+	threed_dongbai: "设计：白驹",
 };

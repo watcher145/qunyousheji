@@ -465,4 +465,39 @@ export const skillTranslate = {
 	qunyou_chousu: "愁訴",
 	qunyou_chousu_info:
 		"你仅被一种颜色的牌指定过的阶段结束时，你摸一张牌且可以使用一张牌，若使用的牌为另一颜色，重复此流程。",
+	qunyou_zhanwei: "战围",
+	qunyou_zhanwei_info:
+		"出牌阶段限两次，你可以与一名角色拼点，若你：赢，其获得你的拼点牌，你视为对其使用一张【决斗】；没赢，反之。",
+	qunyou_dangzhen: "荡阵",
+	qunyou_dangzhen_info:
+		"锁定技，你使用牌对唯一目标结算后，若其与本回合上位成为牌唯一目标的角色不同，你对其造成1点伤害；否则，其摸一张牌。",
+	qunyou_jiang: "激昂",
+	qunyou_jiang_info:
+		`<b>昂扬技</b>，你可以合法且无次数限制的使用本回合弃牌堆的一张牌，此牌结算后，你将你的体力值调整1点（满血时只能减少）。<br>${get.poptip("rule_jiang")}：体力值变化到一。`,
+	qunyou_qushi: "趋势",
+	qunyou_qushi_info:
+		"每轮限一次，当你在回合外需要使用或打出基本牌时，你可以视为使用一张【瞒天过海】，本回合你可视为使用或打出以此法获得的即时牌。",
+	qunyou_shiwei: "施诿",
+	qunyou_shiwei_info:
+		`一名角色的结束阶段，若其：1.本局游戏对你使用过牌；2.本局游戏被你抵消过牌；3.手牌数为0；每满足一项，你可以使用一张牌；满足两项及以上，你重置${get.poptip("qunyou_qushi")}。`,
+	qunyou_yingpo: "英魄",
+	qunyou_yingpo_info:
+		`<b>昂扬技</b>，当你的体力值变化后，你可以发动一次${get.poptip("yinghun")}。<br>${get.poptip("rule_jiang")}：你成为伤害牌目标或你使用伤害牌，且该伤害牌的颜色为本回合弃牌堆中最少的颜色。`,
+	qunyou_daolie: "蹈烈",
+	qunyou_daolie_info:
+		`出牌阶段，你可以将手牌调整至损失体力值，令一名其他角色视为对你使用一张【决斗】，因此受到伤害的角色获得${get.poptip("qunyou_zhengjue")}。`,
+	qunyou_zhengjue: "争绝",
+	qunyou_zhengjue_info: "锁定技，你的手牌均视为【杀】。你造成伤害时，失去此技能。",
+	qunyou_mangzhan: "莽战",
+	qunyou_mangzhan_info:
+		"锁定技，每当你需响应牌时，若你能响应，你必须响应之；每回合你第X次需响应但未响应牌后，你摸X张牌（X为你的体力值）。",
+	threed_cat_eye: "猫眼",
+	"threed_cat_eye_info":
+		"锁定技，你的回合内，牌堆底的牌与其他角色于此回合内获得的牌对你可见，其中你本轮内未以此法使用过的类型的牌于你可用。",
+	threed_xiang_e: "享恶",
+	"threed_xiang_e_info":
+		"弃牌阶段结束时，若你于此阶段内：未弃置牌，你可以令一名其他角色执行一个弃牌阶段；弃置过牌，你可以令一名角色发动〖崩坏〗。",
+	threed_zhi_luan: "织乱",
+	"threed_zhi_luan_info":
+		"你可以将【杀】当【借刀杀人】使用；你因此牌获得武器牌前，可以改为：你获得此牌目标一张牌，此牌目标获得你指定的【杀】的目标一张牌，你指定的【杀】的目标从牌堆底摸一张牌。",
 };
