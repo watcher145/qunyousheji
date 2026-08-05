@@ -28,6 +28,7 @@ function cloneAndPatchCards() {
 }
 
 const characterSortTranslate = {
+	threed: "3D吧赛",
 	qiufeng: "秋风杯",
 	xiaobai: "小白杯",
 	zishubei: "自书杯",
@@ -40,6 +41,7 @@ const characterSortTranslate = {
 };
 
 const characterSort = {
+	threed: ["threed_dongbai"],
 	qiufeng: ["qiufeng_zhangqiyin"],
 	xiaobai: ["xiaobai_lizhaoyi"],
 	zishubei: ["qunyou_zishuliyan", "qunyou_zishulvju", "qunyou_zishuxunyu", "qunyou_zishuwangguan","qunyou_zishupanshu"],
@@ -48,7 +50,7 @@ const characterSort = {
 	yachaiclan: ["yachaiclan_cuiyan", "yachaiclan_wangxiang", "yachaiclan_diaochan", "yachaiclan_wuyi", "yachaiclan_xunyu",
 		 "yachaiclan_luxun", "yachaiclan_lukang", "yachaiclan_luji", "yachaiclan_luyun", "yachaiclan_luji2", "yachaiclan_luyusheng", "yachaiclan_lukai", 
 		 "yachaiclan_zhugeliang", "yachaiclan_zhugezhan", "yachaiclan_zhugeshang", "yachaiclan_zhugejin", "yachaiclan_zhugeke", "yachaiclan_zhugedan", "yachaiclan_zhugeliang2"],
-	qunyou_sinatsuriku: ["qunyou_yang_wang","qunyou_xian_hua","qunyou_sunce","qunyou_lvlingqi","qunyou_panjun"],
+	qunyou_sinatsuriku: ["qunyou_yang_wang","qunyou_xian_hua","qunyou_xxsunce","qunyou_lvlingqi","qunyou_panjun"],
 	qunyou_gaijin: ["qunyou_zhugeliang"],
 	qunyou_yongdong: ["qunyou_wuzhangfei", "qunyou_wanglang"],
 };

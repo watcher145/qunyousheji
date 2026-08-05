@@ -36,7 +36,7 @@ export const characterTitle = {
 	qunyou_diaochan: "诛魔成义",
 	qunyou_wuzhangfei: "烈武恒威",
 	qunyou_weiguanyu: "美髯公",
-	qunyou_sunce: "平江东扫患寇",
+	qunyou_xxsunce: "平江东扫患寇",
 	qunyou_lvlingqi: "红袖仗钺",
 	qunyou_zhangyan: "轻勇骇势",
 	shanhe_zhangjiao: "太平道人",
@@ -72,4 +72,9 @@ export const characterTitle = {
 	qunyou_zuzhugejun: "三珠之隐根",
 	qiufeng_zhangqiyin: "三六大道",
 	qunyou_zishupanshu: "瑶台遗韵",
+	qunyou_taishici: "围阵奋戈",
+	qunyou_sunce:"勇冠三江势",
+	qunyou_guotu:"凶臣",
+	qunyou_liuchen:"血溅轩辕",
+	threed_dongbai:"渭浊阳关",
 };
