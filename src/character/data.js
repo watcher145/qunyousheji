@@ -230,7 +230,7 @@ export const characterData = {
 		hp: 5,
 		maxHp: 5,
 		hujia: 0,
-		skills: ["qunyou_luzhan"],
+		skills: ["qunyou_luzhan","qunyou_mangzhan"],
 	},
 	qunyou_zhonghui: {
 		sex: "male",
@@ -319,7 +319,7 @@ export const characterData = {
 		hp: 3,
 		maxHp: 3,
 		hujia: 0,
-		skills: ["qunyou_chuandao","qunyou_muzhong"],
+		skills: ["shanhe_chuandao","shanhe_muzhong"],
 	},
 	shanhe_luzhi: {
 		sex: "male",
@@ -327,7 +327,7 @@ export const characterData = {
 		hp: 3,
 		maxHp: 6,
 		hujia: 0,
-		skills: ["qunyou_zhenpan","qunyou_kangbian","qunyou_yinshan"],
+		skills: ["shanhe_zhenpan","shanhe_kangbian","shanhe_yinshan"],
 	},
 	qunyou_lvlingqi:{
 		sex: "female",
@@ -343,7 +343,7 @@ export const characterData = {
 		hp: 5,
 		maxHp: 5,
 		hujia: 0,  
-		skills: ["qunyou_yongli","qunyou_taoning","qunyou_fuzhu"],
+		skills: ["qunyou_yongli","shanhe_taoning","shanhe_fuzhu"],
 	},
 	qunyou_lvyi: {
 		sex: "male",
@@ -661,5 +661,29 @@ export const characterData = {
 		maxHp: 3,
 		hujia: 0,
 		skills: ["threed_cat_eye","threed_xiang_e","threed_zhi_luan"],
+	},
+	threed_heji:{
+		sex: "female",
+		group: "wu",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["threed_xuyi1","threed_xuyi2"],
+	},
+	shanhe_jiangwei:{
+		sex: "male",
+		group: "shu",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["shanhe_yuanzhi","shanhe_shutu"],
+	},
+	shanhe_wangyi:{
+		sex: "female",
+		group: "wei",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["shanhe_zijiu","shanhe_huoyu"],
 	},
 };

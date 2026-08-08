@@ -48,6 +48,18 @@ export function precontent() {
 		color: "#dbdbdb",
         nature: "glodenmm",
 	});
+	lib.namePrefix.set("弦", {
+		color: "#9ec5ff",
+        nature: "watermm",
+	});
+	lib.namePrefix.set("望", {
+		color: "#ffe9a8",
+        nature: "shenmm",
+	});
+	lib.namePrefix.set("晦", {
+		color: "#3d3d3d",
+        nature: "blackmm",
+	});
 	lib.namePrefix.set("新", {
 		color: "#fefedc",
 		nature: "shenmm",

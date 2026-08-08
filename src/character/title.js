@@ -77,4 +77,7 @@ export const characterTitle = {
 	qunyou_guotu:"凶臣",
 	qunyou_liuchen:"血溅轩辕",
 	threed_dongbai:"渭浊阳关",
+	threed_heji:"亭盖荧宫",
+	shanhe_jiangwei:"宫锁透甲",
+	shanhe_wangyi:"璟玉秋霜",
 };

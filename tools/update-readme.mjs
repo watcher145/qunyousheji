@@ -145,12 +145,11 @@ const yachaiclanGroups = [
   ["yachaiclan_zhugeliang", "yachaiclan_zhugezhan", "yachaiclan_zhugeshang", "yachaiclan_zhugejin", "yachaiclan_zhugeke", "yachaiclan_zhugedan", "yachaiclan_zhugeliang2"],
 ];
 
-// Package order: follow characterSort, but yongdong & gaijin go to end
+// Package order: follow characterSort, but yongdong & gaijin are handled separately at the very end
 const pkgLast = ['qunyou_yongdong', 'qunyou_gaijin'];
 const pkgOrder = Object.keys(characterSort).filter(
   p => !pkgLast.includes(p)
 );
-pkgOrder.push(...pkgLast);
 
 // Build package sections (first block)
 const pkgSections = [];
