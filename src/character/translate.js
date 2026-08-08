@@ -127,4 +127,10 @@ export const characterTranslate = {
 	qunyou_liuchen: "刘谌",
 	threed_dongbai: "3D董白",
 	threed_dongbai_prefix: "3D",
+	threed_heji: "3D何姬",
+	threed_heji_prefix: "3D",
+	shanhe_jiangwei: "晦姜维",
+	shanhe_jiangwei_prefix: "晦",
+	shanhe_wangyi: "弦王异",
+	shanhe_wangyi_prefix: "弦",
 };

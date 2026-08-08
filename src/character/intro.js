@@ -78,5 +78,8 @@ export const characterIntro = {
 	qunyou_sunce: "设计：罗晓翳不是海龟螺猫（B站）",
 	qunyou_guotu: "设计：烦不烦（B站）",
 	qunyou_liuchen: "设计：-黎明-Dawn（B站）",
-	threed_dongbai: "设计：白驹",
+	threed_dongbai: "设计：白驹<br>修改：去掉了崩坏的条件限制",
+	threed_heji: "设计：柠檬<br>评价：",
+	shanhe_jiangwei: "设计：o.O<br>评价：",
+	shanhe_wangyi: "设计：颜渊&江雪<br>评价：有意思的设计，回合开始时必须要给敌人加鸠，否则自己就会一直获得鸠标记，但是血还是太少了，我加了一上限",
 };
