@@ -3348,4 +3348,333 @@ shanhe_huoyu: {
 		},
 	},
 },
+// === 聚澜 ===
+xiaobai_julan: {
+	audio: 2,
+	comboSkill: true,
+	locked: false,
+	group: ["xiaobai_julan_yinpai", "xiaobai_julan_check"],
+	init(player, skill) {
+		if (!player.storage.xiaobai_julan_condition) {
+			player.storage.xiaobai_julan_condition = ["basic"];
+		}
+		player.addSkill(`${skill}_mark`);
+	},
+	onremove(player, skill) {
+		player.removeSkill(`${skill}_mark`);
+		delete player.storage.xiaobai_julan_condition;
+		delete player.storage.xiaobai_julan_progress;
+		player.removeTip("xiaobai_julan");
+	},
+	trigger: { player: "useCard1" },
+	forced: true,
+	popup: false,
+	silent: true,
+	filter(event, player) {
+		const cond = player.storage.xiaobai_julan_condition;
+		if (!cond?.length) return false;
+		return (player.storage.xiaobai_julan_progress || 0) < cond.length;
+	},
+	async content(event, trigger, player) {
+		const cond = player.storage.xiaobai_julan_condition || ["basic"];
+		const progress = player.storage.xiaobai_julan_progress || 0;
+		const type = get.type2(trigger.card);
+		if (type === cond[progress]) {
+			const next = progress + 1;
+			player.storage.xiaobai_julan_progress = next;
+			player.markSkill("xiaobai_julan_mark");
+			if (next >= cond.length) {
+				await player.draw(cond.length);
+				cond.push("basic");
+				player.storage.xiaobai_julan_progress = 0;
+				player.markSkill("xiaobai_julan_mark");
+				player.removeTip("xiaobai_julan");
+			} else {
+				player.addTip("xiaobai_julan", "聚澜 可连击");
+			}
+		} else if (progress > 0) {
+			player.storage.xiaobai_julan_progress = 0;
+			player.markSkill("xiaobai_julan_mark");
+			player.removeTip("xiaobai_julan");
+			if (player.hasSkill("xiaobai_kuotao")) {
+				await get.info("xiaobai_kuotao").onBreak(player, type);
+			}
+		}
+	},
+	subSkill: {
+		// 印牌：一张牌当【趁火打劫】
+		yinpai: {
+			audio: "xiaobai_julan",
+			enable: "chooseToUse",
+			viewAsFilter(player) {
+				return player.storage.xiaobai_julan_progress > 0;
+			},
+			filterCard(card, player) {
+				return get.itemtype(card) == "card";
+			},
+			selectCard: 1,
+			position: "he",
+			viewAs: { name: "chenghuodajie", storage: { xiaobai_julan: true } },
+			prompt: "聚澜：将一张牌当【趁火打劫】使用",
+		},
+		// 替换趁火打劫结算：展示基本牌时由使用者选择
+		check: {
+			trigger: { player: "useCardToBegin" },
+			forced: true,
+			popup: false,
+			silent: true,
+			filter(event, player) {
+				return event.card?.storage?.xiaobai_julan;
+			},
+			async content(event, trigger, player) {
+				trigger.setContent(get.info("xiaobai_julan").chenghuoContent);
+			},
+		},
+		// 连招进度显示：澜字 + 右下角进度/条件数
+		mark: {
+			charlotte: true,
+			marktext: "澜",
+			intro: {
+				content(storage, player, skill) {
+					const cond = player.storage.xiaobai_julan_condition || ["basic"];
+					const progress = player.storage.xiaobai_julan_progress || 0;
+					return `连招进度：${progress}/${cond.length}`;
+				},
+				markcount(storage, player) {
+					const cond = player.storage.xiaobai_julan_condition || ["basic"];
+					const progress = player.storage.xiaobai_julan_progress || 0;
+					return `${progress}/${cond.length}`;
+				},
+			},
+			init(player, skill) {
+				player.markSkill(skill);
+			},
+			onremove(player, skill) {
+				player.unmarkSkill(skill);
+			},
+		},
+	},
+	async chenghuoContent(event, trigger, player) {
+		const { target } = event;
+		if (typeof event.baseDamage !== "number") {
+			event.baseDamage = 1;
+		}
+		if (typeof event.extraDamage !== "number") {
+			event.extraDamage = 0;
+		}
+		if (!target.hasCards("h") || !player.isIn()) {
+			return;
+		}
+		const result = await player.choosePlayerCard(target, "h", true).forResult();
+		if (!result.bool) {
+			return;
+		}
+		event.show_card = result.cards[0];
+		const str = get.translation(player);
+		await player.showCards(event.show_card);
+		if (get.type(event.show_card) == "basic") {
+			const controlResult = await player.chooseControl().set("choiceList", [`令使用者获得${get.translation(event.show_card)}`, `令${get.translation(target)}受到${event.baseDamage + event.extraDamage}点伤害`]).set("ai", () => {
+				const evt = get.event().getParent();
+				const card = evt.show_card;
+				const source = evt.player;
+				const target2 = evt.target;
+				if (get.damageEffect(target2, source, source) > get.value(card, source)) {
+					return 1;
+				}
+				return 0;
+			}).forResult();
+			if (controlResult.index === 0) {
+				await target.give(event.show_card, player);
+			} else {
+				await target.damage();
+			}
+		} else {
+			const controlResult = await target.chooseControl().set("choiceList", [`令${str}获得${get.translation(event.show_card)}`, `受到${str}造成的${event.baseDamage + event.extraDamage}点伤害`]).set("ai", () => {
+				const evt = get.event().getParent();
+				if (evt == null) {
+					return 1;
+				}
+				const current = evt.target;
+				const source = evt.player;
+				const card = evt.show_card;
+				if (get.damageEffect(current, source, current) > 0) {
+					return 1;
+				}
+				if (get.attitude(current, source) * get.value(card, source) >= 0) {
+					return 0;
+				}
+				if (card.name === "tao") {
+					return 1;
+				}
+				return get.value(card, current) > 6 + (Math.max(current.maxHp, 3) - current.hp) * 1.5 ? 1 : 0;
+			}).forResult();
+			if (controlResult.index === 0) {
+				await target.give(event.show_card, player);
+			} else {
+				await target.damage();
+			}
+		}
+	},
+	ai: {
+		order: 6,
+		result: { player: 1 },
+	},
+},
+// === 括涛 ===
+xiaobai_kuotao: {
+	audio: 2,
+	locked: false,
+	group: ["xiaobai_kuotao_check"],
+	mod: {
+		cardUsable(card, player, num) {
+			if (get.name(card) == "sha") {
+				return num + (player.storage.xiaobai_kuotao_sha_count || 0);
+			}
+		},
+	},
+	trigger: {
+		global: ["phaseBeginAfter", "phaseJudgeAfter", "phaseDrawAfter", "phaseUseAfter", "phaseDiscardAfter", "phaseJieshuAfter"],
+	},
+	forced: true,
+	popup: false,
+	silent: true,
+	filter(event, player) {
+		return Array.isArray(player.storage.xiaobai_kuotao_end) && player.storage.xiaobai_kuotao_end.length > 0;
+	},
+	async content(event, trigger, player) {
+		const list = player.storage.xiaobai_kuotao_end || [];
+		delete player.storage.xiaobai_kuotao_end;
+		for (const X of list) {
+			//if (!lib.card.binglinchengxiax) break;
+			const vcard = get.autoViewAs({ name: "binglinchengxiax", isCard: true, storage: { xiaobai_kuotao_extra: X } });
+			if (game.hasPlayer(target => target != player && lib.filter.filterTarget(vcard, player, target))) {
+				await player.chooseUseTarget(vcard, true, false).set("prompt", "括涛：视为使用一张【兵临城下】").forResult();
+			}
+		}
+	},
+	init(player, skill) {
+		player.addSkill(`${skill}_mark`);
+		if (player.storage.xiaobai_kuotao_sha_count) {
+			player.addTip("xiaobai_kuotao", `出杀次数+${player.storage.xiaobai_kuotao_sha_count}`);
+		}
+	},
+	onremove(player, skill) {
+		player.removeSkill(`${skill}_mark`);
+		player.removeTip("xiaobai_kuotao");
+		delete player.storage.xiaobai_kuotao_sha_count;
+		delete player.storage.xiaobai_kuotao_last_break;
+		delete player.storage.xiaobai_kuotao_end;
+	},
+	async onBreak(player, breakType) {
+		const last = player.storage.xiaobai_kuotao_last_break;
+		player.storage.xiaobai_kuotao_last_break = breakType;
+		player.markSkill("xiaobai_kuotao_mark");
+		if (last === breakType) {
+			player.logSkill("xiaobai_kuotao");
+			player.storage.xiaobai_kuotao_sha_count = (player.storage.xiaobai_kuotao_sha_count || 0) + 1;
+			player.addTip("xiaobai_kuotao", `出杀次数+${player.storage.xiaobai_kuotao_sha_count}`);
+			return;
+		}
+		const shaCount = player.storage.xiaobai_kuotao_sha_count || 0;
+		const condLen = (player.storage.xiaobai_julan_condition || ["basic"]).length;
+		const result = await player
+			.chooseControl(["使用【杀】的次数", "连招条件"], "cancel2")
+			.set("prompt", "括涛：将使用【杀】的次数或连招条件减少至1")
+			.set("ai", () => {
+				const player = get.player();
+				const shaCount = player.storage.xiaobai_kuotao_sha_count || 0;
+				const condLen = (player.storage.xiaobai_julan_condition || ["basic"]).length;
+				return shaCount >= condLen - 1 ? 0 : 1;
+			})
+			.forResult();
+		if (result.control === "cancel2") {
+			return;
+		}
+		let X;
+		if (result.control === "使用【杀】的次数") {
+			X = shaCount;
+			delete player.storage.xiaobai_kuotao_sha_count;
+			player.removeTip("xiaobai_kuotao");
+		} else {
+			X = condLen - 1;
+			player.storage.xiaobai_julan_condition = ["basic"];
+			if (player.hasSkill("xiaobai_julan_mark")) {
+				player.markSkill("xiaobai_julan_mark");
+			}
+		}
+		(player.storage.xiaobai_kuotao_end ??= []).push(X);
+	},
+	subSkill: {
+		// 替换兵临城下结算：多展示 X 张牌
+		check: {
+			trigger: { player: "useCardToBegin" },
+			forced: true,
+			popup: false,
+			silent: true,
+			filter(event, player) {
+				return event.card?.storage?.xiaobai_kuotao_extra;
+			},
+			async content(event, trigger, player) {
+				trigger.setContent(get.info("xiaobai_kuotao").binglinContent);
+			},
+		},
+		// 中断类别显示：涛字 + 右下角类别（基/锦/装）
+		mark: {
+			charlotte: true,
+			marktext: "涛",
+			intro: {
+				content(storage, player, skill) {
+					const type = player.storage.xiaobai_kuotao_last_break;
+					const shaCount = player.storage.xiaobai_kuotao_sha_count || 0;
+					const condLen = (player.storage.xiaobai_julan_condition || ["basic"]).length;
+					let str = "";
+					if (type) {
+						str += `上次导致中断的牌类别：${get.translation(type)}<br>`;
+					} else {
+						str += "未记录中断牌<br>";
+					}
+					str += `出杀次数：${1 + shaCount}<br>连招条件数：${condLen}`;
+					return str;
+				},
+				markcount(storage, player) {
+					const type = player.storage.xiaobai_kuotao_last_break;
+					return type ? { basic: "基", trick: "锦", equip: "装" }[type] || "" : "";
+				},
+			},
+			init(player, skill) {
+				player.markSkill(skill);
+			},
+			onremove(player, skill) {
+				player.unmarkSkill(skill);
+			},
+		},
+	},
+	async binglinContent(event, trigger, player) {
+		const { target } = event;
+		if (!player.isIn() || !target.isIn()) {
+			event.finish();
+			return;
+		}
+		const extra = event.card?.storage?.xiaobai_kuotao_extra || 0;
+		event.showCards = get.cards(4 + extra, true);
+		await game.cardsGotoOrdering(event.showCards);
+		await player.showCards(event.showCards, `${get.translation(player)}使用了【${get.translation(event.card)}】`, true).set("clearArena", false);
+		if (player.isIn() && target.isIn() && event.showCards.length) {
+			for (const card of event.showCards.slice()) {
+				if (get.name(card) == "sha" && player.canUse(card, target, false)) {
+					event.showCards.remove(card);
+					await player.useCard(card, target, false);
+				}
+			}
+		}
+		game.broadcastAll(ui.clear);
+		if (event.showCards.length) {
+			await game.cardsGotoPile(event.showCards.reverse(), "insert");
+		}
+	},
+	ai: {
+		order: 5,
+		result: { player: 1 },
+	},
+},
 }

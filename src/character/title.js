@@ -80,4 +80,5 @@ export const characterTitle = {
 	threed_heji:"亭盖荧宫",
 	shanhe_jiangwei:"宫锁透甲",
 	shanhe_wangyi:"璟玉秋霜",
+	xiaobai_lite:"六郡行王",
 };

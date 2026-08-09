@@ -61,6 +61,12 @@ const dynamicTranslates = {
 		}
 		return `锁定技，你的回合开始时，按以下三条规则重新排列阶段顺序：${rules.join("；")}。`;
 	},
+	xiaobai_julan(player) {
+		const cond = player.storage.xiaobai_julan_condition || ["basic"];
+		const typeText = { basic: "基本牌", trick: "锦囊牌", equip: "装备牌" };
+		const condStr = cond.map(t => typeText[t] || t).join("+");
+		return `连招技（${blue(condStr)}），你摸${blue(cond.length)}张牌，然后你将一个${blue("基本牌")}加入连招条件。你处于连招进度时，可以将一张牌当【趁火打劫】使用，若此【趁火打劫】展示的为基本牌，则改为由你选择令使用者获得此牌或令其受到1点伤害。`;
+	},
 };
 
 export default dynamicTranslates;
