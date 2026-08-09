@@ -686,4 +686,12 @@ export const characterData = {
 		hujia: 0,
 		skills: ["shanhe_zijiu","shanhe_huoyu"],
 	},
+	xiaobai_lite:{
+		sex: "male",
+		group: "jin",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["xiaobai_julan","xiaobai_kuotao"],
+	},
 };

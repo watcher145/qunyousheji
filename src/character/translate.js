@@ -133,4 +133,6 @@ export const characterTranslate = {
 	shanhe_jiangwei_prefix: "晦",
 	shanhe_wangyi: "弦王异",
 	shanhe_wangyi_prefix: "弦",
+	xiaobai_lite: "小白李特",
+	xiaobai_lite_prefix: "小白",
 };
