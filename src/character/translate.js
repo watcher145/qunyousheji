@@ -135,4 +135,6 @@ export const characterTranslate = {
 	shanhe_wangyi_prefix: "弦",
 	xiaobai_lite: "小白李特",
 	xiaobai_lite_prefix: "小白",
+	xiaobai_suojing: "小白索靖",
+	xiaobai_suojing_prefix: "小白",
 };

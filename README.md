@@ -21,7 +21,7 @@
 | `src/skill/helpers.js` | 技能工具函数 |
 | `src/skill/yachai.js` | 崖柴系技能 (`yachai_*`) |
 | `src/skill/clan.js` | 宗族技 (`clan*`) |
-| `src/skill/qunsai.js` | 群赛（目前有：自书杯 + 问鼎·陈郡谢氏 + 山河如梦·朔） 技能 |
+| `src/skill/qunsai.js` | 群赛（详见package） 技能 |
 | `src/skill/sanshe.js` | 散设 — 其余 `qunyou_*` 技能 |
 | `src/translate/skill.js` | 技能译名与 `*_info` |
 | `src/translate/dynamicTranslate.js` | 局内动态描述（可选） |
@@ -59,6 +59,8 @@
 
 ### 小白杯
 - `小叶子`：小白李昭仪
+- `why do we fall`：小白李特
+- `可余雪`：小白索靖
 
 ### 自书杯
 - `城北徐公`：自书李严
@@ -99,6 +101,7 @@
 - `杰劼夫长(贴吧）`：孙皎
 - `yyuan`：郝普
 - `0^0`：嗔赵云
+- `罗乐省标9191（B站）`：谋诸葛亮
 - `鹭`：剻越
 - `祂不想`：刘墨
 - `未知`：梦刘封
@@ -114,7 +117,6 @@
 - `罗晓翳不是海龟螺猫（B站）`：孙策
 - `烦不烦（B站）`：郭图
 - `-黎明-Dawn（B站）`：刘谌
-- `why do we fall`：小白李特
 
 ### 收集到的好设，但只有来源
 - `BV1Rv7S65EAy`：陆逊
@@ -132,6 +134,3 @@
 ### 能永动的武将
 - `滑溜溜`：王朗
 - `晴`：武张飞
-
-### 有问题的设计
-- `寻辉逐烨`：谋诸葛亮

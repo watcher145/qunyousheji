@@ -5,21 +5,98 @@ import dynamicTranslates from "./translate/dynamicTranslate.js";
  * 扩展加载时执行：可在此注册 lib.namePrefix、合并 lib.dynamicTranslate 等
  */
 export function precontent() {
+	lib.namePrefix.set("群友", {
+		getSpan: () => {
+			const span = document.createElement("span"), style = span.style;
+			style.writingMode = style.webkitWritingMode = "horizontal-tb";
+			style.fontFamily = "STXingkai, KaiTi, '楷体', sans-serif";
+			style.fontSize = "10px";
+			style.color = "#E0E0E0";
+			style.fontWeight = "bold";
+			style.letterSpacing = "-0.5px";
+			span.textContent = "群友";
+			return span.outerHTML;
+		},
+	});
+	lib.namePrefix.set("问鼎", {
+		getSpan: () => {
+			const span = document.createElement("span"), style = span.style;
+			style.writingMode = style.webkitWritingMode = "horizontal-tb";
+			style.fontFamily = "STLiti, '隶书', KaiTi, '楷体', sans-serif";
+			style.fontSize = "11px";
+			style.color = "#FFD700";
+			style.fontWeight = "bold";
+			style.letterSpacing = "-0.5px";
+			span.textContent = "问鼎";
+			return span.outerHTML;
+		},
+	});
+	lib.namePrefix.set("崖柴", {
+		getSpan: () => {
+			const span = document.createElement("span"), style = span.style;
+			style.writingMode = style.webkitWritingMode = "horizontal-tb";
+			style.fontFamily = "KaiTi, '楷体', STKaiti, sans-serif";
+			style.fontSize = "11px";
+			style.color = "#B388FF";
+			//style.textShadow = "-1px -1px 0 #000000, 1px -1px 0 #000000, -1px 1px 0 #000000, 1px 1px 0 #000000";
+			style.fontWeight = "bold";
+			style.letterSpacing = "-0.5px";
+			span.textContent = "崖柴";
+			return span.outerHTML;
+		},
+	});
 	lib.namePrefix.set("3D", {
-		color: "#90EE90",
-		nature: "orangemm",
+		getSpan: () => {
+			const span = document.createElement("span"), style = span.style;
+			style.writingMode = style.webkitWritingMode = "horizontal-tb";
+			style.fontFamily = "SimHei, '黑体', sans-serif";
+			style.fontSize = "12px";
+			style.color = "#90EE90";
+			style.fontWeight = "bold";
+			style.letterSpacing = "-0.5px";
+			span.textContent = "3D";
+			return span.outerHTML;
+		},
 	});
 	lib.namePrefix.set("秋风", {
-		color: "#CD4500",
-		nature: "firemm",
+		getSpan: () => {
+			const span = document.createElement("span"), style = span.style;
+			style.writingMode = style.webkitWritingMode = "horizontal-tb";
+			style.fontFamily = "STXingkai, KaiTi, '楷体', sans-serif";
+			style.fontSize = "11px";
+			style.color = "#FF5A36";
+			style.fontWeight = "bold";
+			style.letterSpacing = "-0.5px";
+			span.textContent = "秋风";
+			return span.outerHTML;
+		},
 	});
 	lib.namePrefix.set("小白", {
-		color: "#333333",
-		nature: "glodenmm",
+		getSpan: () => {
+			const span = document.createElement("span"), style = span.style;
+			style.writingMode = style.webkitWritingMode = "horizontal-tb";
+			style.fontFamily = "SimSun, KaiTi, '楷体', sans-serif";
+			style.fontSize = "11px";
+			style.color = "#FFFFFF";
+			//style.textShadow = "-1px -1px 0 #000000, 1px -1px 0 #000000, -1px 1px 0 #000000, 1px 1px 0 #000000";
+			style.fontWeight = "bold";
+			style.letterSpacing = "-0.5px";
+			span.textContent = "小白";
+			return span.outerHTML;
+		},
 	});
 	lib.namePrefix.set("自书", {
-		color: "#c8cdd1",
-		nature: "inkmm",
+		getSpan: () => {
+			const span = document.createElement("span"), style = span.style;
+			style.writingMode = style.webkitWritingMode = "horizontal-tb";
+			style.fontFamily = "KaiTi, '楷体', STKaiti, sans-serif";
+			style.fontSize = "11px";
+			style.color = "#c8cdd1";
+			style.fontWeight = "bold";
+			style.letterSpacing = "-0.5px";
+			span.textContent = "自书";
+			return span.outerHTML;
+		},
 	});
 	lib.namePrefix.set("谋", {
 		color: "#def7ca",
@@ -65,8 +142,17 @@ export function precontent() {
 		nature: "shenmm",
 	});
 	lib.namePrefix.set("西夏", {
-		color: "#A6968B",
-		nature: "blackmm",
+		getSpan: () => {
+			const span = document.createElement("span"), style = span.style;
+			style.writingMode = style.webkitWritingMode = "horizontal-tb";
+			style.fontFamily = "KaiTi, '楷体', STLiti,  '隶书', sans-serif";
+			style.fontSize = "11px";
+			style.color = "#00c2a8";
+			style.fontWeight = "bold";
+			style.letterSpacing = "-0.5px";
+			span.textContent = "西夏";
+			return span.outerHTML;
+		},
 	});
 	// 注册汉势力
 	game.addGroup("han", "汉", "汉势力", {

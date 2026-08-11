@@ -22,7 +22,7 @@ export const characterIntro = {
 	qunyou_wanglang: "设计：滑溜溜。<br>评价：阴完了，拿到A和K就能空城全场",
 	qunyou_cbpzhaoyun: "设计：琉多斯。修改：欢愉与希望<br>评价：我也不知道我改的好不好",
 	qunyou_jiangwei: "来源：BV1CDGv6uESF<br>吐槽：原版那描述都能自创好几个新概念了，还有，太弱了，共同拼点本来就不容易赢，自身顶多是小制衡，没有手牌还发动不了技能",
-	qunyou_zhugeliang: "设计：寻辉逐烨<br>吐槽：太麻烦了，需要改进",
+	qunyou_zhugeliang: "设计：罗乐省标9191（B站）<br>吐槽：续天比想象中的更容易重置",
 	qunyou_pengyue: "设计：鹭。<br>评价：实战似乎一般，心血来潮做的一个",
 	qunyou_liumo: "设计：祂不想。<br>评价：十分好玩的设计，伪用一摸一，爽！",
 	qunyou_mengliufeng: "设计：未知。<br>评价：拿一点体力上限换两张决斗。额，不好衡量，背景故事写的不错，但我没贴过来",
@@ -83,4 +83,5 @@ export const characterIntro = {
 	shanhe_jiangwei: "设计：o.O<br>评价：",
 	shanhe_wangyi: "设计：颜渊&江雪<br>评价：有意思的设计，回合开始时必须要给敌人加鸠，否则自己就会一直获得鸠标记，但是血还是太少了，我加了一上限",
 	xiaobai_lite: "设计：why do we fall<br>说明：群相册里的李特忽略了一个边界问题，如果一个阶段内多次触发了括澜的否则分支，该阶段结束时视为使用多张兵临城下吗，其实区别不大，兵临城下是要把牌放回去的，有时候用了多张也不见得收益很高",
+	xiaobai_suojing: "设计：可余雪",
 };

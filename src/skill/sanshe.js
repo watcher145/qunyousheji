@@ -7394,7 +7394,7 @@ qunyou_shangbing: {
 		},
 	},
 
-// === 荡阵 ===
+	// === 荡阵 ===
 	qunyou_dangzhen: {
 		audio: 2,
 		forced: true,
@@ -7402,15 +7402,15 @@ qunyou_shangbing: {
 		filter(event, player) {
 			if (!event.targets || event.targets.length !== 1) return false;
 			if (!event.targets[0].isIn()) return false;
-			return player.storage.qunyou_dangzhen_prev !== undefined;
+			return true;
 		},
 		async content(event, trigger, player) {
 			const target = trigger.targets[0];
 			const prev = player.storage.qunyou_dangzhen_prev;
-			if (target === prev) {
-				await target.draw();
-			} else {
+			if (prev !== undefined && target !== prev) {
 				await target.damage(1, player);
+			} else {
+				await target.draw();
 			}
 		},
 		group: ["qunyou_dangzhen_record", "qunyou_dangzhen_init"],
@@ -7983,6 +7983,157 @@ qunyou_shangbing: {
 				sub: true,
 				sourceSkill: "qunyou_shiwei",
 			},
+		},
+	},
+// === 忠炎 ===
+	qunyou_zhongyan: {
+		audio: 2,
+		limited: true,
+		skillAnimation: true,
+		animationColor: "orange",
+		trigger: { global: "useCard1" },
+		filter(event, player) {
+			if (_status.dying.length) return false;
+			if (!event.targets?.length) return false;
+			const color = get.color(event.card);
+			return color == "red" || color == "black";
+		},
+		async cost(event, trigger, player) {
+			const name = get.color(trigger.card) == "red" ? "火攻" : "过河拆桥";
+			event.result = await player
+				.chooseBool(get.prompt2("qunyou_zhongyan"), `令此牌视为【${name}】`)
+				.set("ai", () => true)
+				.forResult();
+		},
+		async content(event, trigger, player) {
+			player.logSkill("qunyou_zhongyan", trigger.player);
+			player.awakenSkill("qunyou_zhongyan");
+			const color = get.color(trigger.card);
+			trigger.card = get.autoViewAs({ name: color == "red" ? "huogong" : "guohe", isCard: true }, trigger.cards);
+			player.storage.qunyou_zhongyan_use = trigger;
+			player.addSkill("qunyou_zhongyan_discard");
+			player.addTempSkill("qunyou_zhongyan_clear", { global: "phaseAfter" });
+		},
+		subSkill: {
+			discard: {
+				charlotte: true,
+				trigger: { global: "useCardAfter" },
+				forced: true,
+				popup: false,
+				silent: true,
+				filter(event, player) {
+					const use = player.storage.qunyou_zhongyan_use;
+					return !!use && event === use;
+				},
+				async content(event, trigger, player) {
+					player.removeSkill("qunyou_zhongyan_discard");
+					delete player.storage.qunyou_zhongyan_use;
+					const cards = game.players.reduce((list, target) => {
+						const history = target.getHistory("lose", evt => {
+							if (evt.type != "discard" || evt.getlx === false) return false;
+							let e = evt;
+							let depth = 0;
+							while (e && depth < 12) {
+								if (e === trigger) return true;
+								e = e.parent;
+								depth++;
+							}
+							return false;
+						});
+						if (!history.length) {
+							return list;
+						}
+						return list.addArray(history.reduce((listx, evt) => [...listx, ...evt.cards], []));
+					}, []);
+					const discarded = cards.filterInD("d");
+					if (!discarded.length) {
+						return;
+					}
+					const result = await player
+						.chooseControl(["获得此牌", "置于牌堆顶"], "cancel2")
+						.set("prompt", "忠炎：处理因此被弃置的牌")
+						.set("ai", () => 0)
+						.forResult();
+					if (result.control == "获得此牌") {
+						await player.gain(discarded, "gain2");
+					} else if (result.control == "置于牌堆顶") {
+						await game.cardsGotoPile(discarded, "insert");
+					}
+				},
+				sub: true,
+				sourceSkill: "qunyou_zhongyan",
+			},
+			clear: {
+				charlotte: true,
+				onremove(player) {
+					player.removeSkill("qunyou_zhongyan_discard");
+					delete player.storage.qunyou_zhongyan_use;
+				},
+				sub: true,
+				sourceSkill: "qunyou_zhongyan",
+			},
+		},
+	},
+// === 挽澜 ===
+	qunyou_wanlan: {
+		audio: 2,
+		limited: true,
+		skillAnimation: true,
+		animationColor: "fire",
+		trigger: { global: "dying" },
+		filter(event, player) {
+			return event.player.isAlive();
+		},
+		async cost(event, trigger, player) {
+			if (!player.countCards("h")) return;
+			event.result = await player
+				.chooseBool(get.prompt2("qunyou_wanlan"), `弃置所有手牌并令${get.translation(trigger.player)}回复体力至1点`)
+				.set("ai", () => get.attitude(player, trigger.player) > 0)
+				.forResult();
+		},
+		async content(event, trigger, player) {
+			player.logSkill("qunyou_wanlan", trigger.player);
+			player.awakenSkill("qunyou_wanlan");
+			await player.discard(player.getCards("h"));
+			const dying = trigger.player;
+			await dying.recover(1 - dying.hp);
+			player.when({ global: "dyingAfter" }).then(async (event, trigger, player) => {
+				const cur = _status.currentPhase;
+				if (cur?.isIn()) {
+					await player.damage(cur);
+				}
+			});
+		},
+	},
+// === 续天 ===
+	qunyou_xutian: {
+		audio: 2,
+		locked: true,
+		forced: true,
+		popup: false,
+		silent: true,
+		trigger: { global: "cardsDiscardAfter" },
+		filter(event, player) {
+			return event.cards?.length > 0;
+		},
+		async content(event, trigger, player) {
+			const card = trigger.cards[trigger.cards.length - 1];
+			const last = player.storage.qunyou_xutian_last;
+			const same = !!last && (get.suit(card) == get.suit(last) || get.type2(card) == get.type2(last));
+			player.storage.qunyou_xutian_last = card;
+			if (!same) return;
+			player.storage.qunyou_xutian_count = (player.storage.qunyou_xutian_count || 0) + 1;
+			const x = player.storage.qunyou_xutian_count % 3;
+			if (x === 0) return;
+			const skills = player.getStockSkills(true, true);
+			const skill = skills[x - 1];
+			if (skill) {
+				player.refreshSkill(skill);
+			}
+		},
+		onremove(player) {
+			delete player.storage.qunyou_xutian_last;
+			delete player.storage.qunyou_xutian_count;
 		},
 	},
 }
