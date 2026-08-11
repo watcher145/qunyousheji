@@ -18,6 +18,41 @@ function cloneAndPatchCharacters() {
 	return o;
 }
 
+const pkgPrefixMap = {
+	threed: "3D",
+	qiufeng: "秋风",
+	xiaobai: "小白",
+	zishubei: "自书",
+	qunyou_chenjunxieshi: "问鼎",
+	yachaiclan: "崖柴",
+	qunyou_sinatsuriku: "西夏",
+	qunyou_yongdong: "群友",
+};
+
+function applyCharacterPrefixes(translate) {
+	const result = { ...translate };
+	for (const id of Object.keys(characterData)) {
+		let inPkg = null;
+		for (const pkg of Object.keys(characterSort)) {
+			if (characterSort[pkg].includes(id)) {
+				inPkg = pkg;
+				break;
+			}
+		}
+		const old = result[id + "_prefix"];
+		if (!inPkg) {
+			result[id] = "群友" + result[id];
+			result[id + "_prefix"] = old ? "群友|" + old : "群友";
+			continue;
+		}
+		const prefix = pkgPrefixMap[inPkg];
+		if (!prefix || (old && old.split("|").includes(prefix))) continue;
+		result[id] = prefix + result[id];
+		result[id + "_prefix"] = old ? prefix + "|" + old : prefix;
+	}
+	return result;
+}
+
 function cloneAndPatchCards() {
 	const o = {};
 	for (const name of Object.keys(cardData)) {
@@ -43,7 +78,7 @@ const characterSortTranslate = {
 const characterSort = {
 	threed: ["threed_dongbai", "threed_heji"],
 	qiufeng: ["qiufeng_zhangqiyin"],
-	xiaobai: ["xiaobai_lizhaoyi"],
+	xiaobai: ["xiaobai_lizhaoyi", "xiaobai_lite", "xiaobai_suojing"],
 	zishubei: ["qunyou_zishuliyan", "qunyou_zishulvju", "qunyou_zishuxunyu", "qunyou_zishuwangguan","qunyou_zishupanshu"],
 	qunyou_chenjunxieshi: ["qunyou_xiedaoyun", "qunyou_xiean", "qunyou_xiexuan", "qunyou_xielingyun", "qunyou_xieshi"],
     qunyou_xingheshuo: ["shanhe_zhangjiao", "shanhe_luzhi", "shanhe_dongzhuo", "shanhe_wangyi", "shanhe_jiangwei"],
@@ -51,7 +86,7 @@ const characterSort = {
 		 "yachaiclan_luxun", "yachaiclan_lukang", "yachaiclan_luji", "yachaiclan_luyun", "yachaiclan_luji2", "yachaiclan_luyusheng", "yachaiclan_lukai", 
 		 "yachaiclan_zhugeliang", "yachaiclan_zhugezhan", "yachaiclan_zhugeshang", "yachaiclan_zhugejin", "yachaiclan_zhugeke", "yachaiclan_zhugedan", "yachaiclan_zhugeliang2"],
 	qunyou_sinatsuriku: ["qunyou_yang_wang","qunyou_xian_hua","qunyou_xxsunce","qunyou_lvlingqi","qunyou_panjun"],
-	qunyou_gaijin: ["qunyou_zhugeliang"],
+	qunyou_gaijin: [],
 	qunyou_yongdong: ["qunyou_wuzhangfei", "qunyou_wanglang"],
 };
 
@@ -62,7 +97,7 @@ export function getPackage() {
 	return {
 		character: {
 			character: cloneAndPatchCharacters(),
-			translate: { ...characterTranslate, ...characterSortTranslate },
+			translate: { ...applyCharacterPrefixes(characterTranslate), ...characterSortTranslate },
 			characterSort: {
 				mode_extension_群友设计: characterSort,
 			},

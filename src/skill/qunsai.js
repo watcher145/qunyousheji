@@ -3677,4 +3677,282 @@ xiaobai_kuotao: {
 		result: { player: 1 },
 	},
 },
+// === 胆执 ===
+xiaobai_danzhi: {
+	audio: 2,
+	trigger: { global: "useCardAfter" },
+	filter(event, player) {
+		const data = player.storage.xiaobai_danzhi;
+		if (data) {
+			return get.suit(event.card) == data.suit;
+		}
+		if (event.player != player) return false;
+		if (_status.dying.length) return false;
+		const history = player.getHistory("useCard");
+		return history[0] === event;
+	},
+	async cost(event, trigger, player) {
+		if (player.storage.xiaobai_danzhi) {
+			event.result = { bool: true };
+			return;
+		}
+		const result = await player
+			.chooseTarget(get.prompt2("xiaobai_danzhi"), "选择一名角色", (card, p, target) => target.isIn(), false)
+			.set("ai", target => get.attitude(player, target))
+			.forResult();
+		if (!result?.bool || !result.targets?.length) return;
+		const target = result.targets[0];
+		let choice = "losehp";
+		if (trigger.cards?.length) {
+			const res = await player
+				.chooseControl(["失去体力", "获得此牌"])
+				.set("choiceList", ["令其失去1点体力", "令其获得此牌"])
+				.set("prompt", "胆执：选择效果")
+				.set("ai", () => {
+					const player = get.player();
+					const target = get.event().getParent().result?.targets?.[0];
+					if (!target) return 0;
+					return get.effect(target, { name: "losehp" }, player, player) > 0 ? 0 : 1;
+				})
+				.forResult();
+			if (!res?.control) return;
+			choice = res.control == "获得此牌" ? "gain" : "losehp";
+		}
+		event.result = { bool: true, cost_data: { target, choice } };
+	},
+	async content(event, trigger, player) {
+		if (player.storage.xiaobai_danzhi) {
+			const data = player.storage.xiaobai_danzhi;
+			const target = data.target;
+			if (target.isAlive()) {
+				if (data.choice == "losehp") {
+					await target.recover();
+				} else if (target.countDiscardableCards(target, "he")) {
+					await target.chooseToDiscard("胆执：弃置一张牌", 1, "he", true);
+				}
+			}
+			return;
+		}
+		const { target, choice } = event.cost_data;
+		if (choice == "losehp") {
+			await target.loseHp();
+		} else {
+			await target.gain(trigger.cards, "gain2");
+		}
+		player.storage.xiaobai_danzhi = { target, choice, suit: get.suit(trigger.card) };
+		target.storage.xiaobai_danzhi_mark = { suit: get.suit(trigger.card), choice };
+		target.addSkill("xiaobai_danzhi_mark");
+		player.addTempSkill("xiaobai_danzhi_clear", { global: "phaseAfter" });
+	},
+	subSkill: {
+		// 执 mark（挂在被选角色身上）
+		mark: {
+			charlotte: true,
+			marktext: "执",
+			intro: {
+				content(storage, player, skill) {
+					if (!storage) return "未记录";
+					const suitText = storage.suit == "none" ? "无色" : get.translation(storage.suit);
+					const effect = storage.choice == "losehp" ? "回复1点体力" : "弃置一张牌";
+					return `本回合${suitText}牌被使用后，${effect}`;
+				},
+				markcount(storage, player) {
+					if (!storage) return "";
+					return storage.suit == "none" ? "无" : get.translation(storage.suit);
+				},
+			},
+			init(player, skill) {
+				player.markSkill(skill);
+			},
+			onremove(player, skill) {
+				delete player.storage[skill];
+				player.unmarkSkill(skill);
+			},
+		},
+		// 回合结束清理
+		clear: {
+			charlotte: true,
+			onremove(player) {
+				const data = player.storage.xiaobai_danzhi;
+				if (data?.target) {
+					data.target.removeSkill("xiaobai_danzhi_mark");
+				}
+				delete player.storage.xiaobai_danzhi;
+			},
+		},
+	},
+},
+// === 骤笔 ===
+xiaobai_zhoubi: {
+	audio: 2,
+	enable: "chooseToUse",
+	init(player, skill) {
+		player.addSkill(`${skill}_mark`);
+	},
+	onremove(player, skill) {
+		player.removeSkill(`${skill}_mark`);
+		player.removeSkill("xiaobai_zhoubi_disabled");
+		player.enableSkill("xiaobai_zhoubi_disabled");
+		delete player.storage.xiaobai_zhoubi_last_name;
+		delete player.storage.xiaobai_zhoubi_words;
+		delete player.storage.xiaobai_zhoubi_num;
+	},
+	filter(event, player) {
+		if (player.hasSkill("xiaobai_zhoubi_disabled")) return false;
+		const phase = _status.currentPhase;
+		if (!phase?.isIn() || !phase.countDiscardableCards(phase, "he")) return false;
+		return get.inpileVCardList(info => {
+			if (info[0] !== "basic") return false;
+			const card = new lib.element.VCard({ name: info[2], nature: info[3], isCard: true });
+			return event.filterCard(card, player, event);
+		}).length;
+	},
+	chooseButton: {
+		dialog(event, player) {
+			const list = get.inpileVCardList(info => {
+				if (info[0] !== "basic") return false;
+				const card = new lib.element.VCard({ name: info[2], nature: info[3], isCard: true });
+				return event.filterCard(card, player, event);
+			});
+			const dialog = ui.create.dialog("骤笔", [list, "vcard"], "hidden");
+			dialog.direct = true;
+			return dialog;
+		},
+		check(button) {
+			const player = get.player(),
+				card = new lib.element.VCard({ name: button.link[2], nature: button.link[3], isCard: true });
+			return player.getUseValue(card);
+		},
+		backup(links, player) {
+			return {
+				audio: "xiaobai_zhoubi",
+				viewAs: {
+					name: links[0][2],
+					nature: links[0][3],
+					isCard: true,
+				},
+				filterCard: () => false,
+				selectCard: 0,
+				async precontent(event, trigger, player) {
+					const phase = _status.currentPhase;
+					if (!phase?.isIn()) {
+						event.result.bool = false;
+						return;
+					}
+					const lastWords = player.storage.xiaobai_zhoubi_words ?? 0;
+					const lastNum = player.storage.xiaobai_zhoubi_num ?? 0;
+					const result = await player
+						.choosePlayerCard(phase, "he", true, `骤笔：弃置${get.translation(phase)}一张牌`)
+						.set("ai", card => get.value(card, phase))
+						.forResult();
+					if (!result?.bool || !result.cards?.length) {
+						event.result.bool = false;
+						return;
+					}
+					const card = result.cards[0];
+					await phase.discard(card);
+					const words = get.translation(card.name).length;
+					const num = get.number(card);
+					player.storage.xiaobai_zhoubi_last_name = card.name;
+					player.storage.xiaobai_zhoubi_words = words;
+					player.storage.xiaobai_zhoubi_num = num;
+					player.markSkill("xiaobai_zhoubi_mark");
+					game.broadcastAll((player2) => {
+						const mark = player2.marks.xiaobai_zhoubi_mark;
+						if (mark) {
+							const cn = { 1: "一", 2: "二", 3: "三", 4: "四", 5: "五" }[player2.storage.xiaobai_zhoubi_words];
+							mark.firstChild.innerHTML = cn || player2.storage.xiaobai_zhoubi_words;
+						}
+					}, player);
+					const wordsOK = words > lastWords;
+					const numOK = num < lastNum;
+					if (wordsOK && numOK) {
+						await player.drawTo(5);
+						player.disableSkill("xiaobai_zhoubi_disabled", "xiaobai_zhoubi");
+						player.addSkill("xiaobai_zhoubi_disabled");
+						return;
+					}
+					if (wordsOK) {
+						return;
+					}
+					if (numOK) {
+						await player.drawTo(5);
+						player.disableSkill("xiaobai_zhoubi_disabled", "xiaobai_zhoubi");
+						player.addSkill("xiaobai_zhoubi_disabled");
+						event.result.cancel = true;
+						return;
+					}
+					event.result.cancel = true;
+				},
+			};
+		},
+		prompt(links, player) {
+			return `弃置本回合角色一张牌，若字数更多则视为使用一张${get.translation(links[0][3] || "")}${get.translation(links[0][2])}`;
+		},
+	},
+	hiddenCard(player, name) {
+		if (get.type(name) != "basic") return false;
+		if (player.hasSkill("xiaobai_zhoubi_disabled")) return false;
+		return true;
+	},
+	subSkill: {
+		// 失效监听：手牌数变化为1时解除
+		disabled: {
+			charlotte: true,
+			trigger: {
+				player: "loseAfter",
+				global: ["loseAsyncAfter", "equipAfter", "addToExpansionAfter", "gainAfter", "addJudgeAfter"],
+			},
+			forced: true,
+			popup: false,
+			silent: true,
+			filter(event, player) {
+				const lost = event.getl?.(player)?.hs?.length || 0;
+				const gained = event.getg?.(player)?.length || 0;
+				console.log("骤笔失效检测：", { 事件: event.name, 失去手牌: lost, 获得手牌: gained, 当前手牌数: player.countCards("h") });
+				return lost + gained > 0 && player.countCards("h") == 1;
+			},
+			content(event, trigger, player) {
+				console.log("骤笔失效解除判定成功：手牌数变化为1");
+				player.enableSkill("xiaobai_zhoubi_disabled");
+				player.removeSkill("xiaobai_zhoubi_disabled");
+			},
+		},
+		// 上次弃置的牌信息
+		mark: {
+			charlotte: true,
+			marktext: "笔",
+			intro: {
+				content(storage, player, skill) {
+					const name = player.storage.xiaobai_zhoubi_last_name;
+					if (!name) return "尚未发动过骤笔";
+					let str = `上次弃置的牌：${get.translation(name)}（字数${player.storage.xiaobai_zhoubi_words ?? 0}，点数${player.storage.xiaobai_zhoubi_num ?? 0}）`;
+					if (player.hasSkill("xiaobai_zhoubi_disabled")) {
+						str += "<br>骤笔已失效（手牌数变为1时恢复）";
+					}
+					return str;
+				},
+				markcount(storage, player) {
+					if (typeof player.storage.xiaobai_zhoubi_num !== "number") return "";
+					return player.storage.xiaobai_zhoubi_num;
+				},
+			},
+			init(player, skill) {
+				player.markSkill(skill);
+			},
+			onremove(player, skill) {
+				player.unmarkSkill(skill);
+			},
+		},
+	},
+	ai: {
+		save: true,
+		skillTagFilter(player, tag) {
+			if (player.hasSkill("xiaobai_zhoubi_disabled")) return false;
+			return true;
+		},
+		order: 1,
+		result: { player: 1 },
+	},
+},
 }

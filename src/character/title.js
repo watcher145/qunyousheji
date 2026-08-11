@@ -22,7 +22,7 @@ export const characterTitle = {
 	qunyou_wanglang: "渊薮临危",
 	qunyou_cbpzhaoyun: "虎威将军",
 	qunyou_jiangwei: "桀慢的麒麟",
-	qunyou_zhugeliang: "武侯",
+	qunyou_zhugeliang: "炎汉挽歌",
 	qunyou_pengyue: "审时沉势",
 	qunyou_liumo: "问琴雅然",
 	qunyou_mengliufeng: "翔枝成凤",
@@ -81,4 +81,5 @@ export const characterTitle = {
 	shanhe_jiangwei:"宫锁透甲",
 	shanhe_wangyi:"璟玉秋霜",
 	xiaobai_lite:"六郡行王",
+	xiaobai_suojing:"银钩铮骨",
 };
