@@ -2211,13 +2211,8 @@ export function qunyou_weitai_isSingleTarget(event) {
 	return !!event.card && Array.isArray(event.targets) && event.targets.length === 1;
 }
 
-export function qunyou_weitai_viewAs(name, trigger) {
-	const card = game.createCard({
-		name,
-		suit: get.suit(trigger.card, false) || lib.suit.randomGet(),
-		number: get.number(trigger.card, false) || Math.ceil(Math.random() * 13),
-	});
-	return get.autoViewAs(card);
+export function qunyou_weitai_viewAs(name) {
+	return get.autoViewAs({ name, isCard: true });
 }
 
 export function qunyou_huameng_skillList(target, player) {
@@ -2305,8 +2300,8 @@ export function qunyou_getDiscardSuits() {
 // ====== 燼路 交换UI ======
 export async function jinluSwapUI(player) {
 	return new Promise(resolve => {
-		const left = player.storage.qunyou_mitu_left;
-		const right = player.storage.qunyou_mitu_right;
+		const left = player.storage.zishu_mitu_left;
+		const right = player.storage.zishu_mitu_right;
 		const originalLeft = left.slice();
 		const originalRight = right.slice();
 		let selected = { index: -1, side: "" };
