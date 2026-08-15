@@ -387,11 +387,11 @@ export const skillTranslate = {
 	qunyou_zhenxiang: "震襄",
 	qunyou_zhenxiang_info:
 		"连招技（锦囊牌+红色牌），你使用牌时，若此牌有目标角色，你可令其摸一张牌，然后弃置其区域内一张牌并对其造成一点雷电伤害，若没有，你摸两张牌。",
-	qunyou_duliang: "督粮",
-	qunyou_duliang_info:
+	zishu_duliang: "督粮",
+	zishu_duliang_info:
 		"每轮每项限一次，其他角色回合开始时，你可令其观看牌堆顶X张牌，然后你选择一项令其执行：1.使用其中一张牌，并跳过本回合摸牌阶段；2.将摸牌阶段调整到弃牌阶段后，且摸牌阶段多摸一张牌（X为其体力上限）。",
-	qunyou_xiaqing: "狭情",
-	qunyou_xiaqing_info:
+	zishu_xiaqing: "狭情",
+	zishu_xiaqing_info:
 		"其他角色观看牌时，你可令这些牌对你也可见，并用任意张手牌交换其中等量张牌；若如此做，当前回合角色可以选择一项：1.弃置一张牌，令你失去1点体力；2.交给你一张牌，令你重置【督粮】。",
 	yachai_xiaoqiang: "效戕",
 	yachai_xiaoqiang_info:
@@ -428,20 +428,20 @@ export const skillTranslate = {
 	yachai_beixuan: "背玄",
 	yachai_beixuan_info:
 		`出牌阶段限一次，你可以摸X张牌，然后直到你失去最后的手牌前，你不能摸牌。（X为场上没有的势力数且至少为1）`,
-	qunyou_nilang: "逆浪",
-	qunyou_nilang_info:
+	zishu_nilang: "逆浪",
+	zishu_nilang_info:
 		`当前回合角色使用【杀】或装备牌后，你可以摸一张牌，然后你需使用另一种牌（无距离次数限制），否则失去1点体力。`,
-	qunyou_kongxin: "空馨",
-	qunyou_kongxin_info:
+	zishu_kongxin: "空馨",
+	zishu_kongxin_info:
 		"锁定技，当你成为牌的目标后，若此牌无法被响应或此牌的使用者为你，你回复1点体力。若你未受伤，改为摸两张牌并失去2点体力。",
-	qunyou_shangzhao: "上照",
-	qunyou_shangzhao_info:
+	zishu_shangzhao: "上照",
+	zishu_shangzhao_info:
 		"锁定技，你或一号位每轮首次失去装备区内牌后，另一方需于当前回合结束阶段将一张手牌当【无中生有】对另一方使用。若其手牌数大于此牌目标的手牌数，此牌无法被响应。",
-	qunyou_mitu: "迷途",
-	qunyou_mitu_info:
+	zishu_mitu: "迷途",
+	zishu_mitu_info:
 		"锁定技，你的回合开始时，按三条规则重新排列阶段顺序。",
-	qunyou_jinlu: "燼路",
-	qunyou_jinlu_info:
+	zishu_jinlu: "燼路",
+	zishu_jinlu_info:
 		"使用牌后或造成伤害后，你可对调「迷途」的两条规则。你的回合结束后，若本回合的阶段排列与默认顺序完全相同，你受到X点火焰伤害并选择另一名角色受到X点火焰伤害（X为你已进行过的回合数）。",
 	qunyou_shangbing: "上兵",
 	qunyou_shangbing_info:
@@ -477,11 +477,11 @@ export const skillTranslate = {
 	qiufeng_sanqing: "三清",
 	qiufeng_sanqing_info:
 		"锁定技，准备阶段，你判定三次，若你本回合使用的手牌类型顺序均符合判定牌的类型顺序循环，手牌结算后将之置于牌堆顶。",
-	qunyou_zhilian: "织连",
-	qunyou_zhilian_info:
+	zishu_zhilian: "织连",
+	zishu_zhilian_info:
 		"连招技（四张花色不同的牌），你可以令一名角色回复1点体力。连招中断时，你可以重铸两张牌，将被重铸牌的花色加入到连招进度。",
-	qunyou_chousu: "愁訴",
-	qunyou_chousu_info:
+	zishu_chousu: "愁訴",
+	zishu_chousu_info:
 		"你仅被一种颜色的牌指定过的阶段结束时，你摸一张牌且可以使用一张牌，若使用的牌为另一颜色，重复此流程。",
 	qunyou_zhanwei: "战围",
 	qunyou_zhanwei_info:
@@ -531,4 +531,39 @@ export const skillTranslate = {
 	qunyou_wanlan_info: "限定技，当一名角色进入濒死状态时，你可弃置所有手牌并令其回复体力至1点，若如此做，此次濒死结算结束后，你对当前回合角色造成1点伤害。",
 	qunyou_xutian: "续天",
 	qunyou_xutian_info: "锁定技，一张牌进入弃牌堆时，若与上一张牌花色或类别相同，你令你武将牌上第x个技能视为未发动过（x为此技能发动次数除以3的余数）。",
+
+	qiufeng_jisi: "嫉肆",
+	qiufeng_jisi_info: "与你手牌数不同的角色对你使用❤牌时，你可以令你或其摸一张牌，若双方手牌数仍不同，其令你重铸两张手牌，若花色不唯一，横置你的武将牌，若已是，改为翻面。",
+	qiufeng_fuyao: "复谣",
+	qiufeng_fuyao_info: "与你武将牌状态不同的角色回合结束时，你可以与上名因获得牌的其他角色拼点，赢者可以令你展示手牌，若其中仅有一张❤牌，你回复1点体力并交换双方武将牌状态。",
+
+	shanhe_zhongzhe: "众谪",
+	shanhe_zhongzhe_info: "锁定技，回合结束时，若你本回合使用过【五谷丰登】，你令所有未因此获得牌的角色议事。若结果为：黑色，意见为黑的角色各弃你一张手牌并各摸一张牌；红色，你交给意见为红的角色各一张牌并回复1点体力。",
+	shanhe_jueliang: "脧粮",
+	shanhe_jueliang_info: "出牌阶段限一次，你可以弃置任意张牌，视为使用一张额外亮出等量牌的【五谷丰登】。你使用的【五谷丰登】亮出时，你可以令此牌减少至多X个目标（X为你的当前体力值）。【五谷丰登】结算后，你可以获得置入弃牌堆的剩余牌。",
+
+	shanhe_taolue: "韬略",
+	shanhe_taolue_info: "锁定技，你使用单目标锦囊牌后，若目标角色与本回合上一次成为单目标锦囊牌的角色不同，你将手牌数较多一方的X张手牌交给另一方（X为双方手牌数差值一半，向上取整）。",
+	shanhe_hezong: "合纵",
+	shanhe_hezong_info: "转换技，出牌阶段，①你可以弃置一张牌并视为使用一张【声东击西】。②你可以弃置两张牌并令一名本回合未以此法使用过【树上开花】的角色视为使用一张【树上开花】。",
+
+	zishu_jiaoxi: "交阋",
+	zishu_jiaoxi_info: `转换技，①所有角色均可以将一张锦囊牌当一张【无中生有】使用；②你可以将颜色与上次因此转化牌相同的牌当【无懈可击】或【闪】使用。你抵消牌后，可以转换${get.poptip("zishu_jiaoxi")}或摸一张牌。`,
+	zishu_gongshang: "宫殇",
+	zishu_gongshang_info: "锁定技，当上一张被使用【杀】的目标角色使用【杀】时，或上一个使用【杀】的角色成为【杀】的目标时，若你为此牌的使用者或目标，则此牌多结算一次。",
+
+	zhuoming_feili: "飞戾",
+	zhuoming_feili_info: "转换技，出牌阶段，①你；②你；③你；④你可以视为使用一张【决斗】，然后将当前序号内容改为因此受伤且没有死亡的角色。当序号内角色死亡后，删掉对应序号。周始：你依次对序号内角色造成一点伤害然后摸两张牌。",
+	zhuoming_weigong: "伪恭",
+	zhuoming_weigong_info: `锁定技，转换技，每当你受到或造成一点伤害后，需：①回退；②回退；③回退；④回退${get.poptip("zhuoming_feili")}进度。周始：将一项改为推进。`,
+
+	qunyou_qilue: "奇略",
+	qunyou_qilue_info: "出牌阶段，你可令一名角色将手牌数调整为本阶段你未因此法调整过的数（至多为5），然后若其手牌数未小于/大于你，其/你可视为使用一张本阶段未使用过的普通锦囊牌，若未使用则失去一点体力。你的回合内，当有未被使用过的类别牌进入弃牌堆后，你本回合删去本技能倒数第X个“未”字。（X为本回合弃牌堆牌数）",
+
+	zhuoming_fengpan: "封叛",
+	zhuoming_fengpan_info: "当你造成伤害时，若受伤角色所在势力：①与你相同；②角色数最多；每满足一项，你可以摸一张牌。若如此做，你变更势力。",
+	zhuoming_fuluan: "浮乱",
+	zhuoming_fuluan_info: "群势力技，准备阶段，你可以令任意名势力各不相同的其他角色议事。若结果为黑色，你对一名意见为黑色的角色造成1点伤害；否则你获得所有红色意见牌。",
+	zhuoming_quantong: "遣通",
+	zhuoming_quantong_info: `魏势力技，出牌阶段限一次，你可以令一名其他角色对你发动${get.poptip("quhu")}。`,
 };

@@ -3997,29 +3997,28 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 				filter(event, player) {
 					return qunyou_weitai_storage(player) && qunyou_weitai_isSingleTarget(event) && get.name(event.card, player) !== "juedou";
 				},
-				content(event, trigger, player) {
-					trigger.card = qunyou_weitai_viewAs("juedou", trigger);
-					game.log(player, "使用的单目标牌按", "#y决斗", "结算");
-				},
-				sub: true,
+			content(event, trigger, player) {
+				trigger.card = qunyou_weitai_viewAs("juedou");
+				game.log(player, "使用的单目标牌按", "#y决斗", "结算");
 			},
-			target: {
-				audio: "qunyou_weitai",
-				trigger: { target: "useCardToTargeted" },
-				forced: true,
-				filter(event, player) {
-					return qunyou_weitai_storage(player) && qunyou_weitai_isSingleTarget(event.getParent?.() || event) && get.name(event.card, event.player) !== "chenhuodajie";
-				},
-				content(event, trigger, player) {
-					const useEvent = trigger.getParent();
-					if (useEvent?.card) {
-						useEvent.card = qunyou_weitai_viewAs("chenhuodajie", useEvent);
-						trigger.card = useEvent.card;
-						game.log(useEvent.player, "对", player, "使用的单目标牌按", "#y趁火打劫", "结算");
-					}
-				},
-				sub: true,
+			sub: true,
+		},
+		target: {
+			audio: "qunyou_weitai",
+			trigger: { target: "useCardToTarget" },
+			forced: true,
+			filter(event, player) {
+				return qunyou_weitai_storage(player) && qunyou_weitai_isSingleTarget(event) && get.name(event.card, event.player) !== "chenghuodajie";
 			},
+			content(event, trigger, player) {
+				const useEvent = trigger.getParent();
+				if (useEvent?.card) {
+					useEvent.card = qunyou_weitai_viewAs("chenghuodajie");
+					game.log(useEvent.player, "对", player, "使用的单目标牌按", "#y趁火打劫", "结算");
+				}
+			},
+			sub: true,
+		},
 		},
 		onremove(player) {
 			delete player.storage.qunyou_weitai;
@@ -7741,10 +7740,20 @@ qunyou_shangbing: {
 		audio: 2,
 		trigger: {
 			player: ["chooseToRespondAfter", "chooseToUseAfter", "chooseToRespondBegin", "chooseToUseBegin"],
+			target: "shaDamage",
 			global: "_wuxieAfter",
 		},
 		forced: true,
 		filter(event, player, name) {
+			if (name === "shaDamage") {
+				const shaEvent = event._trigger || event.getTrigger?.() || event;
+				if (shaEvent.directHit || shaEvent.directHit2) return false;
+				if (shaEvent.qunyou_mangzhan_counted) return false;
+				const responded = game.hasGlobalHistory("everything", (evt) => {
+					return evt.triggername === "shaMiss" && evt._trigger === shaEvent && evt._result?.bool && evt._result.result === "shaned";
+				});
+				return !responded;
+			}
 			if (name === "chooseToRespondBegin" || name === "chooseToUseBegin") {
 				if (name === "chooseToUseBegin" && event.type !== "wuxie") return false;
 				if (event.name === "chooseToRespond") {
@@ -7752,16 +7761,14 @@ qunyou_shangbing: {
 				}
 				return player.hasCard((card) => event.filterCard(card, player, event), "hs");
 			}
-			if (player.countMark("qunyou_mangzhan") >= player.getHp()) return false;
 			if (event.name == "chooseToUse" && event.type == "wuxie") return false;
 			if (event.name == "_wuxie") {
 				const directHit = event._trigger?.getParent()?.directHit;
 				if (directHit?.length && directHit.includes(player)) return false;
 				if (event.wuxieresult && event.wuxieresult == player) return false;
-				if (event._info_map.player == player) return false;
 				return true;
 			}
-			return event.respondTo && event.respondTo[0] !== player && !event.result.bool;
+			return event.respondTo && !event.result.bool;
 		},
 		async content(event, trigger, player) {
 			const name = event.triggername;
@@ -7769,9 +7776,15 @@ qunyou_shangbing: {
 				trigger.set("forced", true);
 				return;
 			}
+			if (name === "chooseToUseAfter" && event.type === "respondShan") {
+				const parent = event.getParent();
+				if (parent?.name === "sha") {
+					parent.qunyou_mangzhan_counted = true;
+				}
+			}
 			player.addTempSkill("qunyou_mangzhan_c", "phaseAfter");
 			player.addMark("qunyou_mangzhan", 1);
-			if (player.countMark("qunyou_mangzhan") >= player.getHp()) {
+			if (player.countMark("qunyou_mangzhan") === player.getHp()) {
 				await player.draw(player.getHp());
 			}
 		},
@@ -8136,4 +8149,197 @@ qunyou_shangbing: {
 			delete player.storage.qunyou_xutian_count;
 		},
 	},
+
+// === 奇略 ===
+qunyou_qilue: {
+	audio: 2,
+	enable: "phaseUse",
+	filter(event, player) {
+		const removed = player.storage.qunyou_qilue_removed || [];
+		const nums = player.storage.qunyou_qilue_nums || [];
+		if (!removed.includes(1) && nums.length >= 6) {
+			return false;
+		}
+		return true;
+	},
+	async content(event, trigger, player) {
+		const removed = player.storage.qunyou_qilue_removed || (player.storage.qunyou_qilue_removed = []);
+		const nums = player.storage.qunyou_qilue_nums || (player.storage.qunyou_qilue_nums = []);
+		const phaseEvent = event.getParent("phaseUse");
+		const usedNames = game.getGlobalHistory("useCard", (h) => {
+			return h.getParent("phaseUse") === phaseEvent && h.player.isIn();
+		}).map((h) => get.name(h.card)).toUniqued();
+		const useUnusedTrick = async (user) => {
+			const list = get.inpileVCardList((info) => {
+				if (get.type(info[2], null, false) !== "trick" || get.info(info[2])?.type === "delay") {
+					return false;
+				}
+				if (!removed.includes(3) && usedNames.includes(info[2])) {
+					return false;
+				}
+				return event.filterCard(get.autoViewAs({ name: info[2], nature: info[3] }, "unsure"), user, event);
+			});
+			const result = await user
+				.chooseButton(["奇略：视为使用一张本阶段未使用过的普通锦囊牌（取消则失去1点体力）", [list, "vcard"]], true)
+				.set("ai", (button) => {
+					const p = get.player();
+					return p.getUseValue({ name: button.link[2], nature: button.link[3] });
+				})
+				.forResult();
+			if (!result?.bool || !result.links?.length) {
+				if (!removed.includes(4)) {
+					await user.loseHp();
+				}
+				return;
+			}
+			await user.chooseUseTarget(get.autoViewAs({ name: result.links[0][2], nature: result.links[0][3] }, "unsure"), true, false);
+			if (removed.includes(4)) {
+				await user.loseHp();
+			}
+		};
+		const result = await player
+			.chooseTarget("奇略：令一名角色将手牌数调整至一个本阶段未因此法调整过的数", (card, p, target) => true)
+			.set("ai", (target) => {
+				const p = get.player();
+				return Math.min(5, Math.max(0, 3 - Math.abs(target.countCards("h") - p.countCards("h")))) + (target === p ? 0.5 : 0);
+			})
+			.forResult();
+		if (!result?.bool || !result.targets?.length) return;
+		const target = result.targets[0];
+		const canNums = [0, 1, 2, 3, 4, 5].filter((n) => removed.includes(1) || !nums.includes(n));
+		const numResult = await player
+			.chooseControl(canNums.map((n) => `${n}`))
+			.set("prompt", `奇略：将${get.translation(target)}的手牌数调整至多少？（本阶段已用过：${nums.length ? nums.join("、") : "无"}）`)
+			.set("ai", () => {
+				const evt = _status.event;
+				const cur = evt.target.countCards("h");
+				let best = 0, bestScore = -Infinity;
+				for (const n of evt.nums) {
+					const score = -Math.abs(cur - n) - Math.abs(n - get.player().countCards("h"));
+					if (score > bestScore) {
+						bestScore = score;
+						best = n;
+					}
+				}
+				return evt.controls.indexOf(`${best}`);
+			})
+			.set("target", target)
+			.set("nums", canNums)
+			.forResult();
+		if (!numResult?.control) return;
+		const num = parseInt(numResult.control, 10);
+		nums.push(num);
+		if (target.countCards("h") < num) {
+			await target.drawTo(num);
+		} else if (target.countCards("h") > num) {
+			await target.chooseToDiscard("奇略：弃置手牌至" + num + "张", target.countCards("h") - num, "h", true).forResult();
+		}
+		player.updateMarks("qunyou_qilue");
+		const usedByTarget = !removed.includes(2) ? target.countCards("h") >= player.countCards("h") : target.countCards("h") < player.countCards("h");
+		const usedByPlayer = !removed.includes(3) ? target.countCards("h") <= player.countCards("h") : target.countCards("h") > player.countCards("h");
+		if (usedByTarget) {
+			await useUnusedTrick(target);
+		}
+		if (usedByPlayer && (target !== player || !usedByTarget)) {
+			await useUnusedTrick(player);
+		}
+	},
+	mark: true,
+	marktext: "奇",
+	intro: {
+		markcount(storage, player) {
+			const removed = player.storage.qunyou_qilue_removed || [];
+			return removed.length;
+		},
+		content(storage, player) {
+			const removed = player.storage.qunyou_qilue_removed || [];
+			return `已删去${removed.length ? removed.map((n) => `第${get.cnNumber(n)}个“未”`).join("、") : "无"}。本回合弃牌堆牌数：${player.storage.qunyou_qilue_discard || 0}`;
+		},
+	},
+	trigger: { global: "cardsDiscardAfter" },
+	filter(event, player) {
+		if (_status.currentPhase !== player) return false;
+		const removed = player.storage.qunyou_qilue_removed || [];
+		if (removed.includes(6)) return false;
+		if (!event.cards?.length) return false;
+		const discardCards = event.cards.filterInD("d");
+		if (!discardCards.length) return false;
+		const categories = discardCards.map((c) => get.type2(c, false));
+		const usedTypes = game.getGlobalHistory("useCard", (evt) => {
+			return evt.getParent("phase") === _status.currentPhase && evt.player.isIn();
+		}).map((evt) => get.type2(evt.card, false));
+		const condReverse = removed.includes(5);
+		return categories.some((type) => {
+			if (type !== "basic" && type !== "trick" && type !== "equip") return false;
+			const used = usedTypes.includes(type);
+			return condReverse ? used : !used;
+		});
+	},
+	async content(event, trigger, player) {
+		const removed = player.storage.qunyou_qilue_removed || (player.storage.qunyou_qilue_removed = []);
+		const X = player.storage.qunyou_qilue_discard || 0;
+		const remaining = [1, 2, 3, 4, 5, 6].filter((n) => !removed.includes(n));
+		if (X < 1 || X > remaining.length) return;
+		const toRemove = 7 - X;
+		if (!removed.includes(toRemove)) {
+			removed.push(toRemove);
+		}
+		player.updateMarks("qunyou_qilue");
+		game.log(player, `删去了“奇略”倒数第${get.cnNumber(X)}个“未”字`);
+	},
+	subSkill: {
+		count: {
+			charlotte: true,
+			trigger: { global: "cardsDiscardAfter" },
+			forced: true,
+			popup: false,
+			silent: true,
+			filter(event, player) {
+				if (_status.currentPhase !== player) return false;
+				return event.cards?.length > 0;
+			},
+			content(event, trigger, player) {
+				const cards = (trigger.cards || []).filterInD("d");
+				if (!cards.length) return;
+				player.storage.qunyou_qilue_discard = (player.storage.qunyou_qilue_discard || 0) + cards.length;
+				player.updateMarks("qunyou_qilue");
+			},
+		},
+		clear: {
+			charlotte: true,
+			trigger: { global: "phaseAfter" },
+			forced: true,
+			popup: false,
+			silent: true,
+			content(event, trigger, player) {
+				if (player.storage.qunyou_qilue_removed?.length) {
+					delete player.storage.qunyou_qilue_removed;
+					player.updateMarks("qunyou_qilue");
+				}
+				if (player.storage.qunyou_qilue_discard) {
+					delete player.storage.qunyou_qilue_discard;
+					player.updateMarks("qunyou_qilue");
+				}
+			},
+		},
+		clearNums: {
+			charlotte: true,
+			trigger: { global: "phaseUseAfter" },
+			forced: true,
+			popup: false,
+			silent: true,
+			content(event, trigger, player) {
+				if (player.storage.qunyou_qilue_nums?.length) {
+					delete player.storage.qunyou_qilue_nums;
+					player.updateMarks("qunyou_qilue");
+				}
+			},
+		},
+	},
+	group: ["qunyou_qilue_count", "qunyou_qilue_clear", "qunyou_qilue_clearNums"],
+	ai: {
+		order: 5,
+		result: { player: 1 },
+	},
+},
 }

@@ -10,7 +10,7 @@ export function precontent() {
 			const span = document.createElement("span"), style = span.style;
 			style.writingMode = style.webkitWritingMode = "horizontal-tb";
 			style.fontFamily = "STXingkai, KaiTi, '楷体', sans-serif";
-			style.fontSize = "10px";
+			style.fontSize = "11px";
 			style.color = "#E0E0E0";
 			style.fontWeight = "bold";
 			style.letterSpacing = "-0.5px";
@@ -36,10 +36,10 @@ export function precontent() {
 			const span = document.createElement("span"), style = span.style;
 			style.writingMode = style.webkitWritingMode = "horizontal-tb";
 			style.fontFamily = "KaiTi, '楷体', STKaiti, sans-serif";
-			style.fontSize = "11px";
+			style.fontSize = "12px";
 			style.color = "#B388FF";
-			//style.textShadow = "-1px -1px 0 #000000, 1px -1px 0 #000000, -1px 1px 0 #000000, 1px 1px 0 #000000";
-			style.fontWeight = "bold";
+			style.textShadow = "0 0 1px rgba(0,0,0,0.85), 0 0 2px rgba(0,0,0,0.5)";
+			style.fontWeight = "normal";
 			style.letterSpacing = "-0.5px";
 			span.textContent = "崖柴";
 			return span.outerHTML;
@@ -95,6 +95,19 @@ export function precontent() {
 			style.fontWeight = "bold";
 			style.letterSpacing = "-0.5px";
 			span.textContent = "自书";
+			return span.outerHTML;
+		},
+	});
+	lib.namePrefix.set("濯名", {
+		getSpan: () => {
+			const span = document.createElement("span"), style = span.style;
+			style.writingMode = style.webkitWritingMode = "horizontal-tb";
+			style.fontFamily = "YouYuan, KaiTi, '楷体', sans-serif";
+			style.fontSize = "12px";
+			style.color = "#9ec5ff";
+			style.fontWeight = "bold";
+			style.letterSpacing = "-0.5px";
+			span.textContent = "濯名";
 			return span.outerHTML;
 		},
 	});
