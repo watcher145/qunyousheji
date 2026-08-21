@@ -1,4 +1,5 @@
 import { lib, get, _status } from "noname";
+import { qunyou_no1Player } from "../skill/helpers.js";
 
 const blue = (text) => `<span class="bluetext">${text}</span>`;
 const phaseName = (id) => blue(get.translation(id).replace("阶段", ""));
@@ -96,21 +97,36 @@ const dynamicTranslates = {
 	qunyou_qilue(player) {
 		const removed = player.storage.qunyou_qilue_removed || [];
 		const red = (text) => `<span style="color:#ff4444">${text}</span>`;
+		const redWu = () => red("未");
 		const isR = (n) => removed.includes(n);
 		let text = "出牌阶段，你可令一名角色将手牌数调整为本阶段你";
-		text += isR(1) ? "因此法调整过" : red("未因此法调整过");
+		text += isR(1) ? "因此法调整过" : redWu() + "因此法调整过";
 		text += "的数（至多为5），然后若其手牌数";
-		text += isR(2) ? "小于/大于" : red("未小于/大于");
+		text += isR(2) ? "小于/大于" : redWu() + "小于/大于";
 		text += "你，其/你可视为使用一张本阶段";
-		text += isR(3) ? "使用过" : red("未使用过");
+		text += isR(3) ? "使用过" : redWu() + "使用过";
 		text += "的普通锦囊牌，若";
-		text += isR(4) ? "使用" : red("未使用");
+		text += isR(4) ? "使用" : redWu() + "使用";
 		text += "则失去一点体力。你的回合内，当有";
-		text += isR(5) ? "被使用过" : red("未被使用过");
+		text += isR(5) ? "被使用过" : redWu() + "被使用过";
 		text += "的类别牌进入弃牌堆后，你本回合删去本技能倒数第X个";
-		text += isR(6) ? "" : red("“未”");
+		text += isR(6) ? "“”" : "“" + redWu() + "”";
 		text += "字。（X为本回合弃牌堆牌数）";
 		return text;
+	},
+	zhuoming_liezong(player) {
+		const no1 = qunyou_no1Player();
+		const cond1 = !!no1 && player.countCards("e") >= no1.countCards("e");
+		const cond2 = !!no1 && no1.hp <= player.hp;
+		let timing = "出牌阶段";
+		if (cond1) {
+			timing += "/你受到伤害后";
+		}
+		if (cond2) {
+			timing += "/你回复体力后";
+		}
+		const act = cond1 && cond2 ? "使用" : "弃置";
+		return `${timing}，你可以${act}一张牌；然后若你手牌数差X成为手牌数最多，你摸X张牌，此阶段此技能失效，且你使用牌均无次数、距离限制（X为本回合弃牌堆中伤害牌数）。若你装备牌的牌数不少于一号位，你受到伤害后也可发动；若一号位体力值不多于你，你回复体力后也可发动。若两项条件均满足，“弃置”改为“使用”。`;
 	},
 };
 

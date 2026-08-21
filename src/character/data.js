@@ -96,7 +96,7 @@ export const characterData = {
 		hujia: 0,
 		skills: ["qunyou_muxin", "qunyou_cangxiao"],
 	},
-	qunyou_spwenyang: {
+	qunyou_sp_wenyang: {
 		sex: "male",
 		group: "qun",
 		hp: 4,
@@ -152,7 +152,7 @@ export const characterData = {
 		hujia: 0,
 		skills: ["qunyou_jicheng"],
 	},
-	qunyou_chenzhaoyun: {
+	qunyou_chen_zhaoyun: {
 		sex: "male",
 		group: "shu",
 		hp: 4,
@@ -168,7 +168,7 @@ export const characterData = {
 		hujia: 0,
 		skills: ["qunyou_gushe", "qunyou_zuobao"],
 	},
-	qunyou_cbpzhaoyun: {
+	qunyou_cbp_zhaoyun: {
         sex: "male",
 		group: "shu",
 		hp: 4,
@@ -184,7 +184,7 @@ export const characterData = {
 		hujia: 0,
 		skills: ["qunyou_xiongbo", "qunyou_jinfa"],
 	},
-	qunyou_zhugeliang: {
+	qunyou_sb_zhugeliang: {
 		sex: "male",
 		group: "shu",
 		hp: 3,
@@ -208,7 +208,7 @@ export const characterData = {
 		hujia: 0,
 		skills: ["qunyou_tongxian"],
 	},
-	qunyou_mengliufeng: {
+	qunyou_meng_liufeng: {
 		sex: "male",
 		group: "shu",
 		hp: 4,
@@ -248,7 +248,7 @@ export const characterData = {
 		hujia: 0,
 		skills: ["qunyou_zhouli", "qunyou_yunxian"],
 	},
-	qunyou_xian_hua: {
+	qunyou_caoxiancaohua: {
 		sex: "female",
 		group: "qun",
 		hp: 3,
@@ -256,7 +256,7 @@ export const characterData = {
 		hujia: 0,
 		skills: ["qunyou_lingyu","qunyou_qingmeng"],
 	},
-	qunyou_mojiangwei: {
+	qunyou_mo_jiangwei: {
 		sex: "male",
 		group: "devil",
 		hp: 4,
@@ -264,7 +264,7 @@ export const characterData = {
 		hujia: 0,
 		skills: ["qunyou_zhuoqu", "qunyou_guwo", "qunyou_chubu"],
 	},
-	qunyou_guohuai: {
+	qunyou_sb_guohuai: {
 		sex: "male",
 		group: "wei",
 		hp: 4,
@@ -272,7 +272,7 @@ export const characterData = {
 		hujia: 0,
 		skills: ["qunyou_jingce"],
 	},
-	qunyou_diaochan: {
+	qunyou_clan_diaochan: {
 		sex: "female",
 		group: "qun",
 		hp: 3,
@@ -281,7 +281,7 @@ export const characterData = {
 		clans: ["太原王氏"],
 		skills: ["qunyou_pianyi", "qunyou_cuiping", "clanzhongliu"],
 	},
-	qunyou_wuzhangfei: {
+	qunyou_wu_zhangfei: {
 		sex: "male",
 		group: "shu",
 		hp: 4,
@@ -289,7 +289,7 @@ export const characterData = {
 		hujia: 0,
 		skills: ["qunyou_zisheng", "qunyou_xianlue", "qunyou_haoxian"],
 	},
-	qunyou_weiguanyu: {
+	qunyou_v_guanyu: {
         sex: "male",
 		group: "shu",
 		hp: 4,
@@ -297,7 +297,7 @@ export const characterData = {
 		hujia: 0,
 		skills: ["qunyou_wuwei", "qunyou_zhenxiang"],
 	},
-	qunyou_xxsunce: {
+	qunyou_xx_sunce: {
 		sex: "male",
 		group: "wu",
 		hp: 5,
@@ -432,7 +432,7 @@ export const characterData = {
 		clans: ["吴郡陆氏"],
 		skills: ["yachai_bozui","yachai_heshu","clanxunli"],
 	},
-	yachaiclan_luji: {
+	yachaiclan_luji2: {
 		sex: "male",
 		group: "jin",
 		hp: 3,
@@ -450,7 +450,7 @@ export const characterData = {
 		clans: ["吴郡陆氏"],
 		skills: ["yachai_wuyan","yachai_lihui","clanxunli"],
 	},
-	yachaiclan_luji2: {
+	yachaiclan_luji: {
 		sex: "male",
 		group: "wu",
 		hp: 3,
@@ -605,7 +605,7 @@ export const characterData = {
 		hujia: 0,
 		skills: ["zishu_jiaoxi", "zishu_gongshang"],
 	},
-	zhuoming_gongsunyuan2: {
+	zhuoming_feili_gongsunyuan: {
 		sex: "male",
 		group: "qun",
 		hp: 4,
@@ -620,6 +620,22 @@ export const characterData = {
 		maxHp: 4,
 		hujia: 0,
 		skills: ["zhuoming_fengpan", "zhuoming_fuluan", "zhuoming_quantong"],
+	},
+	zhuoming_liuyan: {
+		sex: "male",
+		group: "qun",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["zhuoming_liezong"],
+	},
+	zishu_zhangjinyun: {
+		sex: "male",
+		group: "shu",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["zishu_yusan", "zishu_huifen"],
 	},
 	xiaobai_lizhaoyi: {
 		sex: "female",
@@ -637,7 +653,7 @@ export const characterData = {
 		hujia: 0,
 		skills: ["qunyou_shishi","qunyou_jiji"],
 	},
-	qunyou_zuzhugejun: {
+	qunyou_clan_zhugejun: {
 		sex: "male",
 		group: "shu",
 		hp: 3,
@@ -646,7 +662,7 @@ export const characterData = {
 		clans: ["琅琊诸葛氏"],
 		skills: ["qunyou_gengdu","clanzuguan"],
 	},
-	qiufeng_zhangqiyin: {
+	qiufeng_zhangqiying: {
 		sex: "female",
 		group: "qun",
 		hp: 3,
@@ -701,6 +717,14 @@ export const characterData = {
 		maxHp: 4,
 		hujia: 0,
 		skills: ["qunyou_daolie"],
+	},
+	qunyou_masu:{
+		sex: "male",
+		group: "shu",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["qunyou_qilue"],
 	},
 	threed_dongbai:{
 		sex: "female",

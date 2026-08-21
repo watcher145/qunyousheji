@@ -52,6 +52,71 @@ export function qunyou_cycleState(player, skill) {
 	player.updateMarks(skill);
 }
 
+export function qunyou_no1Player() {
+	return game.filterPlayer((current) => current.getSeatNum() == 1)[0];
+}
+
+export function qunyou_damageCardInDiscardThisRound() {
+	const cards2 = Array.from(ui.discardPile.childNodes);
+	if (!cards2.length) return 0;
+	const history = game.getGlobalHistory("cardMove", (evt) => {
+		if (evt.name == "lose") {
+			return evt.position == ui.discardPile;
+		}
+		return evt.name == "cardsDiscard";
+	});
+	let num = 0;
+	for (let i = history.length - 1; i >= 0; i--) {
+		const evt = history[i];
+		const cards22 = evt.cards.filter((card) => cards2.includes(card) && get.is.damageCard(card));
+		num += cards22.length;
+		cards2.removeArray(cards22);
+		if (!cards2.length) break;
+	}
+	return num;
+}
+
+export function qunyou_discardCountThisRound() {
+	const cards2 = Array.from(ui.discardPile.childNodes);
+	if (!cards2.length) return 0;
+	const history = game.getGlobalHistory("cardMove", (evt) => {
+		if (evt.name == "lose") {
+			return evt.position == ui.discardPile;
+		}
+		return evt.name == "cardsDiscard";
+	});
+	let num = 0;
+	for (let i = history.length - 1; i >= 0; i--) {
+		const evt = history[i];
+		const cards22 = evt.cards.filter((card) => cards2.includes(card));
+		num += cards22.length;
+		cards2.removeArray(cards22);
+		if (!cards2.length) break;
+	}
+	return num;
+}
+
+export function zishu_yusan_getCards(player) {
+	const last = player.storage.zishu_yusan_last;
+	if (!last) return [];
+	const all = [];
+	for (const history of _status.globalHistory || []) {
+		all.push(...(history.useCard || []));
+	}
+	const idx = all.indexOf(last);
+	if (idx === -1) return [];
+	const discardCards = Array.from(ui.discardPile.childNodes);
+	const gains = [];
+	for (const evt of all.slice(idx + 1)) {
+		for (const card of evt.cards || []) {
+			if (discardCards.includes(card) && get.type(card, false) == "basic") {
+				gains.push(card);
+			}
+		}
+	}
+	return gains;
+}
+
 export function qunyou_getState(player, skill) {
 	const key = `${skill}_state`;
 	if (!Number.isInteger(player.storage[key])) player.storage[key] = 0;
@@ -2381,4 +2446,109 @@ export async function jinluSwapUI(player) {
 		dialog.open();
 		_status.imchoosing = true;
 	});
+}
+
+/**
+ * 暮心核心流程：发动者与目标们依次展示一张未标记手牌；无法展示的角色选择选项。
+ * 供暮心本体（出牌阶段）与苍霄（受伤时）复用。
+ * @param {Player} player 发动者
+ * @param {Player[]} targets 已选目标（其他角色）
+ */
+export async function qunyou_muxin_run(player, targets) {
+	const mark = "qunyou_muxin_mark";
+	const turnCards = (player.storage.qunyou_muxin_turn_cards = player.storage.qunyou_muxin_turn_cards || []);
+	// 发动者展示一张未标记手牌（其展示的牌同样被打标记）
+	const selfCands = player.getCards("h", (c) => !c.hasGaintag(mark));
+	console.log("[暮心] 发动者未标记手牌数:", selfCands.length);
+	if (!selfCands.length) return;
+	const selfResult = await player
+		.chooseCard("暮心：展示一张手牌", "h", true, (c) => !c.hasGaintag(mark))
+		.set("ai", (card) => 6 - get.value(card, get.player()))
+		.forResult();
+	if (!selfResult?.bool || !selfResult.cards?.length) return;
+	const selfCard = selfResult.cards[0];
+	selfCard.addGaintag(mark);
+	console.log("[暮心] 发动者展示牌", get.name(selfCard), "gaintag:", selfCard.gaintag?.join(","));
+	turnCards.push(selfCard);
+	await player.showCards([selfCard], `${get.translation(player)}发动了【暮心】`);
+
+	const shownTargets = [];
+	for (const target of targets.sortBySeat()) {
+		if (!target.isIn()) continue;
+		const cands = target.getCards("h", (c) => !c.hasGaintag(mark));
+		console.log("[暮心] " + target.name + " 未标记手牌数:", cands.length, "手牌总数:", target.countCards("h"));
+		if (!cands.length) {
+			console.log("[暮心] " + target.name + " 无法展示，进入选项分支");
+			// 无法展示牌 → 该角色选择一项
+			const res = await target
+				.chooseControl("选项一", "选项二", "选项三")
+				.set("prompt", `暮心：${get.translation(player)}无法展示牌，请选择一项`)
+				.set("choiceList", [
+					`令其依次对本次展示牌的其他角色造成1点伤害（共${get.cnNumber(shownTargets.length)}名）`,
+					`令其获得你所有以此法展示过的牌并受到1点无来源伤害`,
+					`令其回复1点体力`,
+				])
+				.set("ai", () => {
+					const attacker = player;
+					const att = get.attitude(target, attacker);
+					if (att > 0) {
+						if (attacker.isDamaged()) return "选项三";
+						return "选项一";
+					}
+					let v1 = 0;
+					for (const st of shownTargets) v1 += get.attitude(attacker, st) <= 0 ? 1 : -1;
+					const markCards = target.getCards("hej", (c) => c.hasGaintag(mark));
+					const v2 = markCards.reduce((sum, c) => sum + get.value(c, attacker), 0) - 2;
+					const v3 = attacker.isDamaged() ? 1 : 0;
+					const min = Math.min(v1, v2, v3);
+					if (min === v3) return "选项三";
+					if (min === v2) return "选项二";
+					return "选项一";
+				})
+				.forResult();
+			console.log("[暮心] " + target.name + " 选择了:", res?.control);
+			if (res?.control === "选项一") {
+				target.popup("选项一");
+				player.chat("大军既下，尔等敢不低头？");
+				for (const st of shownTargets) {
+					if (st.isIn()) await st.damage(player);
+				}
+				player.addTempSkill("qunyou_muxin_disabled", "phaseAfter");
+			} else if (res?.control === "选项二") {
+				target.popup("选项二");
+				player.chat("负孤一伤，换尔掌中之物，值了。");
+				const markCards = target.getCards("hej", (c) => c.hasGaintag(mark));
+				if (markCards.length) await player.gain(markCards, target, "giveAuto");
+				await player.damage("nosource");
+				player.addTempSkill("qunyou_muxin_disabled", "phaseAfter");
+			} else if (res?.control === "选项三") {
+				target.popup("选项三");
+				player.chat("身暮不老，折而不倒，且容孤再战。");
+				await player.recover();
+			}
+			continue;
+		}
+		const result = await target
+			.chooseCard("暮心：展示一张手牌", "h", true, (c) => !c.hasGaintag(mark))
+			.set("ai", (card) => 6 - get.value(card, target))
+			.forResult();
+		if (result?.bool && result.cards?.length) {
+			const card = result.cards[0];
+			card.addGaintag(mark);
+			console.log("[暮心] " + target.name + " 展示牌", get.name(card), "gaintag:", card.gaintag?.join(","));
+			turnCards.push(card);
+			await target.showCards([card], `${get.translation(target)}因【暮心】展示了手牌`);
+			shownTargets.push(target);
+		}
+	}
+
+	player.storage.qunyou_muxin_turn_count = (player.storage.qunyou_muxin_turn_count || 0) + 1;
+	if (player.storage.qunyou_muxin_turn_count >= 3) {
+		const gainCards = turnCards.filter((c) => {
+			const owner = get.owner(c);
+			return owner && owner !== player && get.itemtype(c) === "card";
+		});
+		if (gainCards.length) await player.gain(gainCards, "gain2");
+		player.addTempSkill("qunyou_muxin_disabled", "phaseAfter");
+	}
 }

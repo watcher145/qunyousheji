@@ -1718,9 +1718,13 @@ yachai_yuxu: {
 		}
 
 		if (!player.isTurnedOver()) {
-			const r3 = await player.chooseBool("是否执行第③项“翻至背面”？")
-				.set("ai", () => player.isTurnedOver() ? 0 : 1)
-				.forResult();
+const r3 = await player.chooseBool("是否执行第③项“翻至背面”？")
+			.set("ai", () => {
+				// 翻面跳过下回合代价大：手牌充足（可应对/打决斗）才值得换一次决斗次数
+				if (player.isTurnedOver()) return 0;
+				return player.countCards("h") >= 3 ? 1 : 0;
+			})
+			.forResult();
 			if (r3.bool) {
 				await player.turnOver();
 				count++;
@@ -1729,7 +1733,12 @@ yachai_yuxu: {
 
 		const { targets, bool } = await player
 			.chooseTarget("选择【决斗】的目标", lib.filter.notMe)
-			.set("ai", target => get.attitude(player, target) <= 0 ? 1 : -1)
+			.set("ai", (target) => {
+				const p = get.player();
+				const eff = get.effect(target, { name: "juedou" }, p, p);
+				const att = get.attitude(p, target);
+				return eff + (att <= 0 ? 1 : -2);
+			})
 			.forResult();
 		if (!bool) return;
 		const target = targets[0];

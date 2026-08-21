@@ -1,5 +1,6 @@
 import { getPackage } from "./src/package.js";
 import { precontent } from "./src/precontent.js";
+import { setupCharacterReplace } from "./src/character/replace.js";
 
 export const type = "extension";
 
@@ -8,7 +9,9 @@ export default function () {
 		name: "群友设计",
 		editable: true,
 		connect: false,
-		arenaReady() {},
+		arenaReady() {
+			setupCharacterReplace();
+		},
 		content(config, pack) {},
 		prepare() {},
 		precontent,
@@ -34,7 +37,7 @@ export default function () {
 				"image/character/qunyou_sunxiu.jpg",
 				"image/character/qunyou_caocao.jpg",
 				"image/character/qunyou_liukun.jpg",
-				"image/character/qunyou_spwenyang.jpg",
+				"image/character/qunyou_sp_wenyang.jpg",
 				"image/character/qunyou_simayi.jpg",
 			],
 			card: [],
@@ -51,7 +54,7 @@ export default function () {
 				"audio/die/qunyou_sunshao.mp3",
 				"audio/die/qunyou_sunxiu.mp3",
 				"audio/die/qunyou_caocao.mp3",
-				"audio/die/qunyou_spwenyang.mp3",
+				"audio/die/qunyou_sp_wenyang.mp3",
 				"audio/die/qunyou_liukun.mp3",
 				"audio/die/qunyou_simayi.mp3",
 				"audio/skill/qunyou_sc1_guanyong1.mp3",
