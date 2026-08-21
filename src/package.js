@@ -79,18 +79,18 @@ const characterSortTranslate = {
 
 const characterSort = {
 	threed: ["threed_dongbai", "threed_heji"],
-	qiufeng: ["qiufeng_zhangqiyin", "qiufeng_hushi"],
+	qiufeng: ["qiufeng_zhangqiying", "qiufeng_hushi"],
 	xiaobai: ["xiaobai_lizhaoyi", "xiaobai_lite", "xiaobai_suojing"],
-	zishubei: ["zishu_liyan", "zishu_lvju", "zishu_xunyu", "zishu_wangguan","zishu_panshu", "zishu_sunhe"],
-	zhuoming: ["zhuoming_gongsunyuan", "zhuoming_gongsunyuan2"],
+	zishubei: ["zishu_liyan", "zishu_lvju", "zishu_xunyu", "zishu_wangguan","zishu_panshu", "zishu_sunhe", "zishu_zhangjinyun"],
+	zhuoming: ["zhuoming_gongsunyuan", "zhuoming_feili_gongsunyuan", "zhuoming_liuyan"],
 	qunyou_chenjunxieshi: ["qunyou_xiedaoyun", "qunyou_xiean", "qunyou_xiexuan", "qunyou_xielingyun", "qunyou_xieshi"],
 	qunyou_xingheshuo: ["shanhe_zhangjiao", "shanhe_luzhi", "shanhe_dongzhuo", "shanhe_wangyi", "shanhe_jiangwei", "shanhe_hanfu", "shanhe_lusu"],
 	yachaiclan: ["yachaiclan_cuiyan", "yachaiclan_wangxiang", "yachaiclan_diaochan", "yachaiclan_wuyi", "yachaiclan_xunyu",
-		 "yachaiclan_luxun", "yachaiclan_lukang", "yachaiclan_luji", "yachaiclan_luyun", "yachaiclan_luji2", "yachaiclan_luyusheng", "yachaiclan_lukai", 
+		 "yachaiclan_luxun", "yachaiclan_lukang", "yachaiclan_luji2", "yachaiclan_luyun", "yachaiclan_luji", "yachaiclan_luyusheng", "yachaiclan_lukai", 
 		 "yachaiclan_zhugeliang", "yachaiclan_zhugezhan", "yachaiclan_zhugeshang", "yachaiclan_zhugejin", "yachaiclan_zhugeke", "yachaiclan_zhugedan", "yachaiclan_zhugeliang2"],
-	qunyou_sinatsuriku: ["qunyou_yang_wang","qunyou_xian_hua","qunyou_xxsunce","qunyou_lvlingqi","qunyou_panjun"],
+	qunyou_sinatsuriku: ["qunyou_yang_wang","qunyou_caoxiancaohua","qunyou_xx_sunce","qunyou_lvlingqi","qunyou_panjun"],
 	qunyou_gaijin: [],
-	qunyou_yongdong: ["qunyou_wuzhangfei", "qunyou_wanglang"],
+	qunyou_yongdong: ["qunyou_wu_zhangfei", "qunyou_wanglang"],
 };
 
 /**

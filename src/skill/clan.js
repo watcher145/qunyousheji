@@ -202,12 +202,15 @@ clanzhuding: {
 				t.hasClan("琅琊诸葛氏") && ind.some(c => t.hasUseTarget(c))
 			);
 		},
+		check(event, player) {
+			return game.hasPlayer(t => t.hasClan("琅琊诸葛氏") && t !== player && get.attitude(player, t) > 0);
+		},
 		async content(event, trigger, player) {
 			const cards = trigger.getl(player).cards2
 				.filter(c => get.position(c, true) === "d");
 			const tr = await player.chooseTarget(
 				get.prompt("clanzuguan"), (c, f, t) => t.hasClan("琅琊诸葛氏")
-			).forResult();
+			).set("ai", (target) => get.attitude(player, target) > 0 ? 1 : 0).forResult();
 			if (!tr.bool) return;
 			const target = tr.targets[0];
 			const usable = cards.filter(c => target.hasUseTarget(c));
@@ -215,6 +218,7 @@ clanzhuding: {
 			const cr = await target.chooseButton(
 				["族冠：选择使用其中一张牌", usable]
 			).set("filterButton", b => _status.event.player.hasUseTarget(b.link))
+			.set("ai", (button) => target.getUseValue(button.link))
 			.forResult();
 			if (!cr.bool) return;
 			target.$gain2(cr.links[0], false);

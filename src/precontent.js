@@ -103,7 +103,7 @@ export function precontent() {
 			const span = document.createElement("span"), style = span.style;
 			style.writingMode = style.webkitWritingMode = "horizontal-tb";
 			style.fontFamily = "YouYuan, KaiTi, '楷体', sans-serif";
-			style.fontSize = "12px";
+			style.fontSize = "11px";
 			style.color = "#9ec5ff";
 			style.fontWeight = "bold";
 			style.letterSpacing = "-0.5px";
