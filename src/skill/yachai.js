@@ -1377,8 +1377,10 @@ yachai_jingui: {
 			.forResult();
 		if (!result.bool || !result.links || !result.links.length) return;
 		const card = result.links[0];
-		card.storage.yachai_jingui = true;
+		if (!card || get.itemtype(card) != "card") return;
 		await target.gain(card, "gain2");
+		if (!card.storage) card.storage = {};
+		card.storage.yachai_jingui = true;
 		target.addGaintag([card], "yachai_jingui_mark");
 		target.addTempSkill("yachai_jingui_effect", "phaseAfter");
 		if (!target.hasSkill("yachai_jingui_cleanup")) {
@@ -1401,18 +1403,18 @@ yachai_jingui_effect: {
 	onremove(player, skill) {
 		const cards = player.getCards("hs");
 		for (const card of cards) {
-			if (card.storage?.yachai_jingui) {
+			if (card.hasGaintag("yachai_jingui_mark")) {
 				card.removeGaintag("yachai_jingui_mark");
-				delete card.storage.yachai_jingui;
+				if (card.storage) delete card.storage.yachai_jingui;
 			}
 		}
 	},
 	mod: {
 		targetInRange(card, player, target, current) {
-			if (card.storage?.yachai_jingui) return true;
+			if (card.hasGaintag && card.hasGaintag("yachai_jingui_mark")) return true;
 		},
 		cardUsable(card, player, num) {
-			if (card.storage?.yachai_jingui) return num + 999;
+			if (card.hasGaintag && card.hasGaintag("yachai_jingui_mark")) return num + 999;
 		},
 	},
 },
@@ -1425,14 +1427,14 @@ yachai_jingui_cleanup: {
 	silent: true,
 	filter(event, player) {
 		const cards = event.getl(player)?.cards2 || [];
-		return cards.some(c => get.itemtype(c) == "card" && c.storage?.yachai_jingui);
+		return cards.some((c) => get.itemtype(c) == "card" && c.hasGaintag("yachai_jingui_mark"));
 	},
 	content(event, trigger, player) {
 		const cards = trigger.getl(player).cards2;
 		for (const card of cards) {
-			if (get.itemtype(card) == "card" && card.storage?.yachai_jingui) {
-				delete card.storage.yachai_jingui;
+			if (get.itemtype(card) == "card" && card.hasGaintag("yachai_jingui_mark")) {
 				card.removeGaintag("yachai_jingui_mark");
+				if (card.storage) delete card.storage.yachai_jingui;
 			}
 		}
 	},

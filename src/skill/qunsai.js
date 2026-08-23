@@ -4308,6 +4308,7 @@ shanhe_hezong: {
 // === 交阋 ===
 zishu_jiaoxi: {
 	audio: 2,
+	group: ["zishu_jiaoxi_dieclear"],
 	zhuanhuanji(player, skill) {
 		player.storage[skill] = !player.storage[skill];
 		if (player.storage[skill]) {
@@ -4364,6 +4365,17 @@ zishu_jiaoxi: {
 		}
 	},
 	subSkill: {
+		dieclear: {
+			trigger: { player: "dieAfter" },
+			silent: true,
+			forceDie: true,
+			filter(event, player) {
+				return !game.hasPlayer((current) => current.hasSkill("zishu_jiaoxi"));
+			},
+			content(event, trigger, player) {
+				lib.skill.zishu_jiaoxi.onremove(player);
+			},
+		},
 		wuzhong: {
 			charlotte: true,
 			enable: "chooseToUse",
@@ -4979,6 +4991,395 @@ zishu_huifen: {
 	ai: {
 		order: 4,
 		result: { player: 1 },
+	},
+},
+
+// === 击藩 ===
+zishu_jifan: {
+	audio: 2,
+	onChooseToUse(event) {
+		const player = event.player;
+		event.set("zishu_jifan", (() => {
+			event.zishu_jifan ??= {};
+			event.zishu_jifan[player.playerid] = player.getHistory("gain").reduce((cards, evt) => cards.addArray(evt.cards), []);
+			return event.zishu_jifan;
+		})());
+	},
+	enable: "chooseToUse",
+	filter(event, player) {
+		const cards = player.getCards("he", card => event.zishu_jifan?.[player.playerid]?.includes(card));
+		return cards.length > 0 && cards.some(i => event.filterCard(get.autoViewAs({ name: "zishu_yiyi" }, [i]), player, event));
+	},
+	chooseButton: {
+		dialog(event, player) {
+			const cards = player.getCards("he", card => event.zishu_jifan?.[player.playerid]?.includes(card));
+			const vcards = [];
+			if (cards.some(i => event.filterCard(get.autoViewAs({ name: "zishu_yiyi" }, [i]), player, event))) {
+				vcards.push(["锦囊", "", "zishu_yiyi"]);
+			}
+			const dialog = ui.create.dialog("击藩", [vcards, "vcard"], "hidden");
+			dialog.direct = true;
+			return dialog;
+		},
+		ai: () => 1,
+		prompt(links) {
+			return `###击藩###<div class="text center">将一张本回合获得的牌当作【以逸待劳】使用</div>`;
+		},
+		backup(links, player) {
+			return {
+				audio: "zishu_jifan",
+				filterCard(card, player) {
+					return get.event().zishu_jifan?.[player.playerid]?.includes(card);
+				},
+				position: "he",
+				check(card) {
+					return 8 - get.value(card);
+				},
+				viewAs: { name: "zishu_yiyi" },
+			};
+		},
+	},
+	ai: {
+		order: 7,
+		result: { player: 1 },
+	},
+},
+
+// === 馘灭 ===
+zishu_guomie: {
+	audio: 2,
+	trigger: { player: "phaseZhunbeiBegin" },
+	group: ["zishu_guomie_record", "zishu_guomie_boost", "zishu_guomie_juedou", "zishu_guomie_extra"],
+	async content(event, trigger, player) {
+		const vcard = get.autoViewAs({ name: "juedou", isCard: true, storage: { zishu_guomie: true } }, "unsure");
+		await player.chooseUseTarget("馘灭：视为使用一张【决斗】", vcard, true, false).forResult();
+	},
+	subSkill: {
+		record: {
+			charlotte: true,
+			trigger: { player: "damageEnd" },
+			forced: true,
+			popup: false,
+			silent: true,
+			content(event, trigger, player) {
+				const num = trigger.num || 1;
+				player.storage.zishu_guomie_maxHurt = Math.max(player.storage.zishu_guomie_maxHurt || 0, num);
+			},
+		},
+		boost: {
+			charlotte: true,
+			trigger: { source: "damageBefore" },
+			forced: true,
+			popup: false,
+			silent: true,
+			filter(event, player) {
+				const maxHurt = player.storage.zishu_guomie_maxHurt || 0;
+				return maxHurt > 0 && event.num < maxHurt && player.getRoundHistory("sourceDamage").length === 0;
+			},
+			content(event, trigger, player) {
+				trigger.num = player.storage.zishu_guomie_maxHurt;
+				game.log(player, "因【馘灭】将伤害值改为", trigger.num);
+			},
+		},
+		juedou: {
+			charlotte: true,
+			trigger: { global: "chooseToRespondAfter" },
+			forced: true,
+			popup: false,
+			filter(event, player) {
+				const card = event.respondTo?.[1];
+				if (!card || get.name(card, event.player) != "juedou") return false;
+				if (!card.storage?.zishu_guomie) return false;
+				if (event.result?.bool) return false;
+				if (card.storage.zishu_guomie_handled) return false;
+				return true;
+			},
+			async content(event, trigger, player) {
+				const card = trigger.respondTo[1];
+				card.storage.zishu_guomie_handled = true;
+				const useEvt = trigger.getParent("useCard");
+				const responder = trigger.player;
+				const source = useEvt?.player;
+				const target = useEvt?.targets?.[0];
+				const opposite = responder === source ? target : source;
+				if (!opposite?.isIn()) {
+					trigger.result.bool = true;
+					return;
+				}
+				const choice = await opposite
+					.chooseControl("弃置其一张牌", "令此牌伤害+1", "cancel2")
+					.set("prompt", "馘灭：一方首次放弃打出【杀】，请选择一项")
+					.set("ai", () => {
+						const att = get.attitude(opposite, responder);
+						if (att <= 0) return "令此牌伤害+1";
+						return "弃置其一张牌";
+					})
+					.forResult();
+				if (!choice?.control || choice.control === "cancel2") {
+					return;
+				}
+				if (choice.control === "弃置其一张牌") {
+					if (responder.countDiscardableCards(opposite, "he")) {
+						await opposite.discardPlayerCard(responder, "he", [1, 1], true).forResult();
+					}
+				} else {
+					useEvt.extraDamage = (useEvt.extraDamage || 0) + 1;
+				}
+				trigger.result.bool = true;
+			},
+		},
+		extra: {
+			charlotte: true,
+			trigger: { global: "damageBegin" },
+			forced: true,
+			popup: false,
+			filter(event, player) {
+				const useEvt = event.getParent("useCard");
+				if (!useEvt?.card?.storage?.zishu_guomie) return false;
+				return (useEvt.extraDamage || 0) > 0;
+			},
+			content(event, trigger, player) {
+				const useEvt = trigger.getParent("useCard");
+				trigger.num += useEvt.extraDamage || 0;
+			},
+		},
+	},
+	ai: {
+		order: 5,
+		result: { player: 1 },
+	},
+},
+
+// === 骸饗 ===
+zishu_haixiang: {
+	audio: 2,
+	direct: true,
+	trigger: { global: "damageBegin" },
+	group: ["zishu_haixiang_after", "zishu_haixiang_dujiu"],
+	filter(event, player) {
+		return event.num > event.player.hp && event.player.isIn();
+	},
+	async content(event, trigger, player) {
+		const diff = trigger.num - trigger.player.hp;
+		const bool = await player
+			.chooseBool(get.prompt2("zishu_haixiang"), `是否将此伤害值改为${get.translation(trigger.player)}的体力值（${trigger.player.hp}），摸${get.cnNumber(diff)}张牌？`)
+			.set("ai", () => {
+				const t = trigger.player;
+				if (t === player) return true;
+				return get.attitude(player, t) > 0;
+			})
+			.forResult();
+		if (!bool?.bool) return;
+		player.logSkill("zishu_haixiang", trigger.player);
+		trigger.num = trigger.player.hp;
+		if (diff > 0) {
+			player.storage.zishu_haixiang_pending = { damage: trigger, diff };
+		}
+	},
+	subSkill: {
+		after: {
+			charlotte: true,
+			trigger: { global: "damageAfter" },
+			forced: true,
+			popup: false,
+			silent: true,
+			filter(event, player) {
+				const pending = player.storage.zishu_haixiang_pending;
+				return !!pending && event === pending.damage;
+			},
+			async content(event, trigger, player) {
+				const pending = player.storage.zishu_haixiang_pending;
+				delete player.storage.zishu_haixiang_pending;
+				if (pending.diff > 0) {
+					const before = player.getHistory("gain").length;
+					await player.draw(pending.diff);
+					const gained = player.getHistory("gain").slice(before).flatMap((evt) => evt.cards || []);
+					player.markAuto("zishu_haixiang_cards", gained);
+					player.addSkill("zishu_haixiang_dujiu");
+				}
+			},
+		},
+		dujiu: {
+			charlotte: true,
+			mod: {
+				cardname(card, player) {
+					if (get.owner(card) === player && (player.getStorage("zishu_haixiang_cards") || []).includes(card) && !game.hasPlayer((p) => p.isDying())) {
+						return "zishu_dujiu";
+					}
+				},
+			},
+			trigger: { source: "damage" },
+			forced: true,
+			popup: false,
+			silent: true,
+			content(event, trigger, player) {
+				player.unmarkAuto("zishu_haixiang_cards", player.getStorage("zishu_haixiang_cards").slice());
+				player.removeSkill("zishu_haixiang_dujiu");
+				//player.popup("失去【毒酒】");
+			},
+		},
+	},
+	ai: {
+		order: 6,
+		result: { player: 1 },
+	},
+},
+
+// === 不群 ===
+zishu_buqun: {
+	audio: 2,
+	group: ["zishu_buqun_draw", "zishu_buqun_remove"],
+	subSkill: {
+		draw: {
+			audio: "zishu_buqun",
+			charlotte: true,
+			trigger: { player: "phaseJieshuBegin" },
+			filter(event, player) {
+				const num = player.countCards("h");
+				return game.hasPlayer((current) => current != player && current.countCards("h") == num);
+			},
+			async content(event, trigger, player) {
+				let count = 0;
+				while (
+					count < 20 &&
+					game.hasPlayer((current) => current != player && current.countCards("h") == player.countCards("h"))
+				) {
+					const before = player.countCards("h");
+					await player.draw();
+					if (player.countCards("h") == before) {
+						break;
+					}
+					count++;
+				}
+			},
+		},
+		remove: {
+			audio: "zishu_buqun",
+			charlotte: true,
+			trigger: { player: "useCard" },
+			forced: true,
+			filter(event, player) {
+				if (!event.card) return false;
+				const num = player.countCards("h");
+				return game.hasPlayer((current) => current.countCards("h") == num && current.countCards("he") > 0);
+			},
+			async content(event, trigger, player) {
+				const num = player.countCards("h");
+				const next = player.chooseTarget(
+					true,
+					"不群：选择一名手牌数为" + get.cnNumber(num) + "的角色，将其一张牌移出游戏至回合结束",
+					(card, player2, target) => target.countCards("h") == num && target.countCards("he") > 0
+				);
+				next.set("ai", (target) => -get.attitude(get.player(), target));
+				const result = await next.forResult();
+				if (!result?.bool || !result.targets?.length) return;
+				const target = result.targets[0];
+				player.logSkill("zishu_buqun", target);
+				const next2 = player.choosePlayerCard(target, "he", true);
+				next2.set("ai", (button) => get.value(button.link));
+				const result2 = await next2.forResult();
+				if (!result2?.bool || !result2.cards?.length) return;
+				target.addSkill("zishu_buqun_back");
+				const next3 = target.addToExpansion("giveAuto", result2.cards, target);
+				next3.gaintag.add("zishu_buqun_back");
+				await next3;
+				game.log(target, "的一张牌被移出游戏至回合结束");
+			},
+		},
+		back: {
+			audio: "zishu_buqun",
+			charlotte: true,
+			mark: true,
+			trigger: { global: "phaseEnd" },
+			forced: true,
+			popup: false,
+			silent: true,
+			intro: {
+				content: "expansion",
+				markcount: "expansion",
+			},
+			filter(event, player) {
+				return player.getExpansions("zishu_buqun_back").length > 0;
+			},
+			async content(event, trigger, player) {
+				const cards = player.getExpansions("zishu_buqun_back");
+				if (cards.length) {
+					await player.gain(cards, "draw");
+				}
+				game.log(player, "收回了被移出游戏的牌");
+				player.removeSkill("zishu_buqun_back");
+			},
+		},
+	},
+},
+
+// === 不孤 ===
+zishu_bugu: {
+	audio: 2,
+	group: ["zishu_bugu_ask", "zishu_bugu_die"],
+	subSkill: {
+		ask: {
+			audio: "zishu_bugu",
+			charlotte: true,
+			trigger: { player: "phaseZhunbeiBegin" },
+			direct: true,
+			filter(event, player) {
+				return game.hasPlayer((current) => current != player);
+			},
+			async content(event, trigger, player) {
+				const handValue = (p) => p.getCards("h").reduce((sum, card) => sum + get.value(card), 0);
+				const order = [];
+				let current = player.next;
+				while (current && current != player) {
+					order.push(current);
+					current = current.next;
+				}
+				let swapped = false;
+				for (const target of order) {
+					if (swapped || target.isDead()) continue;
+					const req = await target
+						.chooseBool("不孤：是否向" + get.translation(player) + "请求交换手牌？")
+						.set("ai", () => handValue(player) > handValue(target))
+						.forResult();
+					if (!req?.bool) continue;
+					const agree = await player
+						.chooseBool(get.prompt("zishu_bugu"), "若同意，你与" + get.translation(target) + "交换手牌")
+						.set("ai", () => handValue(target) > handValue(player))
+						.forResult();
+					if (!agree?.bool) continue;
+					player.logSkill("zishu_bugu", target);
+					await player.swapHandcards(target);
+					swapped = true;
+				}
+			},
+		},
+		die: {
+			audio: "zishu_bugu",
+			charlotte: true,
+			trigger: { player: "dieBegin" },
+			direct: true,
+			firstDo: true,
+			filter(event, player) {
+				return game.hasPlayer((current) => current != player);
+			},
+			async content(event, trigger, player) {
+				const handValue = (p) => p.getCards("h").reduce((sum, card) => sum + get.value(card), 0);
+				const next = player.chooseTarget("不孤：选择一名其他角色，若其同意，你与其交换手牌", (card, player2, target) => {
+					return target != player2;
+				});
+				next.set("ai", (target) => get.attitude(get.player(), target) * (handValue(target) - handValue(get.player())));
+				const result = await next.forResult();
+				if (!result?.bool || !result.targets?.length) return;
+				const target = result.targets[0];
+				const agree = await target
+					.chooseBool(get.prompt("zishu_bugu"), get.translation(player) + "请求与你交换手牌，是否同意？")
+					.set("ai", () => handValue(get.player()) > handValue(target))
+					.forResult();
+				if (!agree?.bool) return;
+				player.logSkill("zishu_bugu", target);
+				await player.swapHandcards(target);
+			},
+		},
 	},
 },
 }
