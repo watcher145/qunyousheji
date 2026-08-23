@@ -37,7 +37,7 @@ export const characterIntro = {
 	qunyou_mo_jiangwei: "设计：墨客。<br>评价：对牌序要求也太高了，对运气要求也高",
 	qunyou_sb_guohuai: "设计：心乐之。<br>评价：沙摩柯和赵俨的私生子，其实强度不高，孩子们，我又卡基本牌了",
 	qunyou_clan_diaochan: "设计：来自大宝规则集中宗族技的例子<br>评价：自己有黑桃就先给自己用",
-	qunyou_wu_zhangfei: "设计：晴<br>评价：永动机，额，但是不知道怎么改",
+	qunyou_wu_zhangfei: "设计：晴。修改：欢愉与希望<br>评价：原设用三摸三加无限复原限定技就是永动机，现在已经改了，当然还是能滚雪球，但是没那么容易滚起来了",
 	qunyou_v_guanyu: "设计：忆否白露（B站）<br>评价：很有新意，但是卡最大点了怎么办，也是一个待改进名单",
 	qunyou_zhangyan: "设计：终汐舷<br>评价：阴，但是很爽",
 	shanhe_zhangjiao: "设计：玖宴<br>评价：太好玩了，起义的强度是真高，另外ai比较笨，不会凑三类型，因此给多点人，可以很顺利获得起义",
@@ -93,4 +93,9 @@ export const characterIntro = {
 	shanhe_wangyi: "设计：颜渊&江雪<br>评价：有意思的设计，回合开始时必须要给敌人加鸠，否则自己就会一直获得鸠标记，但是血还是太少了，我加了一上限",
 	xiaobai_lite: "设计：why do we fall<br>说明：群相册里的李特忽略了一个边界问题，如果一个阶段内多次触发了括澜的否则分支，该阶段结束时视为使用多张兵临城下吗，其实区别不大，兵临城下是要把牌放回去的，有时候用了多张也不见得收益很高",
 	xiaobai_suojing: "设计：可余雪",
+	zishu_zangba: "设计：小涵",
+	zishu_duanjiong: "设计：..",
+	qunyou_guojia: "设计：钟林",
+	zishu_shantao: "设计：朱苦力",
+	qunyou_zhaoshuang: "设计：欢愉与希望",
 };

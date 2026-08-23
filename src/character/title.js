@@ -91,4 +91,9 @@ export const characterTitle = {
 	shanhe_wangyi:"璟玉秋霜",
 	xiaobai_lite:"六郡行王",
 	xiaobai_suojing:"银钩铮骨",
+	zishu_zangba:"泰山锁钥",
+	zishu_duanjiong:"束马县锋",
+	qunyou_guojia: "遗策定辽",
+	zishu_shantao: "千仞振嵩",
+	qunyou_zhaoshuang: "方圆演数",
 };
