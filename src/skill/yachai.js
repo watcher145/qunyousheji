@@ -796,6 +796,7 @@ yachai_tuicheng: {
 yachai_yingxiang: {
 	audio: 2,
 	forced: true,
+	group: ["yachai_yingxiang_clear"],
 	trigger: {
 		global: ["loseAfter", "cardsDiscardAfter", "loseAsyncAfter", "equipAfter", "addJudgeAfter", "addToExpansionAfter"],
 	},
@@ -2057,7 +2058,7 @@ yachai_chengshi: {
 				if (!player.storage.yachai_chengshi_tracker) return false;
 				return event.getParent("useCard")?.skill === "yachai_chengshi";
 			},
-			content() {
+			content(event, trigger, player) {
 				player.storage.yachai_chengshi_tracker.damaged = true;
 			},
 		},

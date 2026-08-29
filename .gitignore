@@ -1,0 +1,21 @@
+
+
+# 测试缓存与模型产物
+test/embed-cache*.json
+test/models/
+test/*.onnx
+test/*.bin
+
+# 临时文件
+*.log
+*.tmp
+*.temp
+
+# Node 依赖（如有）
+node_modules/
+
+# IDE/编辑器
+.vscode/
+.idea/
+*.swp
+*.swo

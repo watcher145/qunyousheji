@@ -176,4 +176,14 @@ export const cardData = {
 			},
 		},
 	},
+	zhuoming_fangma: {
+		type: "equip",
+		subtype: "equip3",
+		distance: { globalTo: 1 },
+	},
+	zhuoming_jinma: {
+		type: "equip",
+		subtype: "equip3",
+		distance: { globalFrom: -1 },
+	},
 };
