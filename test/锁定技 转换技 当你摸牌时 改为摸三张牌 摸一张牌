@@ -1,0 +1,102 @@
+[
+  {
+    "id": "olziruo",
+    "name": "自若",
+    "score": 5.216338797009704,
+    "sim": 0.7163387970097036,
+    "kw": 4.5,
+    "rules": 0,
+    "info": "转换技，锁定技。①当你使用最{阳：左；阴：右}侧的手牌时，你摸一张牌。②你以此法摸牌后本回合不能整理手牌。",
+    "trigger": {
+      "player": [
+        "useCard"
+      ]
+    },
+    "mod": [
+      "aiOrder"
+    ],
+    "tags": [
+      "zhuanhuanji"
+    ],
+    "apis": [
+      "some"
+    ]
+  },
+  {
+    "id": "fengliao",
+    "name": "凤燎",
+    "score": 5.200425581428172,
+    "sim": 0.7004255814281726,
+    "kw": 4.5,
+    "rules": 0,
+    "info": "锁定技，转换技，你使用牌指定唯一目标后，阳：你令其摸一张牌；阴：你对其造成1点火焰伤害。",
+    "trigger": {
+      "player": [
+        "useCardToPlayered"
+      ]
+    },
+    "mod": [
+      "aiOrder"
+    ],
+    "tags": [
+      "zhuanhuanji",
+      "init",
+      "onremove"
+    ],
+    "apis": [
+      "sort"
+    ]
+  },
+  {
+    "id": "olxiasheng",
+    "name": "夏晟",
+    "score": 3.7506082801666847,
+    "sim": 0.7506082801666846,
+    "kw": 3,
+    "rules": 0,
+    "info": "锁定技，若你手牌中：红色牌较多，你使用黑色牌时摸一张牌；黑色牌较多，你使用红色牌可多指定一个目标。",
+    "trigger": {
+      "player": [
+        "useCard",
+        "useCard2"
+      ]
+    },
+    "tags": [],
+    "apis": [
+      "includes",
+      "add"
+    ]
+  },
+  {
+    "id": "ollinjie",
+    "name": "临节",
+    "score": 3.7375537862621684,
+    "sim": 0.7375537862621685,
+    "kw": 3,
+    "rules": 0,
+    "info": "锁定技，你受到伤害后，来源弃置一张手牌，若为【杀】，你摸一张牌。",
+    "trigger": {
+      "player": [
+        "damageEnd"
+      ]
+    },
+    "tags": [],
+    "apis": []
+  },
+  {
+    "id": "nzry_cunmu",
+    "name": "寸目",
+    "score": 3.7366301624114,
+    "sim": 0.7366301624113997,
+    "kw": 3,
+    "rules": 0,
+    "info": "锁定技，当你摸牌时，改为从牌堆底摸牌。",
+    "trigger": {
+      "player": [
+        "drawBegin"
+      ]
+    },
+    "tags": [],
+    "apis": []
+  }
+]

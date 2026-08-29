@@ -110,7 +110,9 @@ export const characterTranslate = {
 	qunyou_wangyun: "王允",
 	qunyou_guojia: "郭嘉",
 	qunyou_zhaoshuang: "赵爽",
+	qunyou_guanyu: "关羽",
 	zishu_shantao: "山涛",
+	qiufeng_xiahouhui: "夏侯徽",
 	zishu_liyan: "自书李严",
 	zishu_liyan_prefix: "自书",
 	zishu_lvju: "自书吕据",
@@ -161,4 +163,8 @@ export const characterTranslate = {
 	zishu_zangba_prefix: "自书",
 	zishu_duanjiong: "自书段颎",
 	zishu_duanjiong_prefix: "自书",
+	zishu_maohuanghou: "自书毛皇后",
+	zishu_maohuanghou_prefix: "自书",
+	zhuoming_mateng: "濯名马腾",
+	zhuoming_mateng_prefix: "濯名",
 };

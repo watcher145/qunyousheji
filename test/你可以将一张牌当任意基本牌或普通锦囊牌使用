@@ -1,0 +1,101 @@
+[
+  {
+    "id": "scstaoluan",
+    "name": "滔乱",
+    "score": 0.9090446862623444,
+    "sim": 0.9090446862623444,
+    "kw": 0,
+    "rules": 0,
+    "info": "出牌阶段限一次。你可以将一张牌当任意一种基本牌或普通锦囊牌使用。",
+    "enable": [
+      "phaseUse"
+    ],
+    "tags": [
+      "viewAs"
+    ],
+    "apis": [
+      "dialog"
+    ]
+  },
+  {
+    "id": "jizhi",
+    "name": "集智",
+    "score": 0.635468557535383,
+    "sim": 0.635468557535383,
+    "kw": 0,
+    "rules": 0,
+    "info": "当你使用普通锦囊牌时，你可以摸一张牌。",
+    "trigger": {
+      "player": [
+        "useCard"
+      ]
+    },
+    "tags": [],
+    "apis": []
+  },
+  {
+    "id": "yao_yaoyi",
+    "name": "爻疑",
+    "score": 0.5834597787772818,
+    "sim": 0.5834597787772818,
+    "kw": 0,
+    "rules": 0,
+    "info": "锁定技。①你的起始手牌背置。②每回合每种牌名限一次，你可以将一张背置的牌当作任意基本牌或普通锦囊牌使用或打出。",
+    "enable": [
+      "chooseToUse"
+    ],
+    "mod": [
+      "cardEnabled",
+      "cardRespondable",
+      "cardSavable"
+    ],
+    "tags": [
+      "viewAs",
+      "hiddenCard",
+      "init",
+      "onremove",
+      "precontent"
+    ],
+    "apis": [
+      "dialog",
+      "convertedCard"
+    ]
+  },
+  {
+    "id": "dcyuanrong",
+    "name": "圆融",
+    "score": 0.5562065380136031,
+    "sim": 0.5562065380136031,
+    "kw": 0,
+    "rules": 0,
+    "info": "回合结束时，你依次执行以下项：1.可以将本回合进入弃牌堆的一张黑色牌当任意普通锦囊牌使用；2.可以将本回合进入弃牌堆的一张红色牌当任意基本牌使用。",
+    "trigger": {
+      "player": [
+        "phaseEnd"
+      ]
+    },
+    "tags": [],
+    "apis": []
+  },
+  {
+    "id": "yizan_use",
+    "name": "翊赞",
+    "score": 0.5460836250247935,
+    "sim": 0.5460836250247935,
+    "kw": 0,
+    "rules": 0,
+    "info": "你可以将两张牌（其中至少一张为基本牌）当做任意基本牌使用或打出。",
+    "enable": [
+      "chooseToUse",
+      "chooseToRespond"
+    ],
+    "tags": [
+      "viewAs",
+      "hiddenCard",
+      "precontent"
+    ],
+    "apis": [
+      "dialog"
+    ]
+  }
+]

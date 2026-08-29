@@ -96,4 +96,8 @@ export const characterTitle = {
 	qunyou_guojia: "遗策定辽",
 	zishu_shantao: "千仞振嵩",
 	qunyou_zhaoshuang: "方圆演数",
+	qiufeng_xiahouhui: "熠熠珠玉",
+	qunyou_guanyu: "义武千秋",
+	zishu_maohuanghou: "江心何怨",
+	zhuoming_mateng: "驰陇横秋",
 };

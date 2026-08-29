@@ -2323,6 +2323,9 @@ export const skills = {
 		comboSkill: true,
 		locked: false,
 		_priority: 20,
+		breakCombo(player) {
+			qunyou_combo_break(player, "qunyou_yiling");
+		},
 		init(player) {
 			player.addSkill("qunyou_yiling_mark");
 		},
@@ -2413,7 +2416,7 @@ export const skills = {
 						player.addTip("qunyou_yiling_mark", "移陵 可连击");
 						return;
 					}
-					qunyou_combo_break(player, "qunyou_yiling");
+					lib.skill.qunyou_yiling.breakCombo(player);
 				},
 				"skill_id": "qunyou_yiling_mark",
 				sub: true,
@@ -3162,6 +3165,12 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		zhuanhuanji: true,
 		mark: true,
 		marktext: "☯",
+		discardCards(player) {
+			return qunyou_gudan_discardCards(player);
+		},
+		cleanup(player, cards) {
+			qunyou_gudan_cleanup(player, cards);
+		},
 		intro: {
 			content(storage) {
 				return storage
@@ -3198,13 +3207,13 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 					return (player.getStorage("qunyou_gudan_cards") || []).length > 0;
 				},
 				content(event, trigger, player) {
-					const cards = qunyou_gudan_discardCards(player);
+					const cards = lib.skill.qunyou_gudan.discardCards(player);
 					if (cards.length) {
-						qunyou_gudan_cleanup(player, cards);
+						lib.skill.qunyou_gudan.cleanup(player, cards);
 						game.cardsGotoSpecial(cards);
 						game.log(cards, "被销毁了");
 					} else {
-						qunyou_gudan_cleanup(player);
+						lib.skill.qunyou_gudan.cleanup(player);
 					}
 				},
 				sub: true,
@@ -3551,6 +3560,12 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 // === 矜伐 ===
 	qunyou_jinfa: {
 		audio: 2,
+		getCompareEvent(trigger) {
+			return qunyou_jinfa_getCompareEvent(trigger);
+		},
+		getEventStorage(compareEvent, player) {
+			return qunyou_jinfa_getEventStorage(compareEvent, player);
+		},
 		ai: {
 			order: 5,
 			result: { player: 1 },
@@ -3574,7 +3589,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 				},
 				direct: true,
 				async content(event, trigger, player) {
-					const compareEvent = qunyou_jinfa_getCompareEvent(trigger);
+					const compareEvent = lib.skill.qunyou_jinfa.getCompareEvent(trigger);
 					if (!compareEvent || qunyou_jinfa_getEventStorage(compareEvent, player)) {
 						return;
 					}
@@ -3617,8 +3632,8 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 					return !!storage?.modify && storage.number > 0;
 				},
 				content(event, trigger, player) {
-					const compareEvent = qunyou_jinfa_getCompareEvent(trigger);
-					const storage = qunyou_jinfa_getEventStorage(compareEvent, player);
+					const compareEvent = lib.skill.qunyou_jinfa.getCompareEvent(trigger);
+					const storage = lib.skill.qunyou_jinfa.getEventStorage(compareEvent, player);
 					if (!storage?.modify) {
 						return;
 					}
@@ -3639,6 +3654,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		limited: true,
 		skillAnimation: true,
 		animationColor: "water",
+		group: ["qunyou_aoyue_dying"],
 		enable: "phaseUse",
 		filter(event, player) {
 			return !player.awakenedSkills.includes("qunyou_aoyue") && player.maxHp > 1;
@@ -3830,6 +3846,9 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		locked: true,
 		mark: true,
 		marktext: "虎",
+		storage(player) {
+			return qunyou_zhihu_storage(player);
+		},
 		intro: {
 			content(storage, player) {
 				return [
@@ -3892,7 +3911,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 				forced: true,
 				popup: false,
 				content(event, trigger, player) {
-					qunyou_zhihu_storage(player).count = 0;
+					lib.skill.qunyou_zhihu.storage(player).count = 0;
 					player.markSkill("qunyou_zhihu");
 				},
 				sub: true,
@@ -3944,6 +3963,18 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 		init(player) {
 			qunyou_weitai_storage(player);
 		},
+		viewAs(name) {
+			return get.autoViewAs({ name, isCard: true });
+		},
+		storage(player) {
+			if (typeof player.storage.qunyou_weitai !== "boolean") {
+				player.storage.qunyou_weitai = false;
+			}
+			return player.storage.qunyou_weitai;
+		},
+		isSingleTarget(event) {
+			return !!event.card && Array.isArray(event.targets) && event.targets.length === 1;
+		},
 		group: ["qunyou_weitai_gain", "qunyou_weitai_clear", "qunyou_weitai_use", "qunyou_weitai_target"],
 		subSkill: {
 			gain: {
@@ -3951,6 +3982,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 				trigger: { player: "gainAfter" },
 				forced: true,
 				popup: false,
+				silent: true,
 				filter(event, player) {
 					return (event.getg?.(player) || []).length > 0;
 				},
@@ -3965,6 +3997,7 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 				trigger: { global: ["phaseZhunbeiBegin", "phaseJudgeBegin", "phaseDrawBegin", "phaseUseBegin", "phaseDiscardBegin", "phaseJieshuBegin", "phaseAfter"] },
 				forced: true,
 				popup: false,
+				silent: true,
 				content(event, trigger, player) {
 					player.storage.qunyou_weitai = false;
 					player.markSkill("qunyou_weitai");
@@ -3975,11 +4008,12 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 				audio: "qunyou_weitai",
 				trigger: { player: "useCard2" },
 				forced: true,
+				silent: true,
 				filter(event, player) {
 					return qunyou_weitai_storage(player) && qunyou_weitai_isSingleTarget(event) && get.name(event.card, player) !== "juedou";
 				},
 			content(event, trigger, player) {
-				trigger.card = qunyou_weitai_viewAs("juedou");
+				trigger.card = lib.skill.qunyou_weitai.viewAs("juedou");
 				game.log(player, "使用的单目标牌按", "#y决斗", "结算");
 			},
 			sub: true,
@@ -3988,13 +4022,14 @@ trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 			audio: "qunyou_weitai",
 			trigger: { target: "useCardToTarget" },
 			forced: true,
+			silent: true,
 			filter(event, player) {
 				return qunyou_weitai_storage(player) && qunyou_weitai_isSingleTarget(event) && get.name(event.card, event.player) !== "chenghuodajie";
 			},
 			content(event, trigger, player) {
 				const useEvent = trigger.getParent();
 				if (useEvent?.card) {
-					useEvent.card = qunyou_weitai_viewAs("chenghuodajie");
+					useEvent.card = lib.skill.qunyou_weitai.viewAs("chenghuodajie");
 					game.log(useEvent.player, "对", player, "使用的单目标牌按", "#y趁火打劫", "结算");
 				}
 			},
@@ -4989,7 +5024,7 @@ filterCard(card) {
 					}
 					return hits.length > 0;
 				},
-				content() {
+				content(event, trigger, player) {
 					game.log(player, "【灼躯日志-解封content】");
 					try {
 						const hits = Array.isArray(player.storage.qunyou_zhuoqu_pending_remove) ? player.storage.qunyou_zhuoqu_pending_remove.slice() : [];
@@ -8413,18 +8448,50 @@ qunyou_qilue: {
 // === 明策 ===
 	qunyou_mingce: {
 		audio: 2,
-		group: ["qunyou_mingce_target"],
-		enable: "phaseUse",
-		filter(event, player) {
-			return ["basic", "trick", "equip"].some((type) =>
-				player.countCards("h", (card) => {
-					if (card.hasGaintag("faceup_tag")) return false;
-					const t = get.type(card);
-					return (t == "delay" ? "trick" : t) == type;
-				}) > 0
-			);
+		group: ["qunyou_mingce_target", "qunyou_mingce_clear"],
+		enable: "chooseToUse",
+		hiddenCard(player, name) {
+			return lib.inpile.includes(name) && get.type(name) == "trick" && !(player.storage.qunyou_mingce_used || []).includes(name) && player.hasCard((card) => !card.hasGaintag("faceup_tag"), "h");
 		},
-		async content(event, trigger, player) {
+		filter(event, player) {
+			// 印牌条件：有牌可明置（与其他普通锦囊牌一致，无懈同款）；候选限本回合未以此法使用过的普通锦囊
+			if (!player.hasCard((card) => !card.hasGaintag("faceup_tag"), "h")) return false;
+			const used = player.storage.qunyou_mingce_used || [];
+			return get.inpile("trick").some((name) => !used.includes(name) && event.filterCard(get.autoViewAs({ name, isCard: true }, "unsure"), player, event));
+		},
+		chooseButton: {
+			dialog(event, player) {
+				// 候选以当前用牌请求探测：出牌阶段=全部普通锦囊（无懈不可主动使用，自动排除）；限本回合未以此法使用过
+				const used = player.storage.qunyou_mingce_used || [];
+				const tricks = get.inpile("trick").filter((name) => !used.includes(name) && event.filterCard(get.autoViewAs({ name, isCard: true }, "unsure"), player, event));
+				return ui.create.dialog("明策：视为使用一张普通锦囊牌", [tricks.map((name) => ["trick", "", name]), "vcard"]);
+			},
+			check(button) {
+				if (_status.event.getParent().type != "phase") return 1;
+				const player = get.player();
+				return player.getUseValue(get.autoViewAs({ name: button.link[2], isCard: true }), null, true);
+			},
+			backup(links, player) {
+				return {
+					audio: "qunyou_mingce",
+					filterCard: () => false,
+					selectCard: 0,
+					viewAs: { name: links[0][2], isCard: true },
+					log: false,
+					async precontent(event, trigger, player) {
+						player.logSkill("qunyou_mingce");
+						await lib.skill.qunyou_mingce.mingzhi(player);
+						// 记入本回合已用牌名（clear 子技能于下回合开始时清空）
+						(player.storage.qunyou_mingce_used ??= []).push(links[0][2]);
+					},
+				};
+			},
+			prompt(links) {
+				return "明策：明置一种类型的所有牌，视为使用一张【" + get.translation(links[0][2]) + "】";
+			},
+		},
+		// 明置一种类型的所有手牌（主动印牌与无懈接口共用）
+		async mingzhi(player) {
 			const typeNames = { basic: "基本牌", trick: "锦囊牌", equip: "装备牌" };
 			const available = ["basic", "trick", "equip"].filter(
 				(type) =>
@@ -8447,7 +8514,6 @@ qunyou_qilue: {
 				if (!result?.control) return;
 				chosenType = Object.keys(typeNames).find((key) => typeNames[key] === result.control);
 			}
-			if (!chosenType) return;
 			const cards = player.getCards("h", (card) => {
 				if (card.hasGaintag("faceup_tag")) return false;
 				const t = get.type(card);
@@ -8457,14 +8523,6 @@ qunyou_qilue: {
 			game.log(player, "明置了", cards);
 			game.addCardKnower(cards, game.filterPlayer(() => true));
 			game.broadcastAll((cards2) => cards2.forEach((card2) => card2.addGaintag("faceup_tag")), cards);
-			const tricks = get.inpile("trick").filter((name) => name != "wuxie");
-			if (!tricks.length) return;
-			const result2 = await player
-				.chooseButton(["明策：视为使用一张普通锦囊牌", [tricks.map((name) => ["trick", "", name]), "vcard"]], true)
-				.forResult();
-			if (!result2?.bool || !result2.links?.length) return;
-			const vcard = get.autoViewAs({ name: result2.links[0][2], isCard: true }, "unsure");
-			await player.chooseUseTarget(vcard, true);
 		},
 		mod: {
 			cardUsable(card, player) {
@@ -8481,7 +8539,23 @@ qunyou_qilue: {
 			result: { player: 1 },
 		},
 		subSkill: {
+			clear: {
+				// 本回合以此法使用过的锦囊名记录，回合开始时清空
+				name: "明策",
+				charlotte: true,
+				forced: true,
+				popup: false,
+				silent: true,
+				trigger: { global: "phaseBeginStart" },
+				filter(event, player) {
+					return (player.storage.qunyou_mingce_used || []).length > 0;
+				},
+				content(event, trigger, player) {
+					delete player.storage.qunyou_mingce_used;
+				},
+			},
 			target: {
+				name: "明策",
 				audio: "qunyou_mingce",
 				charlotte: true,
 				trigger: { target: "useCardToTarget" },
@@ -8793,6 +8867,153 @@ qunyou_qilue: {
 				content(event, trigger, player) {
 					lib.skill.qunyou_jingkuo.update(player);
 				},
+			},
+		},
+	},
+
+// === 武圣 ===
+	qunyou_wusheng: {
+		audio: 2,
+		enable: ["chooseToUse", "chooseToRespond"],
+		// 区域内存在红牌/伤害牌/基本牌任一，且至少能印出一种候选
+		filter(event, player) {
+			return lib.skill.qunyou_wusheng.getCandidateCards(event, player).length > 0;
+		},
+		// 红色基本牌（存在红色实体的基本牌）：桃/闪/酒/杀/火杀
+		redBasics() {
+			const list = ["tao", "shan", "jiu", "sha"];
+			// 火杀（红色）；雷杀/冰杀无红色实体，不列入
+			if (lib.inpile_nature.includes("fire")) list.push("sha_fire");
+			return list;
+		},
+		// 生成"可印候选"：遍历牌堆牌池，按三组素材条件生成 [类型, "", 牌名, 属性, 组] 按钮数据
+		getCandidateCards(event, player) {
+			const list = [];
+			const hasRed = player.hasCard((card) => get.color(card) === "red", "hes");
+			const hasDamage = player.hasCard((card) => get.is.damageCard(card), "hes");
+			const hasBasic = player.hasCard((card) => get.type(card) === "basic", "hes");
+			// ①红牌 → 当【伤害+基本】的牌（杀及其属性变体，遍历牌堆）
+			if (hasRed) {
+				for (const name of lib.inpile) {
+					if (get.type(name) != "basic" || !get.tag({ name }, "damage")) continue;
+					if (event.filterCard(get.autoViewAs({ name, isCard: true }, "unsure"), player, event)) {
+						list.push([get.translation(get.type(name)), "", name, "", "g1"]);
+					}
+				}
+				// 杀属性变体（火/雷/冰杀）——红牌可印任意伤害基本牌
+				for (const nature of lib.inpile_nature) {
+					const vcard = get.autoViewAs({ name: "sha", nature, isCard: true }, "unsure");
+					if (event.filterCard(vcard, player, event)) {
+						list.push([get.translation(get.type("sha")), "", "sha", nature, "g1"]);
+					}
+				}
+			}
+			// ②伤害牌 → 当【红色+基本】的牌（红色基本牌=桃/闪/酒/杀/火杀，印出强制红）
+			if (hasDamage) {
+				for (const name of lib.skill.qunyou_wusheng.redBasics()) {
+					const isFireSha = name == "sha_fire";
+					const cardName = isFireSha ? "sha" : name;
+					const nature = isFireSha ? "fire" : "";
+					const vcard = get.autoViewAs({ name: cardName, nature, isCard: true, color: "red" }, "unsure");
+					if (event.filterCard(vcard, player, event)) {
+						list.push([get.translation(get.type(cardName)), "", cardName, nature, "g2"]);
+					}
+				}
+			}
+			// ③基本牌 → 当【红色+伤害】的牌（牌堆中非延时伤害牌，印出强制红；杀含火变体，雷/冰非红不列）
+			if (hasBasic) {
+				for (const name of lib.inpile) {
+					if (get.type(name) == "delay" || !get.tag({ name }, "damage")) continue;
+					const vcard = get.autoViewAs({ name, isCard: true, color: "red" }, "unsure");
+					if (event.filterCard(vcard, player, event)) {
+						list.push([get.translation(get.type(name)), "", name, "", "g3"]);
+					}
+				}
+				// 红色伤害杀=火杀（雷/冰无红实体）
+				if (lib.inpile_nature.includes("fire")) {
+					const vcard = get.autoViewAs({ name: "sha", nature: "fire", isCard: true, color: "red" }, "unsure");
+					if (event.filterCard(vcard, player, event)) {
+						list.push([get.translation(get.type("sha")), "", "sha", "fire", "g3"]);
+					}
+				}
+			}
+			return list;
+		},
+		// 构建候选 vcard（组决定是否强制红、属性变体；格式参照原生义烈：[类型,"",牌名,属性,组]）
+		makeVCard(buttonLink) {
+			const [, , name, nature, group] = buttonLink;
+			const forcedRed = group != "g1";
+			return get.autoViewAs({ name, nature: nature || undefined, isCard: true, ...(forcedRed ? { color: "red" } : {}) }, "unsure");
+		},
+		chooseButton: {
+			dialog(event, player) {
+				const list = lib.skill.qunyou_wusheng.getCandidateCards(event, player);
+				return ui.create.dialog("武圣", [list, "vcard"], "hidden");
+			},
+			filter(button, player) {
+				const evt = _status.event.getParent();
+				return evt.filterCard(lib.skill.qunyou_wusheng.makeVCard(button.link), player, evt);
+			},
+			check(button) {
+				if (_status.event.getParent().type != "phase") return 1;
+				const player = _status.event.player;
+				return player.getUseValue(lib.skill.qunyou_wusheng.makeVCard(button.link), null, true);
+			},
+			backup(links, player) {
+				const name = links[0][2];
+				const nature = links[0][3] || "";
+				const group = links[0][4];
+				const forcedRed = group != "g1";
+				return {
+					audio: "qunyou_wusheng",
+					filterCard(card) {
+						if (group == "g1") return get.color(card) === "red";
+						if (group == "g2") return get.is.damageCard(card);
+						return get.type(card) === "basic";
+					},
+					selectCard: 1,
+					position: "hes",
+					viewAs: { name, nature, isCard: true, ...(forcedRed ? { color: "red" } : {}) },
+					popname: true,
+				};
+			},
+			prompt(links, player) {
+				const name = links[0][2];
+				const nature = links[0][3] || "";
+				return "将一张红色/伤害/基本牌当" + (nature ? get.translation(nature) : "") + "【" + get.translation(name) + "】使用或打出";
+			},
+		},
+		hiddenCard(player, name) {
+			// 只能声明牌堆中存在的牌名
+			if (!lib.inpile?.includes(name)) return false;
+			if (name == "sha") {
+				// 杀可被红牌/伤害牌/基本牌印出（含属性变体）
+				return (
+					player.hasCard((card) => get.color(card) === "red", "hes") ||
+					player.hasCard((card) => get.tag(card, "damage"), "hes") ||
+					player.hasCard((card) => get.type(card) === "basic", "hes")
+				);
+			}
+			if (get.type(name) == "basic") {
+				// 基本牌可被伤害牌印出（红色基本牌）
+				return player.hasCard((card) => get.is.damageCard(card), "hes");
+			}
+			if (get.type(name) != "delay" && get.tag({ name }, "damage")) {
+				// 伤害牌可被基本牌印出（红色伤害牌）
+				return player.hasCard((card) => get.type(card) === "basic", "hes");
+			}
+			return false;
+		},
+		ai: {
+			respondSha: true,
+			respondShan: true,
+			save: true,
+			order: 5,
+			result: { player: 1 },
+			skillTagFilter(player, tag, arg) {
+				if (!player.countCards("hes")) return false;
+				if (tag == "respondSha" || tag == "respondShan" || tag == "save") return true;
+				return false;
 			},
 		},
 	},
