@@ -1,10 +1,7 @@
 
 
-# 测试缓存与模型产物
-test/embed-cache*.json
-test/models/
-test/*.onnx
-test/*.bin
+# 测试目录（脚本与缓存产物均不入库）
+test/
 
 # 临时文件
 *.log
