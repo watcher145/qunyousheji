@@ -87,35 +87,57 @@ for (const [pkg, ids] of Object.entries(characterSort)) {
   for (const id of ids) packagedIds.add(id);
 }
 
+// 特殊包：这两个包的角色不加后缀
+const specialPkgs = new Set(['qunyou_yongdong', 'qunyou_gaijin']);
+
 // --- Classify ---
 const packages = {};
+const packageModify = {}; // 记录包内角色的修改/补设信息
 const gaishe = [];
 const needImprove = [];
 const collectedDesigner = [];
 const collectedSource = [];
 
 for (const id of allIds) {
-  if (packagedIds.has(id)) {
-    for (const [pkg, ids] of Object.entries(characterSort)) {
-      if (ids.includes(id)) {
-        (packages[pkg] ??= []).push(id);
-      }
-    }
-    continue;
-  }
-
   const intro = characterIntro[id] || '';
   const designer = extractDesigner(id);
   const isBV = /^BV\d/.test(designer);
   const hasSource = intro.includes('来源：');
   const hasModify = intro.includes('修改') || intro.includes('补充');
   const needsImprove = intro.includes('需要改进');
+  const isBVOrSourceOnly = /^BV\d/.test(designer) || (intro.includes('来源：') && !intro.includes('设计：'));
 
-  if (hasModify) {
+  // 检测补设：多作者且有"（补设）"标记，或 设计：xxx && yyy（补设）
+  const hasPatch = /设计[：:].*&&.*?[\(（]补设[\)）]/.test(intro) || /[\(（]补设[\)）]/.test(intro);
+
+  if (packagedIds.has(id)) {
+    // 找出角色所属的包
+    let charPkg = null;
+    for (const [pkg, ids] of Object.entries(characterSort)) {
+      if (ids.includes(id)) {
+        charPkg = pkg;
+        break;
+      }
+    }
+    (packages[charPkg] ??= []).push(id);
+
+    // 记录包内角色的修改/补设标记（特殊包除外）
+    if (charPkg && !specialPkgs.has(charPkg)) {
+      if (intro.includes('修改') || intro.includes('补充')) {
+        packageModify[id] = '修改';
+      } else if (hasPatch) {
+        packageModify[id] = '补设';
+      }
+    }
+    continue;
+  }
+
+  // 未打包角色：加入补设检测（复用外层已声明的 hasPatch）
+  if (hasModify || hasPatch) {
     gaishe.push(id);
-  } else if (needsImprove) {
+  } else if (intro.includes('需要改进')) {
     needImprove.push(id);
-  } else if (isBV || (hasSource && !intro.includes('设计：'))) {
+  } else if (/^BV\d/.test(extractDesigner(id)) || (intro.includes('来源：') && !intro.includes('设计：'))) {
     collectedSource.push(id);
   } else {
     collectedDesigner.push(id);
@@ -128,6 +150,21 @@ function makeMergedLines(ids) {
   for (const id of ids) {
     const designer = extractDesigner(id);
     const name = getDisplayName(id);
+    (groups[designer] ??= []).push(name);
+  }
+  return Object.entries(groups).map(([designer, names]) =>
+    `- \`${designer}\`：${names.join('、')}`
+  );
+}
+
+// 带后缀的版本：给包内角色加上（修改）/（补设）后缀
+function makeMergedLinesWithSuffix(ids) {
+  const groups = {};
+  for (const id of ids) {
+    const designer = extractDesigner(id);
+    let name = getDisplayName(id);
+    const suffix = packageModify[id];
+    if (suffix) name += `（${suffix}）`;
     (groups[designer] ??= []).push(name);
   }
   return Object.entries(groups).map(([designer, names]) =>
@@ -165,7 +202,8 @@ for (const pkg of pkgOrder) {
       return '- `崖柴xxxF（B站）`：' + names.join('、');
     });
   } else {
-    lines = makeMergedLines(ids);
+    // 包内角色使用带后缀版本
+    lines = makeMergedLinesWithSuffix(ids);
   }
   pkgSections.push(`### ${pkgName}\n${lines.join('\n')}`);
 }
@@ -181,7 +219,7 @@ if (collectedSource.length > 0) {
 }
 
 if (gaishe.length > 0) {
-  const lines = ['#有些设计由于存在边界问题或技能逻辑需要修改或补充，特此列出，欢迎提出意见'];
+  const lines = ['#有些设计由于存在强度问题或技能逻辑需要修改或补充，特此列出，欢迎提出意见'];
   for (const id of gaishe) {
     const designer = extractDesigner(id);
     const name = getDisplayName(id);
@@ -200,7 +238,7 @@ if (needImprove.length > 0) {
   sections.push('\n### 需要改进的设计\n' + makeMergedLines(needImprove).join('\n'));
 }
 
-// Last packages: 能永动的武将, 有问题的设计 (always at the very end)
+// Last packages: 能永动的武将, 有问题的设计 (always at the very end, no suffix)
 for (const pkg of pkgLast) {
   const ids = packages[pkg];
   if (!ids || ids.length === 0) continue;

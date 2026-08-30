@@ -146,6 +146,19 @@ const dynamicTranslates = {
 		const zhoushiName = !initiator || initiator === player ? blue("你") : blue(get.translation(initiator));
 		return `${head}，使用【杀】后，可以令所有序号内角色各重铸一至二张牌，各类型的唯一失去者可以使用其失去的同类型牌。锁定技，“${get.poptip("zhuoming_fengqi")}”被连续拒绝发动两次后，删去前者的序号及内容，被连续发动两次后，周始发动者改为后者。周始：${zhoushiName}令一名角色弃置一种类型的所有牌，然后添加一个内容为其的序号。`;
 	},
+	xuandie_junce(player) {
+		const red = (text) => `<span style="color:#ff4444">${text}</span>`;
+		const sides = player.storage.xuandie_junce_sides || [
+			["sha", "jiu", "tiesuo"],
+			["shan", "tao", "guohe"],
+		];
+		// 两个列表实时生成并标蓝（表示动态部分）；单牌名侧受光环显示为红色的【无中生有】（附原牌名），恢复时自动还原
+		const fmt = (side) =>
+			side.length == 1
+				? `${red("【无中生有】")}（原【${get.translation(side[0])}】）`
+				: blue(`【${side.map((name) => get.translation(name)).join("/")}】`);
+		return `你可以将${fmt(sides[0])}、${fmt(sides[1])}当另一侧一张牌使用并将两者移至同侧。任意侧唯一需要使用的牌名改为【无中生有】。`;
+	},
 };
 
 export default dynamicTranslates;
