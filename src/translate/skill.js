@@ -288,6 +288,8 @@ export const skillTranslate = {
 	yachai_shibian_info: "锁定技，当牌堆底的牌发生变化后，你摸一张牌，然后若你本回合以此法摸牌数大于体力上限，你失去1点体力且本技能失效直到本回合结束。",
 	clanlunyi: "沦佚",
 	clanlunyi_info: "宗族技，锁定技，当同族角色的牌进入弃牌堆时，你将其中一张牌置于牌堆底。",
+	clan_guoting: "过庭",
+	clan_guoting_info: "宗族技，锁定技，出牌阶段结束时，若有同族角色已受伤，你重铸手中唯一最多花色的牌，并横置等量名角色。",
 	yachai_qingjie: "清界",
 	yachai_qingjie_info: "出牌阶段各限一次，你可以将手牌摸至体力上限或弃置至少一张手牌。出牌阶段结束时，你可以令一名其他角色执行你本阶段未执行过的一项。",
 	yachai_chenxun: "陈训",
@@ -441,6 +443,12 @@ export const skillTranslate = {
 	zishu_mitu: "迷途",
 	zishu_mitu_info:
 		"锁定技，你的回合开始时，按三条规则重新排列阶段顺序。",
+	zishu_henglan: "衡澜",
+	zishu_henglan_info:
+		"每轮开始时，你可以移动场上的一张牌，或将你区域里的一张牌交给一名其他角色。本轮因此失去牌的角色和因此获得牌的角色，每名角色每轮限一次，其受到伤害后可以摸X张牌（X为这两名角色本轮受伤次数之和）。",
+	zishu_jibi: "急鞭",
+	zishu_jibi_info:
+		"每回合限一次，你可以视为使用一张无次数限制的【杀】，此【杀】的目标可以将一张坐骑牌当【闪】使用。若此【杀】是你本回合使用的首张牌，此【杀】结算后，目标回复1点体力。",
 	zishu_jinlu: "燼路",
 	zishu_jinlu_info:
 		"使用牌后或造成伤害后，你可对调「迷途」的两条规则。你的回合结束后，若本回合的阶段排列与默认顺序完全相同，你受到X点火焰伤害并选择另一名角色受到X点火焰伤害（X为你已进行过的回合数）。",
@@ -522,6 +530,7 @@ export const skillTranslate = {
 	threed_xuyi1: "恤遗",
 	"threed_xuyi1_info":
 		"没有手牌的角色可以令你选择是否：与其各摸一张牌以令其视为使用【桃】；若其使用此【桃】时未处于濒死状态，其本局游戏不能再发动〖恤遗〗，且你改为将手牌摸至上限。",
+	threed_xuyi1_use: "恤遗",
 	threed_xuyi2: "序仪",
 	"threed_xuyi2_info":
 		"每种手牌数各限一次，你可以将所有手牌当【无懈可击】使用并令本局游戏你的手牌上限+1，然后你可以令一名手牌上限不小于你的角色摸两张牌。",
@@ -597,6 +606,24 @@ export const skillTranslate = {
 	qunyou_mingce: "明策",
 	qunyou_mingce_info:
 		"你可以明置手牌中一种类型的所有牌视为使用本回合未以此法使用过的一张普通锦囊牌。当你有明置牌，成为牌的目标时，若此牌的类别与明置牌相同，你失去一点体力；否则你回复一点体力。你使用明置牌无距离和次数限制。",
+	xuandie_yuwei: "逾围",
+	xuandie_yuwei_info: "你可以以移出方式使用牌并摸牌至X张，令本技能于你使用X张牌前失效、失效X回合后失去。（X为上一张移出牌点数）",
+	xuandie_yuwei_restore_bg: "复",
+	xuandie_yuwei_lose_bg: "失",
+	qunyou_shushou: "疏守",
+	qunyou_shushou_info: "锁定技，当你每回合使用前四张牌时，你依次执行前X项，若无法执行则从首项继续执行：摸一张牌；弃置四张手牌；视为未使用过牌；此项无法执行。（X为此牌牌名字数）",
+	qunyou_huaisui: "懷綏",
+	qunyou_huaisui_info: "转换技，出牌阶段，你可以将一张①红牌当【远交近攻】②黑牌当【兵粮寸断】使用并令手牌数小于你的目标摸一张牌。",
+	qunyou_yangxi: "養隙",
+	qunyou_yangxi_info: "攻击范围内包含你且手牌数大于你的角色的回合开始时，你可获得其一张手牌，若为伤害牌其对你使用之且你无法响应。",
+	qunyou_shili: "识李",
+	qunyou_shili_info: "你不以此法一次性获得或失去两张牌时，你可以视为使用一张【推心置腹】，然后给目标分配一张触发此技能的牌。",
+	qunyou_huimo: "晦默",
+	qunyou_huimo_info: "出牌阶段限一次，你可以令你和任意势力不同的角色同时选择：1.共同拼点；2.摸一张牌。赢者获得所有拼点牌、其余角色须将手牌数弃至与最少者相同。",
+	qunyou_lingzhi: "令智",
+	qunyou_lingzhi_info: "锁定技，若你手牌数不小于体力上限或手牌上限，你获得牌后，移动场上一张牌或分配一张你的牌。",
+	qunyou_chengzhi: "诚质",
+	qunyou_chengzhi_info: "每回合结束时，你可以令当前回合角色检索一张锦囊牌，然后其获得亮出牌中点数唯一最大的牌，你获得剩余亮出的牌，否则你须将检索的锦囊牌当【无中生有】使用，然后此技能本轮失效。",
 	qunyou_dinglue: "定略",
 	qunyou_dinglue_info: `当你的体力值变化后，你暗置明置牌中一个类别的牌。当你进入濒死状态时，你可以令一名其他角色获得${get.poptip("qunyou_mingce")}。`,
 	zishu_buqun: "不群",
@@ -625,4 +652,14 @@ export const skillTranslate = {
 	qiufeng_paoshi: "袍虱",
 	qiufeng_paoshi_info:
 		"转换技，出牌阶段你可以将本轮弃牌堆两张基本牌置于牌堆两侧，视为使用一张与二者牌名①皆相同②皆不同的基本牌。（标记实时显示本轮弃牌堆各基本牌数量）",
+	zhuoming_fengqi: "烽起",
+	zhuoming_fengqi_info:
+		`转换技，①你，使用【杀】后，可以令所有序号内角色各重铸一至二张牌，各类型的唯一失去者可以使用其失去的同类型牌。锁定技，“${get.poptip("zhuoming_fengqi")}”被连续拒绝发动两次后，删去前者的序号及内容，被连续发动两次后，周始发动者改为后者。周始：你令一名角色弃置一种类型的所有牌，然后添加一个内容为其的序号。`,
+	zhuoming_hengchi: "横驰",
+	zhuoming_hengchi_info:
+		"出牌阶段每种手牌数限一次，若你的手牌数唯一，则你可以重铸所有手牌，然后使用其中一张符合拥有的连招技中当前连招进度的牌，否则你将其中一张牌当作-1马置入一名角色的任意装备栏。（可替换原装备）",
+	zhuoming_shuocheng: "朔骋",
+	zhuoming_shuocheng_info:
+		"连招技（自己为唯一目标的牌＋其他角色为唯一目标的牌），若此牌为【杀】，则你可以令之多结算X次；否则，你可以弃置目标角色X张牌并获得其中的【杀】且使用这些【杀】时无次数限制。（X为你场上和攻击范围内能增加攻击范围的牌数）",
+	zhuoming_shuocheng_tag: "朔骋",
 };

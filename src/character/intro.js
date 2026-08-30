@@ -101,5 +101,13 @@ export const characterIntro = {
 	qiufeng_xiahouhui: "设计：夜已央<br>修改：一技能不再失效，二技能改为本轮弃牌堆；",
 	qunyou_guanyu: "来源：BV12Y8B6FE3n",
 	zishu_maohuanghou: "设计：环己醇<br>评价：",
+	zishu_guli: "设计：yyuan<br>评价：",
 	zhuoming_mateng: "设计：孝文白王<br>评价：",
+	zhuoming_fq_mateng: "设计：梦揽星河",
+	zhuoming_sc_mateng: "设计：伊藤幸子",
+	xuandie_xunguan: "设计：玄蝶",
+	qunyou_zhongjin: "来源：BV1r53b61Ep1",
+	qunyou_feiyi: "设计：阿桔是我",
+	qunyou_clan_xunzhuan: "设计：此方",
+	qunyou_clan_wangrong: "设计：璐璐",
 };

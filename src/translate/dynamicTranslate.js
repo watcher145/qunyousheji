@@ -128,6 +128,24 @@ const dynamicTranslates = {
 		const act = cond1 && cond2 ? "使用" : "弃置";
 		return `${timing}，你可以${act}一张牌；然后若你手牌数差X成为手牌数最多，你摸X张牌，此阶段此技能失效，且你使用牌均无次数、距离限制（X为本回合弃牌堆中伤害牌数）。若你装备牌的牌数不少于一号位，你受到伤害后也可发动；若一号位体力值不多于你，你回复体力后也可发动。若两项条件均满足，“弃置”改为“使用”。`;
 	},
+	zhuoming_fengqi(player) {
+		const state = player.storage.zhuoming_fengqi || 0;
+		const slots = player.storage.zhuoming_fengqi_slots || [];
+		let head = "转换技，";
+		if (!slots.length) {
+			head += "序号：无";
+		} else {
+			for (let i = 0; i < slots.length; i++) {
+				const s = slots[i];
+				const num = i < 20 ? String.fromCodePoint(0x2460 + i) : `(${i + 1})`;
+				const sub = s.player === player ? "你" : get.translation(s.player);
+				head += i === state ? blue(num + sub) : num + sub;
+			}
+		}
+		const initiator = player.storage.zhuoming_fengqi_zhoushi;
+		const zhoushiName = !initiator || initiator === player ? blue("你") : blue(get.translation(initiator));
+		return `${head}，使用【杀】后，可以令所有序号内角色各重铸一至二张牌，各类型的唯一失去者可以使用其失去的同类型牌。锁定技，“${get.poptip("zhuoming_fengqi")}”被连续拒绝发动两次后，删去前者的序号及内容，被连续发动两次后，周始发动者改为后者。周始：${zhoushiName}令一名角色弃置一种类型的所有牌，然后添加一个内容为其的序号。`;
+	},
 };
 
 export default dynamicTranslates;

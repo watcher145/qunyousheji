@@ -99,5 +99,13 @@ export const characterTitle = {
 	qiufeng_xiahouhui: "熠熠珠玉",
 	qunyou_guanyu: "义武千秋",
 	zishu_maohuanghou: "江心何怨",
+	zishu_guli: "争舵快航",
 	zhuoming_mateng: "驰陇横秋",
+	zhuoming_fq_mateng: "边雁朔南",
+	zhuoming_sc_mateng: "龙马腾云",
+	xuandie_xunguan: "门蔻丰华",
+	qunyou_zhongjin: "徒劳代逸",
+	qunyou_feiyi: "止步无前",
+	qunyou_clan_xunzhuan: "明允笃诚",
+	qunyou_clan_wangrong: "璞隐九曲",
 };

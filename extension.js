@@ -39,6 +39,7 @@ export default function () {
 				"image/character/qunyou_liukun.jpg",
 				"image/character/qunyou_sp_wenyang.jpg",
 				"image/character/qunyou_simayi.jpg",
+				"image/character/xuandie_xunguan.png",
 			],
 			card: [],
 			skill: [],
