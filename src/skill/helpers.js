@@ -2364,6 +2364,26 @@ export function qunyou_getDiscardSuits() {
 
 // ====== 燼路 交换UI ======
 export async function jinluSwapUI(player) {
+	// 非本地玩家（AI）：不走交互UI，随机决定是否对调及对调哪两个位置
+	if (player != game.me) {
+		if (Math.random() < 0.5) return { bool: false };
+		const left = player.storage.zishu_mitu_left;
+		const right = player.storage.zishu_mitu_right;
+		const slots = [];
+		for (let i = 0; i < 3; i++) {
+			slots.push(["left", i]);
+			slots.push(["right", i]);
+		}
+		const a = slots.randomGet();
+		let b = slots.randomGet();
+		while (b[0] === a[0] && b[1] === a[1]) b = slots.randomGet();
+		const arr1 = a[0] === "left" ? left : right;
+		const arr2 = b[0] === "left" ? left : right;
+		const tmp = arr1[a[1]];
+		arr1[a[1]] = arr2[b[1]];
+		arr2[b[1]] = tmp;
+		return { bool: true, swapped: true };
+	}
 	return new Promise(resolve => {
 		const left = player.storage.zishu_mitu_left;
 		const right = player.storage.zishu_mitu_right;

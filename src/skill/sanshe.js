@@ -62,6 +62,40 @@ import {
 	qunyou_zhuoqu_isOutsideDiscardPhase
 } from "./helpers.js";
 
+// 君侧：两侧牌名的初始分布（六个牌名始终各属一侧，转化与移侧围绕此状态进行）
+const XUANDIE_JUNCE_INIT = [
+	["sha", "jiu", "tiesuo"],
+	["shan", "tao", "guohe"],
+];
+const xuandie_junce_getSides = (player) => player.storage.xuandie_junce_sides || XUANDIE_JUNCE_INIT;
+const xuandie_junce_sideIndexOf = (player, name) => xuandie_junce_getSides(player).findIndex((side) => side.includes(name));
+
+// 相赴：四种差值结果对应的印牌（类别 0相思·杀 1相逢·酒 2相失·闪 3相守·桃）
+const XUANDIE_XIANGFU_NAMES = ["sha", "jiu", "shan", "tao"];
+// 差值（使用者手牌数−搭档手牌数）调整后的变化：少者摸一张、多者弃一张，故差值向0靠近2；相等则不变
+const xuandie_xiangfu_diffAfter = (dOld) => (dOld > 0 ? dOld - 2 : dOld < 0 ? dOld + 2 : 0);
+const xuandie_xiangfu_category = (dOld, dNew) => {
+	if (dNew === dOld) return 3; // 相守·未变化
+	if (dNew === 0) return 1; // 相逢·变为0
+	if (dOld * dNew < 0) return 2; // 相失·变为相反数
+	return 0; // 相思·正负性不变
+};
+
+// 击楫：刷新「击」标记（行三可发动时击字变红）并保证「击」位于「楫」上方
+const xuandie_jiji_refreshMark = (player) => {
+	const counts = player.storage.xuandie_jiji_counts || [0, 0, 0];
+	const active = counts[2] <= counts[0] && counts[2] <= counts[1];
+	const markJi = player.marks["xuandie_jiji"];
+	if (markJi) {
+		const el = markJi.querySelector(".skillmark") || markJi.querySelector(".background");
+		if (el) el.style.color = active ? "#ff4444" : "";
+	}
+	const markCard = player.marks["xuandie_jiji_markCard"];
+	if (markJi && markCard && markJi.nextElementSibling !== markCard) {
+		player.node.marks.insertBefore(markJi, markCard);
+	}
+};
+
 // 散设 — 其余 qunyou_* 技能
 export const skills = {
 // === 审时 ===
@@ -9021,23 +9055,16 @@ qunyou_qilue: {
 // === 逾围 ===
 	xuandie_yuwei: {
 		audio: 2,
-		enable: ["chooseToUse", "chooseToRespond"],
+		enable: "chooseToUse",
 		position: "h",
-		loseTo: "special",
 		filter(event, player) {
-			// 有可“以移出方式使用”的手牌（仅基本牌与普通锦囊；装备/延时按牌面不可由此使用）
+			// 有可“以移出方式使用”的手牌（任意牌型；可用性由 event.filterCard 按牌面探测）
 			// 防自递归：本技能自身的选择流程事件里 event.filterCard 已是本技能过滤层的包装，不能再调
 			const inner = event.skill == "xuandie_yuwei";
-			return player.hasCard((card) => {
-				const type = get.type(card);
-				if (type != "basic" && type != "trick") return false;
-				return inner || event.filterCard(card, player, event);
-			}, "h");
+			return player.hasCard((card) => inner || event.filterCard(card, player, event), "h");
 		},
 		filterCard(card, player, event) {
 			event = event || _status.event;
-			const type = get.type(card);
-			if (type != "basic" && type != "trick") return false;
 			// 防自递归：同上（gameEvent.js:761 会把本技能 filterCard 包装为事件的 filterCard/filterCard2）
 			if (event && (event.skill == "xuandie_yuwei" || event._skill == "xuandie_yuwei")) return true;
 			return event.filterCard(card, player, event);
@@ -9052,11 +9079,25 @@ qunyou_qilue: {
 			}
 			return get.autoViewAs({ name: get.name(card), nature: get.nature(card), suit: get.suit(card), number: get.number(card), isCard: true }, cards);
 		},
+		async precontent(event, trigger, player) {
+			// 以移出方式使用：牌先置于武将牌上（移出游戏，官方笔伐/威肆同款 addToExpansion），再结算
+			const cards = event.result?.cards || [];
+			if (!cards.length) return;
+			const card = cards[0];
+			player.addToExpansion(card);
+			const type = get.type(card);
+			if (type == "basic" || type == "trick") {
+				// 基本牌/普通锦囊：以无实体材料的虚拟牌结算，实体牌留在武将牌上
+				event.result.card = get.autoViewAs({ name: get.name(card), nature: get.nature(card), suit: get.suit(card), number: get.number(card), isCard: true });
+				event.result.cards = [];
+			}
+			// 装备牌/延时锦囊：保留实体牌参与结算，结算时由引擎带入装备区/判定区（“去它该去的地方”）
+		},
 		check(card) {
 			if (_status.event.type != "phase") return 1;
 			return get.order(card);
 		},
-		prompt: "逾围：以移出方式使用一张基本牌或普通锦囊牌，摸牌至X张（X为此牌点数），本技能失效至你使用X张牌，失效X回合后失去",
+		prompt: "逾围：以移出方式使用一张牌，摸牌至X张（X为此牌点数），本技能失效至你使用X张牌，失效X回合后失去",
 		ai: {
 			order: 4,
 			result: { player: 1 },
@@ -9074,7 +9115,6 @@ qunyou_qilue: {
 				},
 				async content(event, trigger, player) {
 					const X = get.number(trigger.card);
-					console.log("[逾围-effect] 触发, X =", X, "skill =", event.skill);
 					await player.drawTo(X);
 					// 用 awakenSkill/restoreSkill 对：与已用限定技/昂扬技同款的失效变灰显示
 					player.awakenSkill("xuandie_yuwei");
@@ -9096,12 +9136,9 @@ qunyou_qilue: {
 				onremove: true,
 				trigger: { player: "useCard1", global: "phaseBeginStart" },
 				filter(event, player) {
-					const on = player.awakenedSkills.includes("xuandie_yuwei");
-					console.log("[逾围-count filter]", event.triggername || event.name, "失效中 =", on);
-					return on;
+					return player.awakenedSkills.includes("xuandie_yuwei");
 				},
 				async content(event, trigger, player) {
-					console.log("[逾围-count content] 触发名 =", event.triggername, "| 复剩余 =", player.countMark("xuandie_yuwei_restore"), "| 失剩余 =", player.countMark("xuandie_yuwei_lose"));
 					if (event.triggername == "useCard1") {
 						player.removeMark("xuandie_yuwei_restore", 1, false);
 						if (player.countMark("xuandie_yuwei_restore") <= 0) {
@@ -9149,6 +9186,531 @@ qunyou_qilue: {
 					content(storage, player) {
 						return "〖逾围〗失效" + storage + "个回合后失去";
 					},
+				},
+			},
+		},
+	},
+
+// === 君侧 ===
+	xuandie_junce: {
+		audio: 2,
+		enable: "chooseToUse",
+		init(player) {
+			if (!player.storage.xuandie_junce_sides) {
+				player.storage.xuandie_junce_sides = [
+					["sha", "jiu", "tiesuo"],
+					["shan", "tao", "guohe"],
+				];
+			}
+		},
+		filter(event, player) {
+			// 防自递归：本技能自身的选择流程事件里 event.filterCard 已是本技能过滤层的包装，不能再调（逾围同款）
+			if (event.skill == "xuandie_junce" || event._skill == "xuandie_junce") {
+				return player.getCards("hes").some((card) => xuandie_junce_sideIndexOf(player, get.name(card, player)) >= 0);
+			}
+			// 材料须属于某一侧；其另一侧的牌名（单牌名侧视为【无中生有】）中存在当前可使用的候选
+			const sides = xuandie_junce_getSides(player);
+			return player.getCards("hes").some((card) => {
+				const idx = xuandie_junce_sideIndexOf(player, get.name(card, player));
+				if (idx < 0) return false;
+				const other = sides[1 - idx];
+				const names = other.length == 1 ? ["wuzhong"] : other;
+				return names.some((name) => event.filterCard(get.autoViewAs({ name }, "unsure"), player, event));
+			});
+		},
+		chooseButton: {
+			dialog(event, player) {
+				const sides = xuandie_junce_getSides(player);
+				// 单牌名侧的候选显示为【无中生有】（光环）
+				const list0 = get.inpileVCardList((info) => (sides[0].length == 1 ? ["wuzhong"] : sides[0]).includes(info[2]));
+				const list1 = get.inpileVCardList((info) => (sides[1].length == 1 ? ["wuzhong"] : sides[1]).includes(info[2]));
+				const args = ["君侧：选择转化后的牌名"];
+				if (list0.length) {
+					args.push('<div class="text center">甲侧牌名（以乙侧的牌使用）</div>', [list0, "vcard"]);
+				}
+				if (list1.length) {
+					args.push('<div class="text center">乙侧牌名（以甲侧的牌使用）</div>', [list1, "vcard"]);
+				}
+				return ui.create.dialog(...args);
+			},
+			check(button) {
+				if (_status.event.getParent().type != "phase") return 1;
+				return get.player().getUseValue(get.autoViewAs({ name: button.link[2] }, null, true));
+			},
+			backup(links, player) {
+				const info = links[0];
+				const displayName = info[2];
+				const sides = xuandie_junce_getSides(player);
+				let targetName = displayName;
+				if (displayName == "wuzhong") {
+					// 光环候选：还原为单牌名侧的原名牌名
+					const single = sides.find((side) => side.length == 1);
+					targetName = single ? single[0] : displayName;
+				}
+				const targetIdx = sides.findIndex((side) => side.includes(targetName));
+				return {
+					audio: "xuandie_junce",
+					// 材料须在目标牌名的另一侧
+					filterCard(card, player2) {
+						return xuandie_junce_sideIndexOf(player2, get.name(card, player2)) == 1 - targetIdx;
+					},
+					selectCard: 1,
+					position: "hes",
+					viewAs: { name: displayName, isCard: true, storage: { xuandie_junce_target: targetName } },
+					popname: true,
+				};
+			},
+			prompt(links) {
+				const info = links[0];
+				const displayName = info[2];
+				const shown = displayName == "wuzhong" ? "【无中生有】（原牌名见技能描述）" : "【" + get.translation(displayName) + "】";
+				return "君侧：将另一侧的一张牌当" + shown + "使用，结算后你可以选择将两个牌名移至同侧";
+			},
+		},
+		ai: {
+			order: 5,
+			result: { player: 1 },
+		},
+		group: ["xuandie_junce_move"],
+		subSkill: {
+			move: {
+				// 转化牌使用结算后：选择将两个牌名之一移至对方所在一侧（单牌名侧的牌名不能移出，唯一合法项自动执行）
+				charlotte: true,
+				direct: true,
+				trigger: { player: "useCardAfter" },
+				filter(event, player) {
+					return event.card?.storage?.xuandie_junce_target && event.cards?.length;
+				},
+				async content(event, trigger, player) {
+					const sides = xuandie_junce_getSides(player);
+					const fromName = get.name(trigger.cards[0], player); // 转换前的牌名
+					const toName = trigger.card.storage.xuandie_junce_target; // 转换后的牌名（光环时为原名）
+					const iFrom = sides.findIndex((side) => side.includes(fromName));
+					const iTo = sides.findIndex((side) => side.includes(toName));
+					if (iFrom < 0 || iTo < 0 || iFrom == iTo) return;
+					const canA = sides[iTo].length > 1; // 将转换后牌名移向转换前牌名一侧
+					const canB = sides[iFrom].length > 1; // 将转换前牌名移向转换后牌名一侧
+					let opt = -1;
+					if (canA && canB) {
+						const result = await player
+							.chooseControl()
+							.set("choiceList", [
+								"将【" + get.translation(toName) + "】移至【" + get.translation(fromName) + "】所在一侧",
+								"将【" + get.translation(fromName) + "】移至【" + get.translation(toName) + "】所在一侧",
+							])
+							.set("prompt", "君侧：请选择移至同侧的方式")
+							.set("ai", () => 0)
+							.forResult();
+						opt = result.index;
+					} else if (canA) {
+						opt = 0;
+					} else if (canB) {
+						opt = 1;
+					}
+					if (opt == 0) {
+						sides[iTo].remove(toName);
+						sides[iFrom].push(toName);
+						game.log(player, "将", "#g【" + get.translation(toName) + "】", "移至了", "#g【" + get.translation(fromName) + "】", "所在一侧");
+					} else if (opt == 1) {
+						sides[iFrom].remove(fromName);
+						sides[iTo].push(fromName);
+						game.log(player, "将", "#g【" + get.translation(fromName) + "】", "移至了", "#g【" + get.translation(toName) + "】", "所在一侧");
+					}
+				},
+			},
+		},
+	},
+
+// === 相赴 ===
+	xuandie_xiangfu: {
+		audio: 2,
+		enable: "chooseToUse",
+		filter(event, player) {
+			// 防自递归：自身选择流程里 event.filterCard 已被包装为备份的过滤层（恒 false），跳过常规可用性探测
+			if (event.skill == "xuandie_xiangfu" || event._skill == "xuandie_xiangfu") {
+				const used = player.storage.xuandie_xiangfu_used || [];
+				return [0, 1, 2, 3].some(
+					(cat) =>
+						!used.includes(cat) &&
+						game.hasPlayer((current) => {
+							if (current == player) return false;
+							const dOld = player.countCards("h") - current.countCards("h");
+							return xuandie_xiangfu_category(dOld, xuandie_xiangfu_diffAfter(dOld)) == cat;
+						})
+				);
+			}
+			// 任一类别：本轮未用 + 存在能产生该结果的搭档 + 该牌常规可用（桃需已受伤，闪不可主动使用）
+			const used = player.storage.xuandie_xiangfu_used || [];
+			return game.hasPlayer((current) => {
+				if (current == player) return false;
+				const dOld = player.countCards("h") - current.countCards("h");
+				const cat = xuandie_xiangfu_category(dOld, xuandie_xiangfu_diffAfter(dOld));
+				if (used.includes(cat)) return false;
+				return event.filterCard(get.autoViewAs({ name: XUANDIE_XIANGFU_NAMES[cat] }, "unsure"), player, event);
+			});
+		},
+		chooseButton: {
+			dialog(event, player) {
+				const used = player.storage.xuandie_xiangfu_used || [];
+				const cats = [0, 1, 2, 3].filter((cat) => {
+					if (used.includes(cat)) return false;
+					if (!event.filterCard(get.autoViewAs({ name: XUANDIE_XIANGFU_NAMES[cat] }, "unsure"), player, event)) return false;
+					return game.hasPlayer((current) => {
+						if (current == player) return false;
+						const dOld = player.countCards("h") - current.countCards("h");
+						return xuandie_xiangfu_category(dOld, xuandie_xiangfu_diffAfter(dOld)) == cat;
+					});
+				});
+				const list = get.inpileVCardList((info) => cats.includes(XUANDIE_XIANGFU_NAMES.indexOf(info[2])));
+				return ui.create.dialog(
+					"相赴：调整手牌，视为使用基本牌（相思·杀｜相逢·酒｜相失·闪｜相守·桃）",
+					[list, "vcard"]
+				);
+			},
+			check(button) {
+				if (_status.event.getParent().type != "phase") return 1;
+				return get.player().getUseValue(get.autoViewAs({ name: button.link[2] }, null, true));
+			},
+			backup(links, player) {
+				const name = links[0][2];
+				return {
+					audio: "xuandie_xiangfu",
+					filterCard: () => false,
+					selectCard: 0,
+					viewAs: { name, isCard: true, storage: { xuandie_xiangfu: true } },
+					log: false,
+					async precontent(event, trigger, player) {
+						const cat = XUANDIE_XIANGFU_NAMES.indexOf(name);
+						// 选搭档（其手牌数差值变化须产生该结果）
+						const result = await player
+							.chooseTarget(true, "相赴：选择一名角色，与其将手牌向彼此调整一张", (card, player2, target) => {
+								if (target == player2) return false;
+								const dOld = player2.countCards("h") - target.countCards("h");
+								return xuandie_xiangfu_category(dOld, xuandie_xiangfu_diffAfter(dOld)) == cat;
+							})
+							.set("ai", (target) => {
+								// 调整使手牌少者得牌、多者弃牌： uniformly 偏好态度较低（敌方）的搭档
+								return -get.attitude(get.player(), target);
+							})
+							.forResult();
+						const partner = result?.targets?.[0];
+						if (!partner) {
+							event.cancel();
+							return;
+						}
+						// 一心：仅首任搭档获得〖相赴〗；本体换搭档或借用者选错人，持有者均永久失去，此后不再授予任何人
+						const owner = game.findPlayer((cur) => cur.hasSkill("xuandie_yixin"));
+						if (player.hasSkill("xuandie_yixin")) {
+							const state = (player.storage.xuandie_yixin ||= { first: null, holder: null, banned: [] });
+							if (!state.holder) {
+								if (!state.first) {
+									// 首任搭档：唯一一次授予
+									state.first = partner;
+									state.holder = partner;
+									partner.addSkill("xuandie_xiangfu");
+									game.log(partner, "视为拥有", "#g【相赴】");
+								}
+							} else if (partner != state.holder) {
+								// 本体换搭档：当前持有者永久失去，不再授予任何人
+								state.holder.removeSkill("xuandie_xiangfu");
+								if (!state.banned.includes(state.holder)) state.banned.push(state.holder);
+								game.log(state.holder, "永久失去", "#g【相赴】");
+								state.holder = null;
+							}
+						} else if (owner && player != owner) {
+							const state = (owner.storage.xuandie_yixin ||= { first: null, holder: null, banned: [] });
+							if (partner != owner && state.holder == player) {
+								// 借用者相赴时未选择本体：永久失去，不再授予任何人
+								player.removeSkill("xuandie_xiangfu");
+								if (!state.banned.includes(player)) state.banned.push(player);
+								state.holder = null;
+								game.log(player, "因〖相赴〗未选择", owner, "，永久失去", "#g【相赴】");
+							}
+						}
+						// 双向调整：手牌少者摸一张，多者弃一张（自选），相等则均不变
+						const dOld = player.countCards("h") - partner.countCards("h");
+						if (dOld > 0) {
+							await player.chooseToDiscard(1, "h", true);
+							await partner.draw();
+						} else if (dOld < 0) {
+							await player.draw();
+							await partner.chooseToDiscard(1, "h", true);
+						}
+						// 每轮各限一次（各使用者独立计数）
+						(player.storage.xuandie_xiangfu_used ||= []).push(cat);
+					},
+				};
+			},
+			prompt(links) {
+				return "相赴：与一名其他角色将手牌向彼此调整一张，按差值变化视为使用【" + get.translation(links[0][2]) + "】";
+			},
+		},
+		ai: {
+			order: 5,
+			result: { player: 1 },
+		},
+		group: ["xuandie_xiangfu_reset"],
+		subSkill: {
+			reset: {
+				// 每轮各限一次：轮次开始清空（本体与借用者各自独立）
+				charlotte: true,
+				trigger: { global: "roundStart" },
+				forced: true,
+				popup: false,
+				silent: true,
+				filter(event, player) {
+					return player.storage.xuandie_xiangfu_used?.length;
+				},
+				content(event, trigger, player) {
+					player.storage.xuandie_xiangfu_used = [];
+				},
+			},
+		},
+	},
+
+// === 一心 ===
+	xuandie_yixin: {
+		locked: true,
+		mark: true,
+		marktext: "一",
+		intro: {
+			content(storage, player) {
+				const state = player.storage.xuandie_yixin;
+				if (!state?.first) return "当前没有参与过〖相赴〗的其他角色";
+				const holder = state.holder ? "当前持有者：" + get.translation(state.holder) + "（视为拥有〖相赴〗）" : "〖相赴〗已被永久失去，不再有任何角色获得";
+				const banned = state.banned?.length ? "；已永久失去者：" + state.banned.map((cur) => get.translation(cur)).join("、") : "";
+				return "首任搭档：" + get.translation(state.first) + "；" + holder + banned;
+			},
+		},
+		// 授予/转移/永久收回逻辑实现于〖相赴〗的 precontent（搭档选择发生在彼处，一心为其锁定声明与状态展示）
+	},
+
+// === 击楫 ===
+	xuandie_jiji: {
+		audio: 2,
+		// 行三仅可「使用」（无懈窗口/濒死求桃走 chooseToUse），不可打出，故无 chooseToRespond
+		enable: ["chooseToUse"],
+		// 「击」标记：三行发动次数（行三可发动时击字变红，见 xuandie_jiji_refreshMark）
+		mark: true,
+		intro: {
+			content(storage, player) {
+				const counts = player.storage.xuandie_jiji_counts || [0, 0, 0];
+				return "移出/移去 " + counts[0] + " 次；摸牌 " + counts[1] + " 次；视为使用 " + counts[2] + " 次";
+			},
+		},
+		init(player) {
+			player.storage.xuandie_jiji_counts ||= [0, 0, 0];
+			// 先创建「楫」标记，随后自动创建的「击」标记（本技能 mark）自然位于其上方
+			player.markSkill("xuandie_jiji_markCard");
+			xuandie_jiji_refreshMark(player);
+		},
+		// 行三：视为使用一张移出牌（虚拟使用，牌留在武将牌上；无懈/桃/闪经事件探测自然接通）
+		filter(event, player) {
+			if (event.skill == "xuandie_jiji" || event._skill == "xuandie_jiji") {
+				// 自身选择流程：跳过常规可用性探测（彼时 event.filterCard 已被包装），仅查次数与移出牌
+				const counts = player.storage.xuandie_jiji_counts || [0, 0, 0];
+				if (!(counts[2] <= counts[0] && counts[2] <= counts[1])) return false;
+				return player.countExpansions("xuandie_jiji_markCard") > 0;
+			}
+			const counts = player.storage.xuandie_jiji_counts || [0, 0, 0];
+			// 本行次数不超过其余两行（允许并列）
+			if (!(counts[2] <= counts[0] && counts[2] <= counts[1])) return false;
+			const exps = player.getExpansions("xuandie_jiji_markCard");
+			if (!exps.length) return false;
+			return exps.some((card) => event.filterCard(get.autoViewAs({ name: get.name(card) }, "unsure"), player, event));
+		},
+		chooseButton: {
+			dialog(event, player) {
+				const exps = player.getExpansions("xuandie_jiji_markCard");
+				const seen = new Set();
+				const list = [];
+				for (const card of exps) {
+					const name = get.name(card);
+					const nature = get.nature(card);
+					const key = name + (nature || "");
+					if (seen.has(key)) continue;
+					seen.add(key);
+					list.push([get.type(name), "", name, nature]);
+				}
+				return ui.create.dialog("击楫：视为使用一张移出牌", [list, "vcard"]);
+			},
+			check(button) {
+				if (_status.event.getParent().type != "phase") return 1;
+				return get.player().getUseValue(get.autoViewAs({ name: button.link[2], nature: button.link[3] }, null, true));
+			},
+			backup(links, player) {
+				return {
+					audio: "xuandie_jiji",
+					filterCard: () => false,
+					selectCard: 0,
+					viewAs: { name: links[0][2], nature: links[0][3], isCard: true, storage: { xuandie_jiji_line3: true } },
+					log: false,
+					async precontent(event, trigger, player) {
+						player.logSkill("xuandie_jiji");
+						const counts = (player.storage.xuandie_jiji_counts ||= [0, 0, 0]);
+						counts[2]++;
+						xuandie_jiji_refreshMark(player);
+					},
+				};
+			},
+			prompt(links) {
+				return "击楫：视为使用一张移出牌【" + get.translation(links[0][2]) + "】（牌留在武将牌上）";
+			},
+		},
+		ai: {
+			order: 5,
+			// 卫境同款接口：respondSha/respondShan 标签是“使用型”询问的可达开关（本引擎闪响应即使用闪，
+			// 走 chooseToUse(type respondShan)），skillTagFilter 排除打出型检查（arg === "respond"）；
+			// save 打开濒死求桃询问（canSave）；hiddenCard 喂 hasWuxie 无懈预检
+			respondSha: true,
+			respondShan: true,
+			save: true,
+			skillTagFilter(player, tag, arg) {
+				const counts = player.storage.xuandie_jiji_counts || [0, 0, 0];
+				// 行三当前可发动（次数不超过其余两行）
+				if (!(counts[2] <= counts[0] && counts[2] <= counts[1])) return false;
+				const names = player.getExpansions("xuandie_jiji_markCard").map((card) => get.name(card));
+				if (tag == "save") {
+					// arg 为濒死角色对象
+					return names.includes("tao");
+				}
+				// 仅使用：打出型检查不放行
+				if (arg === "respond") return false;
+				switch (tag) {
+					case "respondSha":
+						return names.includes("sha");
+					case "respondShan":
+						return names.includes("shan");
+				}
+				return false;
+			},
+			hiddenCard(player, name) {
+				const counts = player.storage.xuandie_jiji_counts || [0, 0, 0];
+				if (!(counts[2] <= counts[0] && counts[2] <= counts[1])) return false;
+				return player.getExpansions("xuandie_jiji_markCard").some((card) => get.name(card) == name);
+			},
+			result: {
+				player(player) {
+					if (_status.event.type == "dying") {
+						return get.attitude(player, _status.event.dying);
+					}
+					return 1;
+				},
+			},
+		},
+		group: ["xuandie_jiji_move", "xuandie_jiji_draw", "xuandie_jiji_markCard"],
+		subSkill: {
+			move: {
+				// 行一：当即时牌进入弃牌堆后，移出（手牌/装备区同名牌置于武将牌上）或移去（武将牌上同名牌置于弃牌堆）
+				audio: "xuandie_jiji",
+				name: "击楫",
+				charlotte: true,
+				direct: true,
+				trigger: { global: ["loseAfter", "loseAsyncAfter", "cardsDiscardAfter", "equipAfter"] },
+				filter(event, player) {
+					return event.getd?.().some((card) => {
+						const name = get.name(card, false);
+						if (get.type(name) != "basic" && get.type(name) != "trick") return false; // 即时牌
+						if (player.getCards("he").some((c) => get.name(c, player) == name)) return true;
+						return player.getExpansions("xuandie_jiji_markCard").some((c) => get.name(c) == name);
+					});
+				},
+				async content(event, trigger, player) {
+					const entered = trigger.getd().filter((card) => {
+						const name = get.name(card, false);
+						if (get.type(name) != "basic" && get.type(name) != "trick") return false;
+						return player.getCards("he").some((c) => get.name(c, player) == name) || player.getExpansions("xuandie_jiji_markCard").some((c) => get.name(c) == name);
+					});
+					const names = [...new Set(entered.map((card) => get.name(card, false)))];
+					let targetName;
+					if (names.length > 1) {
+						const pick = await player
+							.chooseButton(["击楫：有即时牌进入弃牌堆，选择一张进行移出/移去", [names.map((n) => [get.type(n), "", n]), "vcard"]], true)
+							.set("ai", (button) => get.player().getUseValue({ name: button.link[2] }))
+							.forResult();
+						targetName = pick?.links?.[0]?.[2];
+						if (!targetName) return;
+					} else {
+						targetName = names[0];
+					}
+					const outs = player.getCards("he").filter((c) => get.name(c, player) == targetName);
+					const ins = player.getExpansions("xuandie_jiji_markCard").filter((c) => get.name(c) == targetName);
+					// direct + chooseBool 交待信息：双向、仅可移出、仅可移去三种措辞
+					let boolPrompt;
+					if (outs.length && ins.length) {
+						boolPrompt = "击楫：是否移出或移去一张【" + get.translation(targetName) + "】？";
+					} else if (outs.length) {
+						boolPrompt = "击楫：是否移出一张【" + get.translation(targetName) + "】（置于武将牌上）？";
+					} else {
+						boolPrompt = "击楫：是否移去武将牌上的一张【" + get.translation(targetName) + "】（置于弃牌堆）？";
+					}
+					const result = await player.chooseBool(boolPrompt).set("ai", () => true).forResult();
+					if (!result?.bool) return;
+					player.logSkill("xuandie_jiji_move");
+					let moveOut = outs.length > 0;
+					if (outs.length && ins.length) {
+						const ctrl = await player
+							.chooseControl(["移出：将一张同名牌置于武将牌上", "移去：将武将牌上的一张同名牌置于弃牌堆"])
+							.set("prompt", "击楫：请选择方式")
+							.set("ai", () => 0)
+							.forResult();
+						moveOut = ctrl.control.startsWith("移出");
+					}
+					if (moveOut) {
+						let card = outs[0];
+						if (outs.length > 1) {
+							const pick = await player.chooseCard("he", true, "击楫：选择移出的一张同名牌", (c) => outs.includes(c)).forResult();
+							card = pick?.cards?.[0] ?? card;
+						}
+						if (card) await player.addToExpansion({ cards: [card], source: player, animate: "give", gaintag: ["xuandie_jiji_markCard"] });
+					} else {
+						let card = ins[0];
+						if (ins.length > 1) {
+							const pick = await player.chooseButton(["击楫：选择移去的一张同名牌", ins], true).set("ai", (button) => get.value(button.link)).forResult();
+							card = pick?.links?.[0] ?? card;
+						}
+						if (card) await player.loseToDiscardpile({ cards: [card] });
+					}
+					const counts = (player.storage.xuandie_jiji_counts ||= [0, 0, 0]);
+					counts[0]++;
+					xuandie_jiji_refreshMark(player);
+				},
+			},
+			draw: {
+				// 行二（蒺藜式）：本回合使用第X张牌后（X=移出牌数），可以摸牌至X张
+				audio: "xuandie_jiji",
+				name: "击楫",
+				charlotte: true,
+				direct: true,
+				trigger: { player: "useCardAfter" },
+				filter(event, player) {
+					const X = player.countExpansions("xuandie_jiji_markCard");
+					if (X < 1) return false;
+					if (player.getHistory("useCard").length != X) return false;
+					return player.countCards("h") < X;
+				},
+				async content(event, trigger, player) {
+					const X = player.countExpansions("xuandie_jiji_markCard");
+					const result = await player
+						.chooseBool("击楫：你本回合已使用了第" + X + "张牌，是否摸牌至" + X + "张？")
+						.set("ai", () => true)
+						.forResult();
+					if (!result?.bool) return;
+					player.logSkill("xuandie_jiji_draw");
+					const counts = (player.storage.xuandie_jiji_counts ||= [0, 0, 0]);
+					counts[1]++;
+					xuandie_jiji_refreshMark(player);
+					await player.drawTo(X);
+				},
+			},
+			markCard: {
+				// 「楫」标记：显示武将牌上的移出牌牌面
+				name: "击楫",
+				charlotte: true,
+				mark: true,
+				intro: {
+					content: "expansion",
+					markcount: "expansion",
 				},
 			},
 		},
