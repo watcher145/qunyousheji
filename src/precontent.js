@@ -111,6 +111,10 @@ export function precontent() {
 			return span.outerHTML;
 		},
 	});
+	lib.namePrefix.set('蝶设', {
+        color: '#ff6a6a',
+        showName: '蝶',
+    });
 	lib.namePrefix.set("谋", {
 		color: "#def7ca",
 		nature: "woodmm",

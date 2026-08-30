@@ -28,6 +28,7 @@ const pkgPrefixMap = {
 	yachaiclan: "崖柴",
 	qunyou_sinatsuriku: "西夏",
 	qunyou_yongdong: "群友",
+	xuandie_design: "蝶设",
 };
 
 function applyCharacterPrefixes(translate) {
@@ -75,14 +76,15 @@ const characterSortTranslate = {
 	qunyou_sinatsuriku:"西夏笠谷",
 	qunyou_gaijin:"有问题的设计",
 	qunyou_yongdong:"能永动的武将",
+	xuandie_design: "玄蝶的设计",
 };
 
 const characterSort = {
 	threed: ["threed_dongbai", "threed_heji"],
 	qiufeng: ["qiufeng_zhangqiying", "qiufeng_hushi", "qiufeng_xiahouhui"],
 	xiaobai: ["xiaobai_lizhaoyi", "xiaobai_lite", "xiaobai_suojing"],
-	zishubei: ["zishu_liyan", "zishu_lvju", "zishu_xunyu", "zishu_wangguan","zishu_panshu", "zishu_sunhe", "zishu_zhangjinyun", "zishu_zangba", "zishu_duanjiong", "zishu_shantao", "zishu_maohuanghou"],
-	zhuoming: ["zhuoming_gongsunyuan", "zhuoming_feili_gongsunyuan", "zhuoming_liuyan", "zhuoming_mateng"],
+	zishubei: ["zishu_liyan", "zishu_lvju", "zishu_xunyu", "zishu_wangguan","zishu_panshu", "zishu_sunhe", "zishu_zhangjinyun", "zishu_zangba", "zishu_duanjiong", "zishu_shantao", "zishu_maohuanghou", "zishu_guli"],
+	zhuoming: ["zhuoming_gongsunyuan", "zhuoming_feili_gongsunyuan", "zhuoming_liuyan", "zhuoming_mateng", "zhuoming_fq_mateng", "zhuoming_sc_mateng"],
 	qunyou_chenjunxieshi: ["qunyou_xiedaoyun", "qunyou_xiean", "qunyou_xiexuan", "qunyou_xielingyun", "qunyou_xieshi"],
 	qunyou_xingheshuo: ["shanhe_zhangjiao", "shanhe_luzhi", "shanhe_dongzhuo", "shanhe_wangyi", "shanhe_jiangwei", "shanhe_hanfu", "shanhe_lusu"],
 	yachaiclan: ["yachaiclan_cuiyan", "yachaiclan_wangxiang", "yachaiclan_diaochan", "yachaiclan_wuyi", "yachaiclan_xunyu",
@@ -91,6 +93,7 @@ const characterSort = {
 	qunyou_sinatsuriku: ["qunyou_yang_wang","qunyou_caoxiancaohua","qunyou_xx_sunce","qunyou_lvlingqi","qunyou_panjun"],
 	qunyou_gaijin: [],
 	qunyou_yongdong: ["qunyou_wanglang"],
+	xuandie_design: ["xuandie_xunguan"],
 };
 
 /**

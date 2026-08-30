@@ -1763,6 +1763,160 @@ zishu_duliang: {
 	},
 },
 
+// === 衡澜 ===
+zishu_henglan: {
+	audio: 2,
+	trigger: { global: "roundStart" },
+	filter(event, player) {
+		if (player.canMoveCard()) return true;
+		return player.countCards("he") > 0 && game.hasPlayer((current) => current != player);
+	},
+	check(event, player) {
+		return 1;
+	},
+	async content(event, trigger, player) {
+		// 重置本轮记录：当事人、已摸角色、受伤次数
+		player.storage.zishu_henglan_pair = null;
+		player.storage.zishu_henglan_used = [];
+		player.storage.zishu_henglan_dmg = {};
+		const choices = [];
+		if (player.canMoveCard()) choices.push("移动场上的一张牌");
+		if (player.countCards("he")) choices.push("分配你的一张牌");
+		if (!choices.length) return;
+		const choice = await player
+			.chooseControl("cancel2")
+			.set("choiceList", choices)
+			.set("prompt", get.prompt("zishu_henglan"))
+			.set("ai", () => 0)
+			.forResult();
+		if (choice.control == "cancel2") return;
+		if (choices[choice.index] == "移动场上的一张牌") {
+			const result = await player.moveCard(true).forResult();
+			if (!result?.bool || !result.targets || result.targets.length < 2) return;
+			player.storage.zishu_henglan_pair = [result.targets[0], result.targets[1]];
+		} else {
+			const give = await player.chooseCard("he", true, "衡澜：选择分配的一张牌").forResult();
+			const card = give?.cards?.[0];
+			if (!card) return;
+			const targetResult = await player
+				.chooseTarget(true, "衡澜：选择一名角色获得这张牌", (cardx, player2, target) => target != player)
+				.forResult();
+			const target = targetResult?.targets?.[0];
+			if (!target) return;
+			await player.give([card], target);
+			player.storage.zishu_henglan_pair = [player, target];
+		}
+	},
+	group: ["zishu_henglan_effect"],
+	subSkill: {
+		effect: {
+			charlotte: true,
+			trigger: { global: "damageEnd" },
+			direct: true,
+			filter(event, player) {
+				return player.storage.zishu_henglan_pair != null;
+			},
+			async content(event, trigger, player) {
+				const pair = player.storage.zishu_henglan_pair;
+				const damaged = trigger.player;
+				// 本轮受伤次数计数（含本次）
+				const map = (player.storage.zishu_henglan_dmg ||= {});
+				map[damaged.playerid] = (map[damaged.playerid] || 0) + 1;
+				if (!pair.includes(damaged)) return;
+				if (player.storage.zishu_henglan_used.includes(damaged.playerid)) return;
+				const X = (map[pair[0].playerid] || 0) + (map[pair[1].playerid] || 0);
+				if (X <= 0) return;
+				const result = await damaged
+					.chooseBool("衡澜：是否摸" + get.cnNumber(X) + "张牌？")
+					.set("ai", () => true)
+					.forResult();
+				if (result?.bool) {
+					player.storage.zishu_henglan_used.push(damaged.playerid);
+					damaged.logSkill("zishu_henglan");
+					await damaged.draw(X);
+				}
+			},
+		},
+	},
+},
+
+// === 急鞭 ===
+zishu_jibi: {
+	audio: 2,
+	enable: "phaseUse",
+	usable: 1,
+	filterCard: () => false,
+	selectCard: 0,
+	viewAs: { name: "sha", isCard: true, storage: { zishu_jibi: true } },
+	filter(event, player) {
+		return game.hasPlayer((current) => current != player && player.canUse(get.autoViewAs({ name: "sha" }, "unsure"), current, false));
+	},
+	prompt: "急鞭：视为使用一张【杀】，其目标可以将坐骑牌当【闪】使用",
+	check() {
+		return 1;
+	},
+	mod: {
+		cardUsable(card, player, num) {
+			if (card?.storage?.zishu_jibi) return Infinity;
+		},
+	},
+	group: ["zishu_jibi_target", "zishu_jibi_recover"],
+	subSkill: {
+		target: {
+			charlotte: true,
+			trigger: { global: "useCardToTarget" },
+			forced: true,
+			popup: false,
+			silent: true,
+			filter(event, player) {
+				return event.card?.storage?.zishu_jibi;
+			},
+			async content(event, trigger, player) {
+				trigger.target.addTempSkill("zishu_jibi_shan", { global: "useCardAfter" });
+			},
+		},
+		shan: {
+			charlotte: true,
+			enable: "chooseToRespond",
+			filter(event, player) {
+				const rt = event.respondTo;
+				return rt && rt[1]?.storage?.zishu_jibi;
+			},
+			filterCard(card) {
+				const sub = get.subtype(card);
+				return sub == "equip3" || sub == "equip4";
+			},
+			position: "e",
+			viewAs: { name: "shan" },
+			prompt: "急鞭：将一张坐骑牌当【闪】使用",
+			check() {
+				return 1;
+			},
+			hiddenCard(player, name) {
+				return name == "shan" && player.countCards("e", (card) => ["equip3", "equip4"].includes(get.subtype(card))) > 0;
+			},
+			ai: { order: 6 },
+		},
+		recover: {
+			charlotte: true,
+			trigger: { player: "useCardAfter" },
+			forced: true,
+			filter(event, player) {
+				if (!event.card?.storage?.zishu_jibi) return false;
+				const history = player.getHistory("useCard");
+				return history.length > 0 && history[0] === event;
+			},
+			async content(event, trigger, player) {
+				for (const target of trigger.targets || []) {
+					if (target.isIn() && target.hp < target.maxHp) {
+						await target.recover(1);
+					}
+				}
+			},
+		},
+	},
+},
+
 // === 狭情 ===
 zishu_xiaqing: {
 	audio: 2,
@@ -3051,6 +3205,7 @@ threed_xuyi1: {
 	subSkill: {
 		use: {
 			audio: 2,
+			name: "恤遗",
 			enable: ["chooseToUse", "chooseToRespond"],
 			filter(event, player) {
 				if (player.countCards("h")) {
@@ -3067,6 +3222,39 @@ threed_xuyi1: {
 			selectTarget: 1,
 			filterTarget(card, player, target) {
 				return target.hasSkill("threed_xuyi1");
+			},
+			ai: {
+				save: true,
+				skillTagFilter(player, tag, arg) {
+					if (player.countCards("h")) {
+						return false;
+					}
+					if (player.hasSkill("threed_xuyi1_banned")) {
+						return false;
+					}
+					if (!game.hasPlayer(cur => cur.hasSkill("threed_xuyi1"))) {
+						return false;
+					}
+					return arg == player;
+				},
+				order: 2,
+				result: {
+					player(player) {
+						if (_status.event.type == "dying" && _status.event.dying == player) {
+							return 4;
+						}
+						return 1;
+					},
+					target(player, target) {
+						if (target == player) {
+							return 2;
+						}
+						if (_status.event.type == "dying") {
+							return 1;
+						}
+						return get.attitude(player, target);
+					},
+				},
 			},
 			async content(event, trigger, player) {
 				const target = event.targets[0];
@@ -4748,24 +4936,18 @@ zhuoming_fuluan: {
 	async content(event, trigger, player) {
 		const max = new Set(game.players.filter((p) => p != player).map((p) => p.group)).size;
 		const result = await player
-			.chooseTarget("浮乱：选择任意名势力各不相同的其他角色议事", [1, Math.max(1, max)], (card, p, target) => {
-				if (target == p) return false;
-				if (target.group == "unknown") return false;
-				for (let i = 0; i < ui.selected.targets.length; i++) {
-					if (ui.selected.targets[i].group == target.group) {
-						return false;
-					}
-				}
-				return true;
-			})
-			.set("filterOk", () => {
-				const targets = ui.selected.targets;
-				const groups = new Set(targets.map((t) => t.group));
-				return groups.size === targets.length;
-			})
-			.set("ai", (target) => {
-				const p = get.player();
-				return get.attitude(p, target) < 0 ? 1 : 0.1;
+			.chooseTarget({
+				filterTarget(card, player2, target) {
+					// 所选角色势力互不相同（同晦默）；此处目标须为其他角色
+					return target != player2 && target.group != "unknown" && !ui.selected.targets.some((current) => current.group == target.group);
+				},
+				selectTarget: [1, Math.max(1, max)],
+				complexTarget: true,
+				prompt: "浮乱：选择任意名势力各不相同的其他角色议事",
+				ai(target) {
+					const p = get.player();
+					return get.attitude(p, target) < 0 ? 1 : 0.1;
+				},
 			})
 			.forResult();
 		if (!result?.bool || !result.targets?.length) return;
@@ -6009,6 +6191,463 @@ zhuoming_juanlong: {
 				}
 			},
 		},
+	},
+},
+
+// === 烽起 ===
+zhuoming_fengqi: {
+	audio: 2,
+	mark: true,
+	marktext: "烽",
+	init(player) {
+		if (!Number.isInteger(player.storage.zhuoming_fengqi)) {
+			player.storage.zhuoming_fengqi = 0;
+		}
+		if (!Array.isArray(player.storage.zhuoming_fengqi_slots)) {
+			player.storage.zhuoming_fengqi_slots = [{ player }];
+		}
+		if (!player.storage.zhuoming_fengqi_zhoushi) {
+			player.storage.zhuoming_fengqi_zhoushi = player;
+		}
+	},
+	intro: {
+		markcount(storage, player) {
+			const slots = player.storage.zhuoming_fengqi_slots;
+			if (!Array.isArray(slots) || !slots.length) return 0;
+			return (player.storage.zhuoming_fengqi || 0) + 1;
+		},
+		content(storage, player) {
+			const slots = player.storage.zhuoming_fengqi_slots;
+			if (!Array.isArray(slots) || !slots.length) return "当前：无序号。";
+			const state = player.storage.zhuoming_fengqi || 0;
+			const seqName = (i) => (i < 20 ? String.fromCodePoint(0x2460 + i) : `(${i + 1})`);
+			let str = `当前：第${get.cnNumber(state + 1)}项（共${get.cnNumber(slots.length)}项）。`;
+			str += "序号：" + slots.map((s, i) => `${seqName(i)}${s.player === player ? "你" : get.translation(s.player)}`).join("、");
+			return str;
+		},
+	},
+	trigger: { global: "useCardAfter" },
+	direct: true,
+	filter(event, player) {
+		if (get.name(event.card) != "sha" || !event.player?.isIn()) return false;
+		const slots = player.storage.zhuoming_fengqi_slots;
+		if (!Array.isArray(slots) || !slots.length) return false;
+		const state = player.storage.zhuoming_fengqi || 0;
+		if (state >= slots.length || slots[state].player !== event.player) return false;
+		return slots.some((s) => s.player?.isIn() && s.player.countCards("hes", (card) => s.player.canRecast(card)));
+	},
+	async content(event, trigger, player) {
+		const chooser = trigger.player;
+		const slots = player.storage.zhuoming_fengqi_slots;
+		const seqName = (i) => (i < 20 ? String.fromCodePoint(0x2460 + i) : `(${i + 1})`);
+		const names = slots.map((s, i) => seqName(i) + (s.player === chooser ? "你" : get.translation(s.player))).join("");
+		const result = await chooser
+			.chooseBool(`烽起：是否发动？${names}，使用【杀】后，可以令所有序号内角色各重铸一至二张牌，各类型的唯一失去者可以使用其失去的同类型牌`)
+			.set("ai", () => {
+				return slots.some((s) => s.player === chooser && s.player.countCards("hes", (card) => s.player.canRecast(card)));
+			})
+			.forResult();
+		if (result.bool) {
+			await chooser.logSkill("zhuoming_fengqi");
+			// 锁定技：被连续发动两次后，周始发动者改为后者
+			player.storage.zhuoming_fengqi_acts = (player.storage.zhuoming_fengqi_acts || 0) + 1;
+			player.storage.zhuoming_fengqi_declines = { count: 0, player: null };
+			if (player.storage.zhuoming_fengqi_acts >= 2 && player.storage.zhuoming_fengqi_zhoushi !== chooser) {
+				player.storage.zhuoming_fengqi_zhoushi = chooser;
+				game.log(chooser, "成为了", "#g【烽起】", "的周始发动者");
+			}
+			// 所有序号内角色各重铸一至二张牌
+			const lost = [];
+			for (const s of slots) {
+				const current = s.player;
+				if (!current?.isIn()) continue;
+				const max = Math.min(2, current.countCards("hes", (card) => current.canRecast(card)));
+				if (!max) continue;
+				const recast = await current
+					.chooseCard("hes", [1, max], true, max > 1 ? "烽起：请重铸一至二张牌" : "烽起：请重铸一张牌")
+					.set("filterCard", (card, p) => p.canRecast(card))
+					.set("ai", (card) => 6 - get.value(card))
+					.forResult();
+				if (recast?.cards?.length) {
+					await current.recast(recast.cards);
+					lost.push({ player: current, cards: recast.cards.slice() });
+				}
+			}
+			// 各类型的唯一失去者可以使用其失去的同类型牌
+			for (const cat of ["basic", "trick", "equip"]) {
+				const owners = lost.filter((l) => l.cards.some((card) => lib.skill.zhuoming_fengqi.getCat(card) === cat));
+				if (owners.length !== 1 || !owners[0].player.isIn()) continue;
+				const loser = owners[0].player;
+				for (const card of owners[0].cards) {
+					if (lib.skill.zhuoming_fengqi.getCat(card) !== cat) continue;
+					if (get.position(card, true) != "d") continue;
+					if (!game.hasPlayer((target) => loser.canUse(card, target))) continue;
+					const useBool = await loser
+						.chooseBool(`烽起：是否使用你重铸失去的${lib.skill.zhuoming_fengqi.catName(cat)}（${get.translation(card)}）？`)
+						.set("ai", () => get.value(card, loser) > 0)
+						.forResult();
+					if (useBool.bool) {
+						await loser.chooseUseTarget(card, true, "nopopup");
+					}
+				}
+			}
+		} else {
+			// 锁定技：被连续拒绝发动两次后，删去前者的序号及内容
+			const decl = player.storage.zhuoming_fengqi_declines || (player.storage.zhuoming_fengqi_declines = { count: 0, player: null });
+			decl.count++;
+			player.storage.zhuoming_fengqi_acts = 0;
+			if (decl.count >= 2) {
+				const former = decl.player;
+				const idx = former ? slots.findIndex((s) => s.player === former) : -1;
+				if (idx >= 0) {
+					slots.splice(idx, 1);
+					if (idx < (player.storage.zhuoming_fengqi || 0)) {
+						player.storage.zhuoming_fengqi = Math.max(0, player.storage.zhuoming_fengqi - 1);
+					}
+					if ((player.storage.zhuoming_fengqi || 0) >= slots.length) {
+						player.storage.zhuoming_fengqi = 0;
+					}
+					game.log("#g【烽起】", "删去了", former, "的序号");
+				}
+				decl.count = 1;
+			}
+			decl.player = chooser;
+		}
+		player.updateMarks("zhuoming_fengqi");
+		// 拒绝发动不转换状态；仅发动后推进序号，由发动导致的回绕触发周始
+		if (!result.bool || !slots.length) return;
+		const cur = player.storage.zhuoming_fengqi || 0;
+		if (cur >= slots.length) {
+			player.storage.zhuoming_fengqi = 0;
+			player.updateMarks("zhuoming_fengqi");
+			return;
+		}
+		const wrapped = cur === slots.length - 1;
+		player.storage.zhuoming_fengqi = wrapped ? 0 : cur + 1;
+		player.updateMarks("zhuoming_fengqi");
+		if (!wrapped || !result.bool) return;
+		// 周始：周始发动者令一名角色弃置一种类型的所有牌，然后添加一个内容为其的序号
+		const initiator = player.storage.zhuoming_fengqi_zhoushi;
+		if (!initiator?.isIn()) return;
+		if (!game.hasPlayer((current) => current.countCards("he") > 0)) return;
+		const choose = await initiator
+			.chooseTarget(true, "周始：请选择一名角色，令其弃置一种类型的所有牌", (card, target) => target.countCards("he") > 0)
+			.set("ai", (target) => -get.attitude(get.player(), target) * target.countCards("he"))
+			.forResult();
+		const target = choose.targets[0];
+		const cats = [...new Set(target.getCards("he").map((card) => lib.skill.zhuoming_fengqi.getCat(card)))];
+		const catMap = {};
+		for (const cat of cats) {
+			catMap[lib.skill.zhuoming_fengqi.catName(cat)] = cat;
+		}
+		const controls = Object.keys(catMap);
+		let cat = catMap[controls[0]];
+		if (controls.length > 1) {
+			const ctrl = await initiator
+				.chooseControl(controls)
+				.set("prompt", `周始：请选择弃置${get.translation(target)}的一种类型`)
+				.set("ai", () => {
+					let best = controls[0];
+					let bestVal = -1;
+					for (const name of controls) {
+						const val = target.getCards("he", (card) => lib.skill.zhuoming_fengqi.getCat(card) === catMap[name]).reduce((sum, card2) => sum + get.value(card2, target), 0);
+						if (val > bestVal) {
+							bestVal = val;
+							best = name;
+						}
+					}
+					return best;
+				})
+				.forResult();
+			cat = catMap[ctrl.control] ?? cat;
+		}
+		const cards = target.getCards("he", (card) => lib.skill.zhuoming_fengqi.getCat(card) === cat);
+		if (cards.length) {
+			await target.discard(cards);
+		}
+		slots.push({ player: target });
+		player.updateMarks("zhuoming_fengqi");
+		game.log("#g【烽起】", "添加了序号：", target);
+	},
+	group: ["zhuoming_fengqi_remove"],
+	subSkill: {
+		remove: {
+			charlotte: true,
+			name: "烽起",
+			trigger: { global: "dieAfter" },
+			forced: true,
+			popup: false,
+			silent: true,
+			filter(event, player) {
+				const slots = player.storage.zhuoming_fengqi_slots;
+				return Array.isArray(slots) && slots.some((s) => s.player === event.player);
+			},
+			content(event, trigger, player) {
+				const slots = player.storage.zhuoming_fengqi_slots;
+				const dead = trigger.player;
+				let pointer = player.storage.zhuoming_fengqi || 0;
+				for (let i = slots.length - 1; i >= 0; i--) {
+					if (slots[i].player === dead) {
+						slots.splice(i, 1);
+						if (i < pointer) pointer = Math.max(0, pointer - 1);
+					}
+				}
+				if (pointer >= slots.length) {
+					pointer = Math.max(0, slots.length - 1);
+				}
+				player.storage.zhuoming_fengqi = pointer;
+				player.updateMarks("zhuoming_fengqi");
+				game.log("#g【烽起】", "删去了", dead, "的序号");
+			},
+		},
+	},
+	getCat(card) {
+		const type = get.type(card);
+		if (type === "equip") return "equip";
+		if (type === "basic") return "basic";
+		return "trick";
+	},
+	catName(cat) {
+		if (cat === "equip") return "装备牌";
+		if (cat === "basic") return "基本牌";
+		return "锦囊牌";
+	},
+},
+
+// === 横驰 ===
+zhuoming_hengchi: {
+	audio: 2,
+	enable: "phaseUse",
+	filter(event, player) {
+		const used = player.storage.zhuoming_hengchi_used || [];
+		if (used.includes(player.countCards("h"))) return false;
+		// 若你的手牌数唯一（没有其他角色与你手牌数相同）
+		if (!player.countCards("h")) return false;
+		return !game.hasPlayer((current) => current !== player && current.countCards("h") === player.countCards("h"));
+	},
+	onuse(result, player) {
+		if (!Array.isArray(player.storage.zhuoming_hengchi_used)) {
+			player.storage.zhuoming_hengchi_used = [];
+		}
+		const n = player.countCards("h");
+		if (!player.storage.zhuoming_hengchi_used.includes(n)) {
+			player.storage.zhuoming_hengchi_used.push(n);
+		}
+		player.updateMarks("zhuoming_hengchi");
+	},
+	mark: true,
+	marktext: "驰",
+	intro: {
+		content(storage, player) {
+			const used = (player.storage.zhuoming_hengchi_used || []).slice().sort((a, b) => a - b);
+			return `本阶段已使用的手牌数：${used.length ? used.map((n) => get.cnNumber(n)).join("、") : "无"}`;
+		},
+	},
+	async content(event, trigger, player) {
+		const cards = player.getCards("h");
+		if (!cards.length) return;
+		// 你可以重铸所有手牌
+		const bool = await player
+			.chooseBool("横驰：是否重铸所有手牌？")
+			.set("ai", () => {
+				const needs = lib.skill.zhuoming_hengchi.getComboNeeds(player);
+				if (needs.some((check) => cards.some((card) => check(card, player)))) return true;
+				return cards.some((card) => get.value(card) < 5);
+			})
+			.forResult();
+		if (!bool.bool) return;
+		await player.recast(cards);
+		const recastCards = cards.filter((card) => get.position(card, true) == "d");
+		if (!recastCards.length) return;
+		// 使用其中一张符合拥有的连招技中当前连招进度的牌
+		const needs = lib.skill.zhuoming_hengchi.getComboNeeds(player);
+		const matched = needs.length ? recastCards.filter((card) => needs.some((check) => check(card, player))) : [];
+		if (matched.length) {
+			const choose = await player
+				.chooseButton(["横驰：选择使用一张符合连招进度的牌", [matched, "card"]], true)
+				.set("ai", (button) => player.getUseValue(button.link))
+				.forResult();
+			const card = choose.links?.[0];
+			if (card && get.position(card, true) == "d") {
+				await player.chooseUseTarget(card, true, "nopopup");
+			}
+			return;
+		}
+		// 否则你将其中一张牌当作-1马置入一名角色的任意装备栏（可替换原装备）
+		const chooseCard = await player
+			.chooseButton(["横驰：选择一张重铸的牌当作-1马", [recastCards, "card"]], true)
+			.set("ai", (button) => 4 - get.value(button.link))
+			.forResult();
+		const card = chooseCard.links?.[0];
+		if (!card || get.position(card, true) != "d") return;
+		const canEquip = (current) => {
+			for (let i = 0; i <= 5; i++) {
+				if (current.hasEquipableSlot(i)) return true;
+			}
+			return false;
+		};
+		if (!game.hasPlayer((current) => canEquip(current))) return;
+		const chooseTarget = await player
+			.chooseTarget(true, "横驰：请选择一名角色，置入其任意装备栏", (cardx, target) => canEquip(target))
+			.set("ai", (target) => {
+				if (target === player) {
+					return [4, 3, 5, 1, 2, 0].some((i) => player.hasEmptySlot(i)) ? 8 : 2;
+				}
+				if (get.attitude(player, target) < 0) return Math.min(8, target.countCards("e") * 2);
+				return 0;
+			})
+			.forResult();
+		const target = chooseTarget.targets[0];
+		const slots = [];
+		for (let i = 0; i <= 5; i++) {
+			if (target.hasEquipableSlot(i)) slots.push(`equip${i}`);
+		}
+		const ctrl = await player
+			.chooseControl(slots)
+			.set("prompt", `横驰：请选择置入${get.translation(target)}的哪个装备栏`)
+			.set("ai", () => {
+				const empty = [4, 3, 5, 1, 2, 0].find((i) => target.hasEmptySlot(i));
+				return empty != null ? `equip${empty}` : slots[0];
+			})
+			.forResult();
+		const slot = ctrl.control;
+		// 重铸牌在弃牌堆中无归属，equip不会搬运：先取回手中，让装备流程正常完成“弃牌堆→装备栏”的转移
+		await player.gain(card, "gain2");
+		const vcard = get.autoViewAs({ name: "chitu" }, [card]);
+		vcard.subtypes = [slot];
+		game.log(player, "将", card, "当作", "#y-1马", "置入了", target, "的", "#g" + get.translation(slot) + "栏");
+		await target.equip(vcard);
+	},
+	getComboNeeds(player) {
+		const needs = [];
+		for (const skill of player.getSkills()) {
+			const info = lib.skill[skill];
+			if (!info?.comboSkill) continue;
+			if (typeof info.comboNeed === "function") {
+				const check = info.comboNeed(player);
+				if (check) needs.push(check);
+			}
+		}
+		return needs;
+	},
+	group: ["zhuoming_hengchi_clear"],
+	subSkill: {
+		clear: {
+			charlotte: true,
+			name: "横驰",
+			trigger: { player: "phaseUseBegin" },
+			forced: true,
+			popup: false,
+			silent: true,
+			filter(event, player) {
+				return player.storage.zhuoming_hengchi_used?.length;
+			},
+			content(event, trigger, player) {
+				player.storage.zhuoming_hengchi_used = [];
+				player.updateMarks("zhuoming_hengchi");
+			},
+		},
+	},
+	ai: {
+		order: 5,
+		result: { player: 1 },
+	},
+},
+
+// === 朔骋 ===
+zhuoming_shuocheng: {
+	audio: 2,
+	comboSkill: true,
+	getLastUsed(player, event) {
+		var history = player.getAllHistory("useCard");
+		var index;
+		if (event) {
+			index = history.indexOf(event) - 1;
+		} else {
+			index = history.length - 1;
+		}
+		if (index >= 0) {
+			return history[index];
+		}
+		return false;
+	},
+	isSelfOnly(evt, player) {
+		return evt?.targets?.length === 1 && evt.targets[0] === player;
+	},
+	comboNeed(player) {
+		const info = lib.skill.zhuoming_shuocheng;
+		if (info.isSelfOnly(info.getLastUsed(player), player)) {
+			// 连招进度：已达成“自己为唯一目标的牌”，下一张需要“其他角色为唯一目标的牌”
+			return (card) => game.hasPlayer((target) => target !== player && player.canUse(card, target));
+		}
+		// 连招进度：需要“自己为唯一目标的牌”
+		return (card) => player.canUse(card, player);
+	},
+	getX(player) {
+		const count = (current) =>
+			current.countCards("e", (card) => {
+				if (get.subtype(card) == "equip1") return true;
+				const info = get.info(card, false);
+				return info?.distance?.attackFrom;
+			});
+		let num = count(player);
+		for (const current of game.players) {
+			if (current !== player && current.isIn() && player.inRange(current)) {
+				num += count(current);
+			}
+		}
+		return num;
+	},
+	trigger: { player: "useCard" },
+	filter(event, player) {
+		const info = lib.skill.zhuoming_shuocheng;
+		if (event.targets?.length !== 1 || event.targets[0] === player) return false;
+		if (!info.isSelfOnly(info.getLastUsed(player, event), player)) return false;
+		return info.getX(player) > 0;
+	},
+	check(event, player) {
+		const target = event.targets[0];
+		if (get.attitude(player, target) >= 0) return 0;
+		if (get.name(event.card) == "sha") return 2 + lib.skill.zhuoming_shuocheng.getX(player);
+		return target.countCards("he") > 0 ? 1 + lib.skill.zhuoming_shuocheng.getX(player) : 0;
+	},
+	async content(event, trigger, player) {
+		const X = lib.skill.zhuoming_shuocheng.getX(player);
+		if (get.name(trigger.card) == "sha") {
+			const bool = await player
+				.chooseBool(`朔骋：是否令${get.translation(trigger.card)}多结算${get.cnNumber(X)}次？`)
+				.set("ai", () => get.attitude(player, trigger.targets[0]) < 0)
+				.forResult();
+			if (bool.bool) {
+				trigger.effectCount = (typeof trigger.effectCount == "number" ? trigger.effectCount : get.info(trigger.card, false).effectCount || 1) + X;
+				game.log(trigger.card, "额外结算了", get.cnNumber(X), "次");
+			}
+		} else {
+			const target = trigger.targets[0];
+			const num = Math.min(X, target.countCards("he"));
+			if (!num) return;
+			const result = await player
+				.choosePlayerCard(target, "he", num, true)
+				.set("prompt", `朔骋：请弃置${get.translation(target)}${get.cnNumber(num)}张牌`)
+				.set("ai", get.buttonValue)
+				.forResult();
+			const cards = result.cards || [];
+			if (!cards.length) return;
+			await player.discard(cards);
+			const shas = cards.filter((card) => get.name(card) == "sha");
+			if (shas.length) {
+				await player.gain(shas, "gain2");
+				player.addGaintag(shas, "zhuoming_shuocheng_tag");
+			}
+		}
+	},
+	mod: {
+		cardUsable(card, player, num) {
+			if (card?.hasGaintag?.("zhuoming_shuocheng_tag")) return Infinity;
+		},
+	},
+	ai: {
+		order: 1,
 	},
 },
 }

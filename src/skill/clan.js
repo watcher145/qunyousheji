@@ -229,4 +229,51 @@ clanzhuding: {
 			threaten: 2,
 		},
 	},
+
+// === 过庭 ===
+clan_guoting: {
+	audio: 2,
+	clanSkill: true,
+	locked: true,
+	forced: true,
+	trigger: { player: "phaseUseEnd" },
+	filter(event, player) {
+		if (!player.hasClan("鲁国孔氏")) return false;
+		// 有同族角色（含自己）已受伤
+		if (!game.hasPlayer((cur) => cur.hasClan("鲁国孔氏") && cur.isDamaged())) return false;
+		// 手牌中存在“唯一最多”的花色
+		const suits = {};
+		player.getCards("h").forEach((card) => {
+			const suit = get.suit(card, player);
+			suits[suit] = (suits[suit] || 0) + 1;
+		});
+		const entries = Object.entries(suits).sort((a, b) => b[1] - a[1]);
+		if (!entries.length) return false;
+		return entries.length == 1 || entries[0][1] > entries[1][1];
+	},
+	async content(event, trigger, player) {
+		const suits = {};
+		player.getCards("h").forEach((card) => {
+			const suit = get.suit(card, player);
+			suits[suit] = (suits[suit] || 0) + 1;
+		});
+		const entries = Object.entries(suits).sort((a, b) => b[1] - a[1]);
+		if (!entries.length || (entries.length > 1 && entries[0][1] <= entries[1][1])) return;
+		const suit = entries[0][0];
+		const cards = player.getCards("h", (card) => get.suit(card, player) == suit);
+		if (!cards.length) return;
+		await player.recast(cards);
+		// 横置等量名角色（超过场上人数则截断；含自己；已横置者保持横置）
+		const num = Math.min(cards.length, game.players.length);
+		if (num <= 0) return;
+		const result = await player
+			.chooseTarget(num, true, "过庭：横置" + get.cnNumber(num) + "名角色")
+			.set("ai", (target) => -get.attitude(get.player(), target))
+			.forResult();
+		if (!result?.targets?.length) return;
+		for (const target of result.targets) {
+			if (!target.isLinked()) await target.link(true);
+		}
+	},
+},
 };
