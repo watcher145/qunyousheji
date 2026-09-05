@@ -159,6 +159,17 @@ const dynamicTranslates = {
 				: blue(`【${side.map((name) => get.translation(name)).join("/")}】`);
 		return `你可以将${fmt(sides[0])}、${fmt(sides[1])}当另一侧一张牌使用并将两者移至同侧。任意侧唯一需要使用的牌名改为【无中生有】。`;
 	},
+	qunyou_tiaolong(player) {
+		const state = player.storage.qunyou_tiaolong || 0;
+		const names = ["杀", "闪", "酒", "桃"];
+		const nums = ["①", "②", "③", "④"];
+		let head = "转换技，你可以将一张非基本牌当作";
+		for (let i = 0; i < 4; i++) {
+			head += i === state ? blue(nums[i] + "【" + names[i] + "】") : nums[i] + "【" + names[i] + "】";
+		}
+		const prev = names[(state + 3) % 4], next = names[(state + 1) % 4];
+		return `${head}使用；${get.poptip("qunyou_tiaolong")}当前状态的上一状态（${blue("【" + prev + "】")}）的同名牌你仅可当作【决斗】使用，下一状态（${blue("【" + next + "】")}）的同名牌你仅可当作【无懈可击】使用。`;
+	},
 };
 
 export default dynamicTranslates;

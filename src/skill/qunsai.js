@@ -810,7 +810,7 @@ export const skills = {
 				.set("ai", () => get.attitude(target, player) < 0)
 				.forResult();
 			if (!go?.bool) {
-				player.logSkill("qunyou_beixuan", target);
+				// useSkill 结算已自动输出“对XX发动了【悖玄】”，这里不再重复 logSkill
 				target.addTempSkill("qunyou_beixuan_ban", { global: "phaseAfter" });
 				return;
 			}
@@ -3211,7 +3211,7 @@ threed_xuyi1: {
 				if (player.countCards("h")) {
 					return false;
 				}
-				if (player.hasSkill("threed_xuyi1_banned")) {
+				if (player.hasSkill("threed_xuyi1_banned") || player.hasSkill("threed_xuyi1_cool")) {
 					return false;
 				}
 				if (!game.hasPlayer(cur => cur.hasSkill("threed_xuyi1"))) {
@@ -3223,51 +3223,56 @@ threed_xuyi1: {
 			filterTarget(card, player, target) {
 				return target.hasSkill("threed_xuyi1");
 			},
-			ai: {
-				save: true,
-				skillTagFilter(player, tag, arg) {
-					if (player.countCards("h")) {
-						return false;
-					}
-					if (player.hasSkill("threed_xuyi1_banned")) {
-						return false;
-					}
-					if (!game.hasPlayer(cur => cur.hasSkill("threed_xuyi1"))) {
-						return false;
-					}
-					return arg == player;
-				},
-				order: 2,
-				result: {
-					player(player) {
-						if (_status.event.type == "dying" && _status.event.dying == player) {
-							return 4;
+				ai: {
+					save: true,
+					skillTagFilter(player, tag, arg) {
+						if (player.countCards("h")) {
+							return false;
 						}
-						return 1;
+						if (player.hasSkill("threed_xuyi1_banned") || player.hasSkill("threed_xuyi1_cool")) {
+							return false;
+						}
+						if (!game.hasPlayer(cur => cur.hasSkill("threed_xuyi1"))) {
+							return false;
+						}
+						return arg == player;
 					},
-					target(player, target) {
-						if (target == player) {
-							return 2;
-						}
-						if (_status.event.type == "dying") {
-							return 1;
-						}
-						return get.attitude(player, target);
+					order: 2,
+					result: {
+						player(player) {
+							if (_status.event.type == "dying" && _status.event.dying == player) {
+								return 4;
+							}
+							// 目标大概率会拒绝时不发起（拒绝无任何收益，防止 AI 反复空发起）
+							const owner = game.hasPlayer(cur => cur.hasSkill("threed_xuyi1") && get.attitude(cur, player) > 0);
+							return owner ? 1 : -1;
+						},
+						target(player, target) {
+							if (target == player) {
+								return 2;
+							}
+							if (_status.event.type == "dying") {
+								return 1;
+							}
+							return get.attitude(player, target);
+						},
 					},
 				},
-			},
-			async content(event, trigger, player) {
-				const target = event.targets[0];
-				if (player !== target) {
-					const choice = await target
-						.chooseControl("同意", "取消")
-						.set("prompt", `恤遗：${get.translation(player)}请求与你各摸一张牌并视为使用【桃】`)
-						.set("ai", () => get.attitude(target, player) > 0 ? "同意" : "取消")
-						.forResult();
-					if (choice.control === "取消") {
-						return;
+				async content(event, trigger, player) {
+					const target = event.targets[0];
+					if (player !== target) {
+						const choice = await target
+							.chooseControl("同意", "取消")
+							.set("prompt", `恤遗：${get.translation(player)}请求与你各摸一张牌并视为使用【桃】`)
+							.set("ai", () => get.attitude(target, player) > 0 ? "同意" : "取消")
+							.forResult();
+						if (choice.control === "取消") {
+							// 被拒绝后本回合内不再发起：拒绝不产生任何状态变化，
+							// 否则 AI 在出牌阶段的 chooseToUse 循环里会无限重复发起恤遗
+							player.addTempSkill("threed_xuyi1_cool", "phaseAfter");
+							return;
+						}
 					}
-				}
 				player.logSkill("threed_xuyi1", target);
 				const dying = player.hp <= 0;
 				if (dying) {
@@ -3286,10 +3291,14 @@ threed_xuyi1: {
 			sourceSkill: "threed_xuyi1",
 			"_priority": 0,
 		},
-		banned: {
-			charlotte: true,
-			sub: true,
-		},
+			banned: {
+				charlotte: true,
+				sub: true,
+			},
+			cool: {
+				charlotte: true,
+				sub: true,
+			},
 	},
 	"skill_id": "threed_xuyi1",
 	"_priority": 0,
@@ -6648,6 +6657,461 @@ zhuoming_shuocheng: {
 	},
 	ai: {
 		order: 1,
+	},
+},
+
+// === 骄黠 ===
+zishu_jiaoxie: {
+	audio: 2,
+	mark: true,
+	marktext: "黠",
+	init(player) {
+		player.storage.zishu_jiaoxie = 4;
+	},
+	intro: {
+		content(storage, player) {
+			const left = player.storage.zishu_jiaoxie || 0;
+			return `每轮限四次，剩余${left}次。<br>你可以视为使用或打出一张【杀】（消耗1次），或消耗所有剩余次数以视为使用一张【兵临城下】。`;
+		},
+	},
+	enable: ["chooseToUse", "chooseToRespond"],
+	filter(event, player) {
+		const rem = player.storage.zishu_jiaoxie || 0;
+		if (rem <= 0) return false;
+		if (event.type == "wuxie") return false;
+		if (event.skill == "zishu_jiaoxie" || event._skill == "zishu_jiaoxie") {
+			return true;
+		}
+		if (event.filterCard({ name: "sha", isCard: true }, player, event)) {
+			return true;
+		}
+		if (event.name == "chooseToUse") {
+			const bing = { name: "binglinchengxiax", isCard: true };
+			return event.filterCard(bing, player, event) && game.hasPlayer((t) => t != player && player.canUse(bing, t, false));
+		}
+		return false;
+	},
+	chooseButton: {
+		filter(button, player) {
+			const evt = _status.event.getParent();
+			const name = button.link[2];
+			if (name == "sha") {
+				return evt.filterCard({ name: "sha", isCard: true }, player, evt);
+			}
+			if (name == "binglinchengxiax") {
+				return (
+					evt.name == "chooseToUse" &&
+					evt.filterCard({ name: "binglinchengxiax", isCard: true }, player, evt) &&
+					game.hasPlayer((t) => t != player && player.canUse({ name: "binglinchengxiax", isCard: true }, t, false))
+				);
+			}
+			return false;
+		},
+		dialog(event, player) {
+			const evt = _status.event;
+			const list = [];
+			if (evt.filterCard(get.autoViewAs({ name: "sha", isCard: true }, "unsure"), player, evt)) {
+				list.push(["basic", "", "sha", ""]);
+			}
+			if (
+				evt.name == "chooseToUse" &&
+				evt.filterCard(get.autoViewAs({ name: "binglinchengxiax", isCard: true }, "unsure"), player, evt) &&
+				(player.storage.zishu_jiaoxie || 0) > 0 &&
+				game.hasPlayer((t) => t != player && player.canUse(get.autoViewAs({ name: "binglinchengxiax", isCard: true }, "unsure"), t, false))
+			) {
+				list.push(["trick", "", "binglinchengxiax", ""]);
+			}
+			return ui.create.dialog("骄黠：视为使用一张牌", [list, "vcard"]);
+		},
+		check(button) {
+			if (button.link[2] == "binglinchengxiax") return 5;
+			return 4;
+		},
+		backup(links, player) {
+			const name = links[0][2];
+			const all = name == "binglinchengxiax";
+			return {
+				audio: "zishu_jiaoxie",
+				filterCard: () => false,
+				selectCard: -1,
+				popname: true,
+				viewAs: { name, isCard: true },
+				log: false,
+				async precontent(event, trigger, player) {
+					player.logSkill("zishu_jiaoxie");
+					if (all) {
+						player.storage.zishu_jiaoxie = 0;
+					} else {
+						player.storage.zishu_jiaoxie = Math.max(0, (player.storage.zishu_jiaoxie || 0) - 1);
+					}
+					player.updateMarks("zishu_jiaoxie");
+				},
+			};
+		},
+		prompt(links) {
+			const name = links[0][2];
+			return "骄黠：视为使用" + (name == "binglinchengxiax" ? "一张【兵临城下】（消耗所有剩余次数）" : "一张【杀】（消耗1次）");
+		},
+	},
+	ai: {
+		order: 4.5,
+		respondSha: true,
+		skillTagFilter(player, tag, arg) {
+			if ((player.storage.zishu_jiaoxie || 0) <= 0) return false;
+			if (arg === "respond") return false;
+			return tag == "respondSha";
+		},
+		hiddenCard(player, name) {
+			return name == "sha" && (player.storage.zishu_jiaoxie || 0) > 0;
+		},
+	},
+	group: ["zishu_jiaoxie_reset"],
+	subSkill: {
+		reset: {
+			name: "骄黠",
+			charlotte: true,
+			trigger: { player: "roundStart" },
+			forced: true,
+			popup: false,
+			silent: true,
+			content(event, trigger, player) {
+				player.storage.zishu_jiaoxie = 4;
+				player.updateMarks("zishu_jiaoxie");
+			},
+		},
+	},
+},
+
+// === 桀朔 ===
+zishu_jieshuo: {
+	audio: 2,
+	onremove(player) {
+		game.players.forEach((current) => {
+			if (current != player && current.hasSkill("zishu_jieshuo_mark")) {
+				current.removeSkill("zishu_jieshuo_mark");
+			}
+		});
+	},
+	group: ["zishu_jieshuo_grant", "zishu_jieshuo_juedou", "zishu_jieshuo_transfer"],
+	subSkill: {
+		// 游戏开始时，给每名其他角色挂上「朔」mark（4次）
+		grant: {
+			name: "桀朔",
+			audio: "zishu_jieshuo",
+			trigger: {
+				global: "phaseBefore",
+				player: "enterGame",
+			},
+			forced: true,
+			popup: false,
+			silent: true,
+			filter(event, player) {
+				return event.name != "phase" || game.phaseNumber == 0;
+			},
+			content(event, trigger, player) {
+				const list = game.filterPlayer((current) => current != player && !current.hasMark("zishu_jieshuo_mark"));
+				for (const current of list) {
+					if (!current.hasSkill("zishu_jieshuo_mark")) current.addSkill("zishu_jieshuo_mark");
+					current.addMark("zishu_jieshuo_mark", 4, true);
+				}
+			},
+		},
+		// 挂在其他角色身上的「朔」mark：角标剩余次数，悬停显示"桀朔还有X次"
+		mark: {
+			name: "桀朔",
+			mark: true,
+			marktext: "朔",
+			charlotte: true,
+			intro: {
+				content(storage) {
+					return `桀朔还有${storage || 0}次`;
+				},
+				markcount(storage) {
+					return storage || 0;
+				},
+			},
+			onremove: true,
+		},
+		// 出牌阶段开始时，其他角色可视为对拥有者使用【决斗】（消耗1次）
+		juedou: {
+			name: "桀朔",
+			audio: "zishu_jieshuo",
+			trigger: { global: "phaseUseBegin" },
+			filter(event, player) {
+				const current = event.player;
+				if (!current || current === player) return false;
+				if (!current.hasMark("zishu_jieshuo_mark")) return false;
+				return current.canUse({ name: "juedou", isCard: true }, player, false);
+			},
+			async cost(event, trigger, player) {
+				const current = trigger.player;
+				event.result = await current
+					.chooseBool("桀朔：是否视为对" + get.translation(player) + "使用一张【决斗】（消耗1次）？")
+					.set("ai", () => get.attitude(current, player) < 0)
+					.forResult();
+			},
+			async content(event, trigger, player) {
+				const current = trigger.player;
+				current.removeMark("zishu_jieshuo_mark", 1, false);
+				if (current.hasSkill("zishu_jieshuo_mark") && !current.hasMark("zishu_jieshuo_mark")) {
+					current.removeSkill("zishu_jieshuo_mark");
+				}
+				await current.useCard({ name: "juedou", isCard: true }, player, "zishu_jieshuo");
+			},
+		},
+		// 其他角色成为拥有者【杀】的目标时，可消耗所有剩余次数以转移之（流离式，不弃牌）
+		transfer: {
+			name: "桀朔",
+			audio: "zishu_jieshuo",
+			trigger: { global: "useCardToTarget" },
+			filter(event, player) {
+				if (event.card?.name != "sha" || event.player !== player) return false;
+				const target = event.target;
+				if (!target || target === player) return false;
+				if (!target.hasMark("zishu_jieshuo_mark")) return false;
+				return game.hasPlayer(
+					(current) =>
+						current != target &&
+						current != player &&
+						lib.filter.targetEnabled(event.card, player, current) &&
+						target.inRange(current)
+				);
+			},
+			async cost(event, trigger, player) {
+				const target = trigger.target;
+				event.result = await target
+					.chooseBool("桀朔：是否消耗所有剩余次数以转移此【杀】？")
+					.set("ai", () => 1)
+					.forResult();
+			},
+			async content(event, trigger, player) {
+				const target = trigger.target;
+				target.removeMark("zishu_jieshuo_mark", target.countMark("zishu_jieshuo_mark"), false);
+				if (target.hasSkill("zishu_jieshuo_mark") && !target.hasMark("zishu_jieshuo_mark")) {
+					target.removeSkill("zishu_jieshuo_mark");
+				}
+				const evt = trigger.getParent();
+				const result = await target
+					.chooseTarget(true, "桀朔：转移此【杀】", (card, p, t) => {
+						return p.inRange(t) && t !== target && t !== player && lib.filter.targetEnabled(trigger.card, player, t);
+					})
+					.set("ai", (t) => get.attitude(target, t))
+					.forResult();
+				const chosen = result?.targets?.[0];
+				if (!chosen) return;
+				evt.triggeredTargets2.remove(target);
+				evt.targets.remove(target);
+				evt.targets.push(chosen);
+			},
+		},
+	},
+},
+// === 落墨 ===
+maokuo_luomo: {
+	audio: 2,
+	trigger: { global: "phaseDiscardAfter" },
+	direct: true,
+	filter(event, player) {
+		if (!player.isIn() || !event.player?.isIn()) {
+			return false;
+		}
+		const used = player.getStorage("maokuo_luomo_used") || [];
+		const cards = get.info("maokuo_luomo").getCards(event);
+		return ["spade", "club"].some(
+			(suit) => !used.includes(suit) && cards.some((card) => get.suit(card) == suit)
+		);
+	},
+	getCards(event) {
+		// 固政（guzheng）同款：弃牌阶段角色于此阶段内弃置、且仍在弃牌堆中的牌
+		const cards = [];
+		event.player.getHistory("lose", (evt) => {
+			if (evt.type != "discard" || evt.getParent("phaseDiscard") != event) {
+				return;
+			}
+			cards.addArray(evt.cards.filterInD("d"));
+		});
+		return cards;
+	},
+	async content(event, trigger, player) {
+		const used = player.getStorage("maokuo_luomo_used") || [];
+		const allCards = get.info("maokuo_luomo").getCards(trigger);
+		const spadeCards = allCards.filter((card) => get.suit(card) == "spade");
+		const clubCards = allCards.filter((card) => get.suit(card) == "club");
+		const mats = (used.includes("spade") ? [] : spadeCards).concat(used.includes("club") ? [] : clubCards);
+		if (!mats.length) {
+			return;
+		}
+		// ♠对应普通锦囊、♣对应基本牌（一一对应）
+		const vcards = get.inpileVCardList((info) => {
+			const type = get.type(info[2]);
+			const candidates = type == "trick" ? spadeCards : type == "basic" ? clubCards : [];
+			return candidates.some((card) => player.hasUseTarget(get.autoViewAs({ name: info[2], nature: info[3] }, [card]), true, true));
+		});
+		if (!vcards.length) {
+			return;
+		}
+		// 圆融（dcyuanrong）同款：材料牌＋虚拟牌双按钮配对选择
+		const result = await player
+			.chooseButton(
+				[
+					`###落墨：你可以将${get.translation(trigger.player)}于此阶段内弃置过的一张♠/♣牌当普通锦囊牌/基本牌使用###弃牌堆`,
+					mats,
+					"###可转化的牌###",
+					[vcards, "vcard"],
+				],
+				2
+			)
+			.set("filterButton", (button) => {
+				if (!Array.isArray(button.link)) {
+					return ui.selected.buttons.length == 0;
+				}
+				if (ui.selected.buttons.length != 1) {
+					return false;
+				}
+				const suit = get.suit(ui.selected.buttons[0].link);
+				if (suit == "spade") {
+					return get.type(button.link[2]) == "trick";
+				}
+				if (suit == "club") {
+					return get.type(button.link[2]) == "basic";
+				}
+				return false;
+			})
+			.set("complexSelect", true)
+			.set("ai", (button) => {
+				if (ui.selected.buttons.length == 0) {
+					return Math.random();
+				}
+				const cardx = get.autoViewAs({ name: button.link[2], nature: button.link[3] });
+				return get.player().getUseValue(cardx, true, true);
+			})
+			.forResult();
+		if (!result?.bool) {
+			return;
+		}
+		const card = result.links[0];
+		const suit = get.suit(card);
+		if (!mats.includes(card) || (suit != "spade" && suit != "club")) {
+			return;
+		}
+		if ((player.getStorage("maokuo_luomo_used") || []).includes(suit)) {
+			return;
+		}
+		const vcard = get.autoViewAs({ name: result.links[1][2], nature: result.links[1][3] }, [card]);
+		const next = player.chooseUseTarget(vcard, true, [card]);
+		next.set("logSkill", event.name);
+		await next;
+		player.addTempSkill("maokuo_luomo_used", "roundStart");
+		player.markAuto("maokuo_luomo_used", [suit]);
+	},
+	subSkill: {
+		used: {
+			name: "落墨",
+			charlotte: true,
+			onremove: true,
+			mark: true,
+			intro: {
+				content(storage) {
+					if (!storage?.length) {
+						return "本轮尚未以此法使用过牌";
+					}
+					return "本轮已以此法使用过" + storage.map((suit) => ({ spade: "♠", club: "♣" })[suit]).join("、") + "的牌";
+				},
+			},
+		},
+	},
+},
+// === 肖形 ===
+maokuo_xiaoxing: {
+	audio: 2,
+	trigger: { player: ["phaseBegin", "phaseEnd"] },
+	filter(event, player, name) {
+		// 回合开始对应♥、回合结束对应♦（一一对应）
+		const suit = name == "phaseBegin" ? "heart" : "diamond";
+		if (!player.countCards("h", (card) => get.suit(card) == suit)) {
+			return false;
+		}
+		return game.players.some((current) => current.countCards("e") > 0);
+	},
+	check(event, player) {
+		return true;
+	},
+	async content(event, trigger, player) {
+		const isBegin = event.triggername == "phaseBegin";
+		const result = await player
+			.chooseCard("h", true, `肖形：重铸一张${isBegin ? "♥" : "♦"}手牌`, (card) => get.suit(card) == (isBegin ? "heart" : "diamond"))
+			.set("ai", (card) => 6 - get.value(card))
+			.forResult();
+		if (!result?.bool) {
+			return;
+		}
+		await player.recast(result.cards);
+		if (!player.isIn()) {
+			return;
+		}
+		const owners = game.players.filter((current) => current.countCards("e") > 0);
+		if (!owners.length) {
+			return;
+		}
+		const chooseList = ["肖形：视为装备场上的一张装备牌"];
+		owners.forEach((current) => {
+			chooseList.push(get.translation(current));
+			chooseList.push([current.getCards("e"), "card"]);
+		});
+		const result2 = await player
+			.chooseButton(chooseList, true)
+			.set("ai", (button) => get.equipValue(button.link, player))
+			.forResult();
+		if (!result2?.bool || !result2.links?.length) {
+			return;
+		}
+		const name = get.name(result2.links[0]);
+		const skill = "maokuo_xiaoxing_equip";
+		const prev = player.getStorage(skill);
+		if (prev?.length) {
+			player.unmarkAuto(skill, prev);
+		}
+		// 回合开始发动→你此回合结束时失效；回合结束发动→你下回合开始时失效
+		player.addTempSkill(skill, isBegin ? { player: "phaseEnd" } : { player: "phaseBegin" });
+		player.markAuto(skill, [name]);
+		player.addAdditionalSkill(skill, (lib.card[name]?.skills || []).slice());
+		player.addExtraEquip(skill, [name], true);
+	},
+	subSkill: {
+		equip: {
+			name: "肖形",
+			charlotte: true,
+			mark: true,
+			marktext: "肖",
+			intro: {
+				content(storage) {
+					if (!storage?.length) {
+						return "未视为装备任何牌";
+					}
+					return "视为装备着【" + storage.map((name) => get.translation(name)).join("】【") + "】";
+				},
+			},
+			// 煌烛（twhuangzhu）同款：视为装备的距离修正
+			mod: {
+				globalFrom(from, to, distance) {
+					return distance + (lib.card[from.getStorage("maokuo_xiaoxing_equip")?.[0]]?.distance?.globalFrom || 0);
+				},
+				globalTo(from, to, distance) {
+					return distance + (lib.card[to.getStorage("maokuo_xiaoxing_equip")?.[0]]?.distance?.globalTo || 0);
+				},
+				attackRange(from, distance) {
+					return distance - (lib.card[from.getStorage("maokuo_xiaoxing_equip")?.[0]]?.distance?.attackFrom || 0);
+				},
+				attackTo(from, to, distance) {
+					return distance + (lib.card[to.getStorage("maokuo_xiaoxing_equip")?.[0]]?.distance?.attackTo || 0);
+				},
+			},
+			onremove(player, skill) {
+				player.removeExtraEquip(skill);
+				player.removeAdditionalSkill(skill);
+				delete player.storage[skill];
+			},
+		},
 	},
 },
 }

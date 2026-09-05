@@ -29,7 +29,6 @@ const pkgPrefixMap = {
 	qunyou_sinatsuriku: "西夏",
 	qunyou_yongdong: "群友",
 	xuandie_design: "蝶设",
-	maomi_dayuan: "猫咪",
 };
 
 function applyCharacterPrefixes(translate) {
@@ -78,7 +77,6 @@ const characterSortTranslate = {
 	qunyou_gaijin:"有问题的设计",
 	qunyou_yongdong:"能永动的武将",
 	xuandie_design: "玄蝶的设计",
-	maomi_dayuan: "猫咪大院",
 };
 
 const characterSort = {
@@ -96,7 +94,6 @@ const characterSort = {
 	qunyou_gaijin: ["qunyou_jiangwei","qunyou_pengyue"],
 	qunyou_yongdong: ["qunyou_wanglang"],
 	xuandie_design: ["xuandie_xunguan", "xuandie_lvzhi", "xuandie_wenjun", "xuandie_zuti"],
-	maomi_dayuan: ["maokuo_caobuxing"],
 };
 
 /**

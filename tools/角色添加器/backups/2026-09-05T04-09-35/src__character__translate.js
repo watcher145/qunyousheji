@@ -1,4 +1,3 @@
-import { lib } from "noname";
 /**
  * 武将译名、前缀键（与 lib.namePrefix 配合时可加 xxx_prefix）
  */
@@ -195,10 +194,4 @@ export const characterTranslate = {
 	qunyou_yangqun: "阳群",
 	qunyou_clan_yuanshao: "族袁绍",
 	qunyou_clan_yuanshao_prefix: "族",
-
-	qunyou_clan_yuanshu: "族袁术",
-	qunyou_clan_yuanshu_prefix: "族",
-
-	maokuo_caobuxing: "猫咪曹不兴",
-	maokuo_caobuxing_prefix: "猫咪",
 };

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>武将添加器 · 无名杀扩展工具</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+	<h1>⚔ 武将添加器</h1>
+	<div class="ext-picker">
+		<label for="extSelect">扩展</label>
+		<select id="extSelect"></select>
+	</div>
+	<div id="fileChips" class="file-chips"></div>
+</header>
+
+<main>
+	<section class="col form-col">
+		<h2>基础信息</h2>
+		<div class="grid2">
+			<div class="field">
+				<label>武将 id（小写下划线）</label>
+				<input id="charId" placeholder="例：qunyou_zhangsan" autocomplete="off">
+				<div id="idHint" class="hint"></div>
+			</div>
+			<div class="field">
+				<label>角色全称（translate 显示名，含前缀字）</label>
+				<input id="charName" placeholder="例：族张三" autocomplete="off">
+			</div>
+			<div class="field small">
+				<label>体力 hp</label>
+				<input id="charHp" type="number" value="4" min="1">
+			</div>
+			<div class="field small">
+				<label>体力上限 maxHp</label>
+				<input id="charMaxHp" type="number" value="4" min="1">
+			</div>
+			<div class="field small">
+				<label>护甲 hujia</label>
+				<input id="charHujia" type="number" value="0" min="0">
+			</div>
+			<div class="field small">
+				<label>性别 sex</label>
+				<input id="charSex" list="sexList" value="male">
+				<datalist id="sexList">
+					<option value="male">男</option>
+					<option value="female">女</option>
+				</datalist>
+			</div>
+			<div class="field small">
+				<label>势力 group</label>
+				<input id="charGroup" list="groupList" value="qun">
+				<datalist id="groupList">
+					<option value="wei">魏</option>
+					<option value="shu">蜀</option>
+					<option value="wu">吴</option>
+					<option value="qun">群</option>
+					<option value="jin">晋</option>
+					<option value="god">神</option>
+					<option value="key">KEY</option>
+				</datalist>
+			</div>
+			<div class="field">
+				<label>氏族 clans（可选，多个用逗号或、分隔）</label>
+				<input id="charClans" placeholder="例：汝南袁氏" autocomplete="off">
+			</div>
+		</div>
+
+		<h2>称号 / 简介</h2>
+		<div class="field">
+			<label>称号（title）</label>
+			<input id="charTitle" placeholder="例：独骑将军" autocomplete="off">
+		</div>
+		<div class="field">
+			<label>简介（intro，支持 &lt;br&gt; 换行）</label>
+			<textarea id="charIntro" rows="4" placeholder="设计：×××<br>评价：……"></textarea>
+		</div>
+
+		<h2>搭载技能 <button id="openSkillPicker" class="btn accent">＋ 选择 / 浏览技能</button></h2>
+		<div id="skillChips" class="chips"><span class="hint">尚未选择技能（点击上方按钮，可中文搜索本扩展与游戏本体的全部技能）</span></div>
+
+		<h2>前缀（translate 的 id_prefix，多个按顺序用 | 合并）</h2>
+		<div class="prefix-row">
+			<input id="prefixInput" list="prefixList" placeholder="输入或从已注册前缀中选择…" autocomplete="off">
+			<datalist id="prefixList"></datalist>
+			<button id="addPrefix" class="btn">添加</button>
+		</div>
+		<div id="prefixChips" class="chips"></div>
+
+		<h2>所属包（characterSort）</h2>
+		<div id="packageList" class="pkg-list"><span class="hint">扫描中…</span></div>
+
+		<div class="actions">
+			<label class="force-label"><input type="checkbox" id="forceAdd"> 强制添加（技能不在扫描结果中也写入）</label>
+			<button id="btnPreview" class="btn">生成预览</button>
+			<button id="btnSubmit" class="btn primary">写入五个文件</button>
+		</div>
+	</section>
+
+	<section class="col result-col">
+		<h2>结果</h2>
+		<div id="resultPanel" class="result-panel"><div class="hint">提交或预览后，这里显示每个文件的写入结果 / 片段 / 语法检查 / 备份路径。</div></div>
+	</section>
+</main>
+
+<div id="toastBox"></div>
+
+<!-- 技能选择副窗口 -->
+<div id="skillOverlay" class="overlay hidden">
+	<div class="skill-panel">
+		<div class="skill-head">
+			<h3>技能库</h3>
+			<div class="tabs">
+				<button class="tab active" data-tab="ext">本扩展</button>
+				<button class="tab" data-tab="global">游戏本体</button>
+			</div>
+			<input id="skillSearch" placeholder="中文搜索：技能名 / id / 描述关键词…" autocomplete="off">
+			<button id="closeSkillPicker" class="btn">完成</button>
+		</div>
+		<div class="skill-meta" id="skillMeta"></div>
+		<div class="skill-list" id="skillList"></div>
+		<div class="skill-foot">
+			<span id="skillCount"></span>
+			<button id="skillMore" class="btn hidden">加载更多</button>
+		</div>
+	</div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

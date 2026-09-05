@@ -981,13 +981,4 @@ export const characterData = {
 		clans: ["汝南袁氏"],
 		skills: ["qunyou_quanwang", "qunyou_daimang", "clanguming"],
 	},
-
-	maokuo_caobuxing: {
-		sex: "male",
-		group: "wu",
-		hp: 3,
-		maxHp: 3,
-		hujia: 0,
-		skills: ["maokuo_luomo", "maokuo_xiaoxing"],
-	},
 };

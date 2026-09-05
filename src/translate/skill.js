@@ -290,6 +290,9 @@ export const skillTranslate = {
 	clanlunyi_info: "宗族技，锁定技，当同族角色的牌进入弃牌堆时，你将其中一张牌置于牌堆底。",
 	clan_guoting: "过庭",
 	clan_guoting_info: "宗族技，锁定技，出牌阶段结束时，若有同族角色已受伤，你重铸手中唯一最多花色的牌，并横置等量名角色。",
+	clanguming: "沽名",
+	clanguming_info:
+		`宗族技，锁定技，准备阶段，你令一名同族角色的${get.poptip("clanguming")}上升一格，视为使用【无中生有】或【桃】。`,
 	yachai_qingjie: "清界",
 	yachai_qingjie_info: "出牌阶段各限一次，你可以将手牌摸至体力上限或弃置至少一张手牌。出牌阶段结束时，你可以令一名其他角色执行你本阶段未执行过的一项。",
 	yachai_chenxun: "陈训",
@@ -638,9 +641,37 @@ export const skillTranslate = {
 	qunyou_huimo: "晦默",
 	qunyou_huimo_info: "出牌阶段限一次，你可以令你和任意势力不同的角色同时选择：1.共同拼点；2.摸一张牌。赢者获得所有拼点牌、其余角色须将手牌数弃至与最少者相同。",
 	qunyou_lingzhi: "令智",
-	qunyou_lingzhi_info: "锁定技，若你手牌数不小于体力上限或手牌上限，你获得牌后，移动场上一张牌或分配一张你的牌。",
+	qunyou_lingzhi_info: "锁定技，若你手牌数大于体力上限或手牌上限，你一次性获得两张及以上数量的牌时，移动场上一张牌或分配一张你的牌给其他角色。",
 	qunyou_chengzhi: "诚质",
-	qunyou_chengzhi_info: "每回合结束时，你可以令当前回合角色检索一张锦囊牌，然后其获得亮出牌中点数唯一最大的牌，你获得剩余亮出的牌，否则你须将检索的锦囊牌当【无中生有】使用，然后此技能本轮失效。",
+	qunyou_chengzhi_info: "你失去过牌的回合结束时，你可以令当前回合角色检索一张锦囊牌，然后其获得亮出牌中点数唯一最大的牌，你获得剩余亮出的牌，否则你须将检索的锦囊牌当【无中生有】使用，然后此技能本轮失效。",
+	qunyou_tiaolong: "挑龙",
+	qunyou_tiaolong_info:
+		`转换技，你可以将一张非基本牌当作①【杀】②【闪】③【酒】④【桃】使用；${get.poptip("qunyou_tiaolong")}当前状态的上一状态的同名牌你仅可当作【决斗】使用，下一状态的同名牌你仅可当作【无懈可击】使用。`,
+	qunyou_chitu: "赤途",
+	qunyou_chitu_info:
+		`锁定技，你造成伤害时，展示受伤角色的所有手牌，然后将${get.poptip("qunyou_tiaolong")}转至第X项。若无法转换，你回复1点体力；若无法回复，其重铸两张红色牌；若无法重铸，你摸三张牌。（X为其中的花色数）`,
+	qunyou_liaofa: "聊伐",
+	qunyou_liaofa_info: "锁定技，你的普通锦囊牌额外结算一次。",
+	qunyou_xiqiang: "鬩墙",
+	qunyou_xiqiang_info: "锁定技，此技能上方的技能失效；当你造成或受到伤害后，你失去武将牌上最下方的技能直到本轮结束。",
+	qunyou_yaobing: "曜兵",
+	qunyou_yaobing_info: "锁定技，当你造成伤害后，你摸等同于你当前体力值张牌。",
+	qunyou_hezhong: "合众",
+	qunyou_hezhong_info:
+		`锁定技，当你使用单目标伤害牌时，其他角色均可以弃置一张与此牌类型相同的手牌助战，令此牌额外结算一次，并令你的${get.poptip("clanguming")}上升一格。`,
+	qunyou_shenli: "神离",
+	qunyou_shenli_info:
+		`锁定技，当你使用多目标锦囊牌时，其他角色均可以弃置一张与此牌类型相同的手牌助战：若其为此牌的目标，其减少自己成为此牌目标；若其不是此牌的目标，则其摸一张牌。并令你的${get.poptip("clanguming")}下降一格。`,
+	qunyou_hezhong_append:
+		'<span style="font-family: yuanli"><li>作者注：合众的助战在使用确认后（原生应变时机）结算，先于这张牌自带的应变“助战”效果（若有）——牌自带助战时由原生助战窗口结算，合众不再重复询问；询问时目标数以使用时为准，应变“目标+1”加出来的目标不参与合众的助战；此牌的额外结算可与聊伐等其他额外结算效果叠加，每有一个来源即多结算一次；沽名不在或已在首位时不移动，其余效果照常。</span>',
+	qunyou_shenli_append:
+		'<span style="font-family: yuanli"><li>作者注：神离的助战与合众同为原生应变时机，先于这张牌自带的应变“助战”效果（若有）——牌自带助战时由原生助战窗口结算，神离不再重复询问；应变“目标+1”加出来的新目标不参与神离的助战、也不会被排除；被排除的目标在本次结算中跳过，其余目标照常；沽名不在或已在末位时不移动，其余效果照常。</span>',
+	qunyou_quanwang: "权惘",
+	qunyou_quanwang_info:
+		`你可以重铸所有❤牌以发动一个场上非坐骑装备的效果（效果以你为语境、于其对应时机结算），若你发动过同名效果，则你翻面或失去${get.poptip("qunyou_daimang")}，然后此技能上升一格。没有发动时机的装备效果（如状态类、依赖实体牌的效果）不能以此法发动。`,
+	qunyou_daimang: "殆鋩",
+	qunyou_daimang_info:
+		`你可以将三张牌当最后一张置入弃牌堆的普通锦囊牌使用，若此牌目标不包括你，则你横置或失去${get.poptip("qunyou_quanwang")}，然后此技能上升一格。`,
 	qunyou_dinglue: "定略",
 	qunyou_dinglue_info: `当你的体力值变化后，你暗置明置牌中一个类别的牌。当你进入濒死状态时，你可以令一名其他角色获得${get.poptip("qunyou_mingce")}。`,
 	zishu_buqun: "不群",
@@ -679,4 +710,18 @@ export const skillTranslate = {
 	zhuoming_shuocheng_info:
 		"连招技（自己为唯一目标的牌＋其他角色为唯一目标的牌），若此牌为【杀】，则你可以令之多结算X次；否则，你可以弃置目标角色X张牌并获得其中的【杀】且使用这些【杀】时无次数限制。（X为你场上和攻击范围内能增加攻击范围的牌数）",
 	zhuoming_shuocheng_tag: "朔骋",
+	zishu_jiaoxie: "骄黠",
+	zishu_jiaoxie_info:
+		"每轮限四次，你可以：视为使用或打出一张【杀】（消耗1次），或消耗所有剩余次数以视为使用一张【兵临城下】。",
+	zishu_jieshuo: "桀朔",
+	zishu_jieshuo_info:
+		"本局游戏每名其他角色限四次，其可以：出牌阶段开始时，视为对你使用【决斗】（消耗1次），或成为你使用【杀】的目标时，消耗所有剩余次数以转移之。",
+	maokuo_luomo: "落墨",
+	maokuo_luomo_info:
+		"每轮每种花色限一次，一名角色的弃牌阶段结束时，你可以将其于此阶段内弃置过的一张♠/♣牌当普通锦囊牌/基本牌使用。",
+	maokuo_luomo_used: "落墨",
+	maokuo_xiaoxing: "肖形",
+	maokuo_xiaoxing_info:
+		"回合开始/结束时，你可以重铸一张♥/♦手牌，然后你视为装备着场上由你指定的一张装备牌，直到你此回合结束时/下回合开始时。",
+	maokuo_xiaoxing_equip: "肖形",
 };

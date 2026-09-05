@@ -117,7 +117,4 @@ export const characterIntro = {
 	zishu_yongkai: "设计：此方",
 	qunyou_yangqun: "设计：可余雪<br>评价：",
 	qunyou_clan_yuanshao: "设计：BCG&颍川李氏",
-	qunyou_clan_yuanshu: "设计：BCG&颍川李氏",
-
-	maokuo_caobuxing: "设计：RP",
 };

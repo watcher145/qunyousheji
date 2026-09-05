@@ -198,7 +198,4 @@ export const characterTranslate = {
 
 	qunyou_clan_yuanshu: "族袁术",
 	qunyou_clan_yuanshu_prefix: "族",
-
-	maokuo_caobuxing: "猫咪曹不兴",
-	maokuo_caobuxing_prefix: "猫咪",
 };

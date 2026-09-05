@@ -1,3 +1,4 @@
+import { lib } from "noname";
 /**
  * 角色替换列表：让群友设计角色与本体同名武将在选将页面可互相切换。
  * 参考 Nirvana 扩展（lib.arenaReady + lib.characterReplace）的做法。
