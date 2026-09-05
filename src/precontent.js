@@ -115,6 +115,15 @@ export function precontent() {
         color: '#ff6a6a',
         showName: '蝶',
     });
+	// 猫咪大院：仿原生雁翎前缀（library/index.js namePrefix 表"雁翎"项），emoji 作为前缀显示
+	lib.namePrefix.set("猫咪", {
+		getSpan: () => {
+			const span = document.createElement("span");
+			span.style.fontFamily = "NonameSuits";
+			span.textContent = "🐱";
+			return span.outerHTML;
+		},
+	});
 	lib.namePrefix.set("谋", {
 		color: "#def7ca",
 		nature: "woodmm",

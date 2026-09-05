@@ -117,6 +117,4 @@ export const characterTitle = {
 	qunyou_clan_yuanshao: "捷成族英",
 
 	qunyou_clan_yuanshu: "鋩失权惘",
-
-	maokuo_caobuxing: "良匠绘形容",
 };

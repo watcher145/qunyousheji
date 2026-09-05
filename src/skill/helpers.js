@@ -2572,3 +2572,88 @@ export async function qunyou_muxin_run(player, targets) {
 		player.addTempSkill("qunyou_muxin_disabled", "phaseAfter");
 	}
 }
+
+/**
+ * 令 player 的指定技能在武将牌技能列表中移动一格（通用版）
+ * 只在“可见技能”（有 _info 翻译者）之间移动，跳过隐形机关技能——
+ * 否则下降会穿到隐形技能后面、上升时先出现数次“无变化”的移动
+ * @param { Player } player 技能所在的角色
+ * @param { string } skillId 要移动的技能 id
+ * @param { number } dir 1 = 上升一格（向首位），-1 = 下降一格（向末位）
+ * @returns { boolean } 是否实际移动（无此技能或已无相邻可见技能时返回 false）
+ */
+export function qunyou_skillMove(player, skillId, dir) {
+	const skills = player.skills;
+	const idx = skills.indexOf(skillId);
+	if (idx < 0) return false;
+	const isVisible = skill => !!lib.translate[skill + "_info"];
+	// 找移动方向上最近的可见技能；没有则已到可见位极限，不移动
+	let targetIdx = -1;
+	if (dir > 0) {
+		for (let i = idx - 1; i >= 0; i--) {
+			if (isVisible(skills[i])) {
+				targetIdx = i;
+				break;
+			}
+		}
+	} else {
+		for (let i = idx + 1; i < skills.length; i++) {
+			if (isVisible(skills[i])) {
+				targetIdx = i;
+				break;
+			}
+		}
+	}
+	if (targetIdx < 0) return false;
+	skills.splice(idx, 1);
+	// 移除后统一插到 targetIdx：上升=目标可见技能之前，下降=目标可见技能之后（降为先移除再插入，下标不受移除影响）
+	skills.splice(targetIdx, 0, skillId);
+	// 直接改数组不经过 addSkill/removeSkill，须清事件步缓存
+	_status.event.clearStepCache();
+	game.broadcast(function (target, skill, curDir) {
+		const skills2 = target.skills;
+		const i = skills2.indexOf(skill);
+		if (i < 0) return;
+		const visible = skill2 => !!lib.translate[skill2 + "_info"];
+		let t = -1;
+		if (curDir > 0) {
+			for (let j = i - 1; j >= 0; j--) {
+				if (visible(skills2[j])) {
+					t = j;
+					break;
+				}
+			}
+		} else {
+			for (let j = i + 1; j < skills2.length; j++) {
+				if (visible(skills2[j])) {
+					t = j;
+					break;
+				}
+			}
+		}
+		if (t < 0) return;
+		skills2.splice(i, 1);
+		skills2.splice(t, 0, skill);
+	}, player, skillId, dir);
+	// 鬩墙的“上方技能失效”依赖技能位置，任意技能移动后须即时同步
+	if (player.hasSkill("qunyou_xiqiang") && lib.skill.qunyou_xiqiang && lib.skill.qunyou_xiqiang.syncDisable) {
+		lib.skill.qunyou_xiqiang.syncDisable(player);
+	}
+	return true;
+}
+
+/**
+ * 令 player 的〖沽名〗（clanguming）在武将牌技能列表中移动一格
+ * 只在“可见技能”（有 _info 翻译者）之间移动，跳过隐形机关技能——
+ * 否则下降会穿到隐形技能后面、上升时先出现数次“无变化”的移动
+ * @param { Player } player 沽名所在的角色
+ * @param { number } dir 1 = 上升一格（向首位），-1 = 下降一格（向末位）
+ * @returns { boolean } 是否实际移动（无沽名或已无相邻可见技能时返回 false）
+ */
+export function qunyou_gumingMove(player, dir) {
+	const moved = qunyou_skillMove(player, "clanguming", dir);
+	if (moved) {
+		game.log(player, "的", "#g【沽名】", dir > 0 ? "上升了一格" : "下降了一格");
+	}
+	return moved;
+}

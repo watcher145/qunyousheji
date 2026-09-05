@@ -1,4 +1,5 @@
 import { lib, game, get, ui, _status } from "noname";
+import { qunyou_gumingMove } from "./helpers.js";
 
 // 宗族技 — clan*
 export const skills = {
@@ -274,6 +275,55 @@ clan_guoting: {
 		for (const target of result.targets) {
 			if (!target.isLinked()) await target.link(true);
 		}
+	},
+},
+
+// === 沽名 ===
+clanguming: {
+	audio: 2,
+	clanSkill: true,
+	locked: true,
+	forced: true,
+	trigger: { player: "phaseZhunbeiBegin" },
+	filter(event, player) {
+		// 至少存在一名沽名未升至首位的同族角色，否则整个技能不发动
+		return game.hasPlayer(cur => cur.hasClan("汝南袁氏") && cur.skills.indexOf("clanguming") > 0);
+	},
+	async content(event, trigger, player) {
+		const result = await player
+			.chooseTarget(true, "沽名：请选择一名同族角色，令其〖沽名〗上升一格", (card, player2, target) => {
+				return target.hasClan("汝南袁氏") && target.skills.indexOf("clanguming") > 0;
+			})
+			.set("ai", target => {
+				const player2 = get.player();
+				return get.attitude(player2, target) + (target == player2 ? 1 : 0);
+			})
+			.forResult();
+		if (!result?.targets?.length) return;
+		const target = result.targets[0];
+		// 沽名前移一格（helper 内含缓存清理、联机同步与鬩墙失效位置同步）
+		qunyou_gumingMove(target, 1);
+		// 持有者视为使用【无中生有】或【桃】（桃仅在可用时进入选项；仅剩一个选项直接跳过选择）
+		// ⚠️ chooseButton 的按钮数组必须与 "vcard" 类型标记配对成 [按钮数组, "vcard"]，否则按钮按无类型创建会抛“button不合法”
+		const cardList = [["锦囊", "", "wuzhong"]];
+		if (lib.filter.cardEnabled(get.autoViewAs({ name: "tao", isCard: true }), player)) {
+			cardList.push(["基本", "", "tao"]);
+		}
+		let name = "wuzhong";
+		if (cardList.length > 1) {
+			const choice = await player
+				.chooseButton(["沽名：视为使用一张牌", [cardList, "vcard"]], true)
+				.set("ai", button => {
+					const player2 = get.player();
+					if (button.link[2] == "tao") return player2.hp <= 2 ? 3 : 1;
+					return 2;
+				})
+				.forResult();
+			if (!choice?.links?.length) return;
+			name = choice.links[0][2];
+		}
+		// 无中生有与桃均为对己使用的牌（wuzhong: filterTarget target === player），目标须传自己，否则结算取不到 event.target
+		await player.useCard(get.autoViewAs({ name, isCard: true }), [player]);
 	},
 },
 };
