@@ -122,10 +122,4 @@ export const characterTitle = {
 
 	maokuo_jiangwei: "炎汉之志",
 	maokuo_nuqi_jiangwei: "怒麒",
-
-	maokuo_pengyang: "革木一声",
-
-	maokuo_wangwang: "晔兮如华",
-
-	qunyou_clan_jiangwei: "一意回天",
 };

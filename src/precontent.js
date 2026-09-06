@@ -1,4 +1,4 @@
-import { lib, game } from "noname";
+import { lib, game, get, _status } from "noname";
 import dynamicTranslates from "./translate/dynamicTranslate.js";
 
 /**
@@ -192,6 +192,57 @@ export function precontent() {
 		id: "rule_shiwuSkill",
 		info: "奋武技的使用次数为本轮你造成和受到的伤害值+1，至多为5。",
 	});
+	/* 分辙全局补丁暂时停用（含修复），排查卡死
+	// 分辙：令持有 qunyou_fenzhe_wai 的角色本回合可对游戏外（移出游戏）的角色使用牌。
+	// 引擎在目标过滤（lib.filter.targetEnabledx/2/3、targetEnabled）与结算口（content.js:9400/9790）
+	// 都按牌定义的 info.includeOut 拦截离场目标，这里按"使用者持有 wai"放行；死亡角色不放行。
+	if (!lib.filter.__qunyou_fenzhe_out) {
+		lib.filter.__qunyou_fenzhe_out = true;
+		const allowOutTarget = (fn) =>
+			function (card, player, target) {
+				if (
+					target && !target.removed && target.isOut() &&
+					player && player.isIn() && player.hasSkill("qunyou_fenzhe_wai") && card
+				) {
+					const info = get.info(card);
+					if (info && !info.includeOut) {
+						info.includeOut = true;
+						try {
+							return fn.call(this, card, player, target);
+						} finally {
+							delete info.includeOut;
+						}
+					}
+				}
+				return fn.call(this, card, player, target);
+			};
+		for (const name of ["targetEnabledx", "targetEnabled", "targetEnabled2", "targetEnabled3"]) {
+			// 防御：引擎缺少某个过滤器时跳过，避免包装出调用即抛错的死函数
+			if (typeof lib.filter[name] != "function") {
+				continue;
+			}
+			lib.filter[name] = allowOutTarget(lib.filter[name]);
+		}
+		// 结算口按 get.info(event.card, false).includeOut 判断，窄条件代理放行
+		const origInfo = get.info;
+		get.info = function (item, player) {
+			const result = origInfo.apply(this, arguments);
+			if (
+				player === false &&
+				result && !result.includeOut &&
+				typeof item == "object" && item != null && item.name &&
+				_status.event?.name == "useCard" &&
+				_status.event.player?.hasSkill("qunyou_fenzhe_wai")
+			) {
+				const proxied = Object.create(result);
+				proxied.includeOut = true;
+				return proxied;
+			}
+			return result;
+		};
+	}
+	*/
+
 	lib.dynamicTranslate ??= {};
 	for (const key of Object.keys(dynamicTranslates)) {
 		if (!lib.dynamicTranslate[key]) {

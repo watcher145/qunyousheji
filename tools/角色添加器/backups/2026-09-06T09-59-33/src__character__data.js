@@ -1026,14 +1026,4 @@ export const characterData = {
 		hujia: 0,
 		skills: ["maokuo_xinwang", "maokuo_xiangxie"],
 	},
-
-	qunyou_clan_jiangwei: {
-		sex: "male",
-		group: "shu",
-		hp: 4,
-		maxHp: 4,
-		hujia: 0,
-		clans: ["天水姜氏"],
-		skills: ["qunyou_zhuhui", "clan_xinggu"],
-	},
 };

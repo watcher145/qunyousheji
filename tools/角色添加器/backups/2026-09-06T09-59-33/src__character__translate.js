@@ -213,7 +213,4 @@ export const characterTranslate = {
 
 	maokuo_wangwang: "猫咪王桃&王悦",
 	maokuo_wangwang_prefix: "猫咪",
-
-	qunyou_clan_jiangwei: "族姜维",
-	qunyou_clan_jiangwei_prefix: "族",
 };

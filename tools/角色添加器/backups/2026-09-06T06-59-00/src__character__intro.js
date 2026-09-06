@@ -117,16 +117,10 @@ export const characterIntro = {
 	zishu_yongkai: "设计：此方",
 	qunyou_yangqun: "设计：可余雪<br>评价：",
 	qunyou_clan_yuanshao: "设计：BCG&颍川李氏",
-	qunyou_clan_yuanshu: "设计：BCG&颍川李氏<br>修改：欢愉与希望<br>评价：沽名明明需要上升，但原设另两个技能却要失去，也就是为了开两无中太难了，而且渐冻人真的没可玩性，还是让技能上升一格保证永续吧",
+	qunyou_clan_yuanshu: "设计：BCG&颍川李氏",
 
 	maokuo_caobuxing: "设计：RP",
 
 	maokuo_jiangwei: "设计：怀默",
 	maokuo_nuqi_jiangwei: "设计：怀默",
-
-	maokuo_pengyang: "设计：冥狐",
-
-	maokuo_wangwang: "设计：陈木",
-
-	qunyou_clan_jiangwei: "设计：于吉&颖川李氏<br>修改：欢愉与希望<br>评价：实际上怎么把手牌弃置到1才是难点，其实应该加一个消耗手牌的技能的，因此修改了一下数值，只要有一张杀杀中了就能继续改阶段了",
 };

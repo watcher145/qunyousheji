@@ -126,6 +126,4 @@ export const characterTitle = {
 	maokuo_pengyang: "革木一声",
 
 	maokuo_wangwang: "晔兮如华",
-
-	qunyou_clan_jiangwei: "一意回天",
 };
