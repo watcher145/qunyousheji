@@ -96,7 +96,7 @@ const characterSort = {
 	qunyou_gaijin: ["qunyou_jiangwei","qunyou_pengyue"],
 	qunyou_yongdong: ["qunyou_wanglang"],
 	xuandie_design: ["xuandie_xunguan", "xuandie_lvzhi", "xuandie_wenjun", "xuandie_zuti"],
-	maomi_dayuan: ["maokuo_caobuxing", "maokuo_jiangwei", "maokuo_nuqi_jiangwei", "maokuo_pengyang", "maokuo_wangwang"],
+	maomi_dayuan: ["maokuo_caobuxing", "maokuo_jiangwei", "maokuo_nuqi_jiangwei", "maokuo_pengyang"],
 };
 
 /**

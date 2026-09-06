@@ -1,6 +1,29 @@
 import { lib, game, get, ui, _status } from "noname";
 import { qunyou_gumingMove } from "./helpers.js";
 
+// 星孤 —— 天水姜氏共享的"同一张【浮雷】"：黑桃命中计数与递增雷伤记录在这一个虚拟牌对象上，全族共用
+function clanXingguSharedCard(player) {
+	let card = player.storage.clan_xinggu_card;
+	if (!card) {
+		for (const current of game.players.concat(game.dead)) {
+			if (current != player && current.storage.clan_xinggu_card) {
+				card = current.storage.clan_xinggu_card;
+				break;
+			}
+		}
+	}
+	if (!card) {
+		card = { name: "fulei", isCard: true, storage: { fulei: 0 } };
+	}
+	player.storage.clan_xinggu_card = card;
+	for (const current of game.players) {
+		if (current.hasClan && current.hasClan("天水姜氏")) {
+			current.storage.clan_xinggu_card = card;
+		}
+	}
+	return card;
+}
+
 // 宗族技 — clan*
 export const skills = {
 // === 沦佚 ===
@@ -324,6 +347,46 @@ clanguming: {
 		}
 		// 无中生有与桃均为对己使用的牌（wuzhong: filterTarget target === player），目标须传自己，否则结算取不到 event.target
 		await player.useCard(get.autoViewAs({ name, isCard: true }), [player]);
+	},
+},
+
+// === 星孤 ===
+clan_xinggu: {
+	audio: 2,
+	clanSkill: true,
+	trigger: { player: "phaseUseBegin" },
+	direct: true,
+	filter(event, player) {
+		return player.isIn();
+	},
+	async content(event, trigger, player) {
+		while (player.isIn()) {
+			const card = clanXingguSharedCard(player);
+			const hits = typeof card.storage.fulei == "number" ? card.storage.fulei : 0;
+			// 交待天水姜氏共同的浮雷判定黑桃命中次数，每次判定后重新询问，取消即停
+			const go = await player
+				.chooseBool(`星孤：是否进行一次【浮雷】判定？（天水姜氏共同的浮雷判定已命中黑桃${hits}次，本次若命中将受到${hits + 1}点雷电伤害）`)
+				.set("choice", player.hp > hits + 1)
+				.forResult();
+			if (!go.bool) {
+				break;
+			}
+			const judgeEvent = player.judge(card);
+			judgeEvent.set("callback", async (event2) => {
+				// 获得判定牌（趁判定牌仍在处理区时收集，洛神同款）
+				if (get.position(event2.card, true) === "o") {
+					await player.gain({ cards: [event2.card], animate: "gain2" });
+				}
+			});
+			const result = await judgeEvent.forResult();
+			// 视为同一张【浮雷】：黑桃命中时计数记在全族共享的这张牌上，伤害随累计次数递增（浮雷同公式：X=已命中次数）
+			if (result.bool === false) {
+				card.storage.fulei = (typeof card.storage.fulei == "number" ? card.storage.fulei : 0) + 1;
+				if (player.isIn()) {
+					await player.damage(card.storage.fulei, "thunder", "nosource");
+				}
+			}
+		}
 	},
 },
 };

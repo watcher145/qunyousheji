@@ -100,7 +100,37 @@ function extractStringEntries(src) {
 		const c = src[i];
 		if (c === "/" && src[i + 1] === "/") { const e = src.indexOf("\n", i); i = e < 0 ? n : e; continue; }
 		if (c === "/" && src[i + 1] === "*") { const e = src.indexOf("*/", i + 2); i = e < 0 ? n : e + 2; continue; }
-		if (c === '"' || c === "'") { i = skipQuoted(src, i, c); continue; }
+		if (c === '"' || c === "'") {
+			// 可能是带引号的键："xxx_info": "..."
+			const keyEnd = skipQuoted(src, i, c);
+			let k = keyEnd;
+			while (k < n && (src[k] === " " || src[k] === "\t" || src[k] === "\n" || src[k] === "\r")) k++;
+			if (src[k] === ":") {
+				k++;
+				while (k < n && /\s/.test(src[k])) k++;
+				const v = src[k];
+				const key = src.slice(i + 1, keyEnd - 1);
+				if (v === '"' || v === "'") {
+					const end = skipQuoted(src, k, v);
+					out.push({ key, value: src.slice(k + 1, end - 1), quote: v });
+					i = end;
+					continue;
+				}
+				if (v === "`") {
+					const end = skipTemplate(src, k);
+					out.push({ key, value: src.slice(k + 1, end - 1), quote: "`" });
+					i = end;
+					continue;
+				}
+				if (v === "(" || src.startsWith("function", k) || src.startsWith("async", k)) {
+					out.push({ key, value: null });
+					i = keyEnd;
+					continue;
+				}
+			}
+			i = keyEnd;
+			continue;
+		}
 		if (c === "`") { i = skipTemplate(src, i); continue; }
 		if (isIdStart(c)) {
 			let j = i;
@@ -244,6 +274,21 @@ function readTarget(extName, rel) {
 
 const skillCache = { global: null, ext: new Map() };
 
+// 收集目录下所有 js 的 mtime 指纹，用于缓存失效（文件有增删改就重扫）
+function filesFingerprint(files) {
+	let fp = files.length + "|";
+	for (const { full } of files) {
+		try { fp += full + ":" + fs.statSync(full).mtimeMs + "|"; } catch { /* ignore */ }
+	}
+	return fp;
+}
+
+function isCacheValid(cacheEntry, files) {
+	if (!cacheEntry) return false;
+	if (cacheEntry.fp !== filesFingerprint(files)) return false;
+	return true;
+}
+
 function scanSkillsInFiles(files) {
 	const map = new Map();
 	for (const { full, rel } of files) {
@@ -274,19 +319,20 @@ function scanSkillsInFiles(files) {
 }
 
 function scanGlobalSkills() {
-	if (skillCache.global) return skillCache.global;
 	const files = walkJsFiles(CHARACTER_DIR, CHARACTER_DIR);
-	skillCache.global = scanSkillsInFiles(files);
-	return skillCache.global;
+	if (!isCacheValid(skillCache.global, files)) {
+		skillCache.global = { fp: filesFingerprint(files), map: scanSkillsInFiles(files) };
+	}
+	return skillCache.global.map;
 }
 
 function scanExtSkills(extName) {
-	if (skillCache.ext.has(extName)) return skillCache.ext.get(extName);
 	const extDir = path.join(EXTENSIONS_DIR, extName);
 	const files = walkJsFiles(extDir, extDir);
-	const result = scanSkillsInFiles(files);
-	skillCache.ext.set(extName, result);
-	return result;
+	if (!isCacheValid(skillCache.ext.get(extName), files)) {
+		skillCache.ext.set(extName, { fp: filesFingerprint(files), map: scanSkillsInFiles(files) });
+	}
+	return skillCache.ext.get(extName).map;
 }
 
 /* ---------------- 前缀 / 包扫描 ---------------- */

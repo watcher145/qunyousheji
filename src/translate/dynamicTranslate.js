@@ -1,5 +1,6 @@
 import { lib, get, _status } from "noname";
 import { qunyou_no1Player } from "../skill/helpers.js";
+import { qunyouPhaseNames } from "../skill/sanshe.js";
 
 const blue = (text) => `<span class="bluetext">${text}</span>`;
 const phaseName = (id) => blue(get.translation(id).replace("阶段", ""));
@@ -169,6 +170,20 @@ const dynamicTranslates = {
 		}
 		const prev = names[(state + 3) % 4], next = names[(state + 1) % 4];
 		return `${head}使用；${get.poptip("qunyou_tiaolong")}当前状态的上一状态（${blue("【" + prev + "】")}）的同名牌你仅可当作【决斗】使用，下一状态（${blue("【" + next + "】")}）的同名牌你仅可当作【无懈可击】使用。`;
+	},
+	qunyou_fenzhe(player) {
+		const idx = Number.isInteger(player.storage.qunyou_fenzhe) ? player.storage.qunyou_fenzhe : 0;
+		const zero = player.storage.qunyou_fenzhe_zero ? `<br>${blue("你的手牌上限已减少至0。")}` : "";
+		return `此技能当前于${blue(qunyouPhaseNames[idx] + "阶段开始时")}发动。你可以令此技能的发动时机后移任意个阶段（选择0则不移动，至多至本回合结束阶段开始时）并令你的手牌上限减少至0，视为使用等量张【调虎离山】；然后你本回合可对游戏外（移出游戏）的角色使用牌。${zero}`;
+	},
+	qunyou_qiongji(player) {
+		const idx = Number.isInteger(player.storage.qunyou_qiongji) ? player.storage.qunyou_qiongji : 4;
+		let str = `此技能当前于${blue(qunyouPhaseNames[idx] + "阶段开始时")}发动。你可以令此技能的发动时机前移任意个阶段（选择0则不移动，至多至准备阶段开始时）并摸三张牌，视为使用一张【杀】；然后你于下个该阶段开始前弃置所有手牌。`;
+		const pen = player.storage.qunyou_qiongji_pen;
+		if (Number.isInteger(pen)) {
+			str += `<br>${blue(`下个${qunyouPhaseNames[pen]}阶段开始前：`)}你弃置所有手牌。`;
+		}
+		return str;
 	},
 };
 
