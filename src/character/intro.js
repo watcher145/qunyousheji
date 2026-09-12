@@ -105,7 +105,7 @@ export const characterIntro = {
 	zhuoming_mateng: "设计：孝文白王<br>评价：",
 	zhuoming_fq_mateng: "设计：梦揽星河",
 	zhuoming_sc_mateng: "设计：伊藤幸子<br>修改：欢愉与希望	<br>评价：原版太过依赖场上牌了，因此修改一技能一个给了一个补充-1马的手段",
-	xuandie_xunguan: "设计：玄蝶",
+	xuandie_xunguan: "设计：玄蝶<br>加强：欢愉与希望<br>评价：原版的确是具有赌和爆发的特色，但我认为还是有在可玩性上做调整，荀灌也有重新突围的机会",
 	xuandie_lvzhi: "设计：玄蝶",
 	xuandie_wenjun: "设计：玄蝶<br>评价：真浪漫呀",
 	xuandie_zuti: "设计：玄蝶",
@@ -129,4 +129,16 @@ export const characterIntro = {
 	maokuo_wangwang: "设计：陈木",
 
 	qunyou_clan_jiangwei: "设计：于吉&颖川李氏<br>修改：欢愉与希望<br>评价：实际上怎么把手牌弃置到1才是难点，其实应该加一个消耗手牌的技能的，因此修改了一下数值，只要有一张杀杀中了就能继续改阶段了",
+
+	zishu_liangxi: "设计：易大剧",
+
+	qunyou_clan_diaochan2: "设计：monika&于吉",
+
+	xiaobai__hufang: "设计：铝",
+
+	xiaobai_lvzhu: "设计：小叶子",
+
+	xiaobai_malun: "设计：易大剧",
+
+	qunyou_taokan: "设计：余平方",
 };

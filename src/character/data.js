@@ -1036,4 +1036,59 @@ export const characterData = {
 		clans: ["天水姜氏"],
 		skills: ["qunyou_zhuhui", "clan_xinggu"],
 	},
+
+	zishu_liangxi: {
+		sex: "male",
+		group: "wei",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["zishu_yuanjiang", "zishu_suqi"],
+	},
+
+	qunyou_clan_diaochan2: {
+		sex: "female",
+		group: "qun",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		clans: ["太原王氏"],
+		skills: ["qunyou_huoni", "clanzhongliu"],
+	},
+
+	xiaobai__hufang: {
+		sex: "male",
+		group: "jin",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_liewu", "xiaobai_chongjuan"],
+	},
+
+	xiaobai_lvzhu: {
+		sex: "female",
+		group: "jin",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_huzhen", "xiaobai_liufang"],
+	},
+
+	xiaobai_malun: {
+		sex: "female",
+		group: "qun",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_bianmei", "xiaobai_yingying"],
+	},
+
+	qunyou_taokan: {
+		sex: "male",
+		group: "jin",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["qunyou_donglan"],
+	},
 };

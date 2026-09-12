@@ -1633,6 +1633,8 @@ yachai_yanling: {
 yachai_feijiao: {
 	audio: 2,
 	locked: true,
+	// locked 仅为"锁定技"标签(get.is.locked 判定);真正跳过询问强制发动的是 forced
+	forced: true,
 	trigger: { global: "shaMiss" },
 	filter(event, player) {
 		if (event.player === player) return false;

@@ -216,4 +216,21 @@ export const characterTranslate = {
 
 	qunyou_clan_jiangwei: "族姜维",
 	qunyou_clan_jiangwei_prefix: "族",
+
+	zishu_liangxi: "自书梁习",
+	zishu_liangxi_prefix: "自书",
+
+	qunyou_clan_diaochan2: "族貂蝉",
+	qunyou_clan_diaochan2_prefix: "族",
+
+	xiaobai__hufang: "小白胡芳",
+	xiaobai__hufang_prefix: "小白",
+
+	xiaobai_lvzhu: "小白绿珠",
+	xiaobai_lvzhu_prefix: "小白",
+
+	xiaobai_malun: "小白马伦",
+	xiaobai_malun_prefix: "小白",
+
+	qunyou_taokan: "陶侃",
 };
