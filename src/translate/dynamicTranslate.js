@@ -176,15 +176,21 @@ const dynamicTranslates = {
 		const zero = player.storage.qunyou_fenzhe_zero ? `<br>${blue("你的手牌上限已减少至0。")}` : "";
 		return `此技能当前于${blue(qunyouPhaseNames[idx] + "阶段开始时")}发动。你可以令此技能的发动时机后移任意个阶段（选择0则不移动，至多至本回合结束阶段开始时）并令你的手牌上限减少至0，视为使用等量张【调虎离山】；然后你本回合可对游戏外（移出游戏）的角色使用牌。${zero}`;
 	},
-	qunyou_qiongji(player) {
-		const idx = Number.isInteger(player.storage.qunyou_qiongji) ? player.storage.qunyou_qiongji : 4;
-		let str = `此技能当前于${blue(qunyouPhaseNames[idx] + "阶段开始时")}发动。你可以令此技能的发动时机前移任意个阶段（选择0则不移动，至多至准备阶段开始时）并摸三张牌，视为使用一张【杀】；然后你于下个该阶段开始前弃置所有手牌。`;
-		const pen = player.storage.qunyou_qiongji_pen;
-		if (Number.isInteger(pen)) {
-			str += `<br>${blue(`下个${qunyouPhaseNames[pen]}阶段开始前：`)}你弃置所有手牌。`;
-		}
-		return str;
-	},
-};
+qunyou_qiongji(player) {
+			const idx = Number.isInteger(player.storage.qunyou_qiongji) ? player.storage.qunyou_qiongji : 4;
+			let str = `此技能当前于${blue(qunyouPhaseNames[idx] + "阶段开始时")}发动。你可以令此技能的发动时机前移任意个阶段（选择0则不移动，至多至准备阶段开始时）并摸三张牌，视为使用一张【杀】；然后你于下个该阶段开始前弃置所有手牌。`;
+			const pen = player.storage.qunyou_qiongji_pen;
+			if (Number.isInteger(pen)) {
+				str += `<br>${blue(`下个${qunyouPhaseNames[pen]}阶段开始前：`)}你弃置所有手牌。`;
+			}
+			return str;
+		},
+		xuandie_yuwei(player) {
+			if (lib.config.extension_群友设计_xuandie_xunguan == "false") {
+				return "你可以以移出方式使用牌并摸牌至X张，令本技能于你使用X张牌前失效、失效X回合后失去、失去X回合后获得。（X为上一张移出牌点数）";
+			}
+			return lib.translate["xuandie_yuwei_info"];
+		},
+	};
 
 export default dynamicTranslates;

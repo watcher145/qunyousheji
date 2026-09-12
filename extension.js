@@ -16,7 +16,19 @@ export default function () {
 		prepare() {},
 		precontent,
 		help: {},
-		config: {},
+		config: {
+			xuandie_xunguan: {
+				name: "荀灌",
+				init: "1",
+				item: {
+					false: "加强",
+					1: "普通",
+				},
+				onclick(item) {
+					game.saveExtensionConfig("群友设计", "xuandie_xunguan", item);
+				},
+			},
+		},
 		package: getPackage(),
 		intro: "群友投稿扩展：在 src/character、src/skill、src/card、src/translate 中按模块添加内容。",
 		author: "无名玩家",

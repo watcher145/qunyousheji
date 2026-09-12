@@ -128,4 +128,16 @@ export const characterTitle = {
 	maokuo_wangwang: "晔兮如华",
 
 	qunyou_clan_jiangwei: "一意回天",
+
+	zishu_liangxi: "共济方圆",
+
+	qunyou_clan_diaochan2: "以色为戈",
+
+	xiaobai__hufang: "真绝傲枝",
+
+	xiaobai_lvzhu: "金谷一容",
+
+	xiaobai_malun: "慧臻端节",
+
+	qunyou_taokan: "激流勇退",
 };

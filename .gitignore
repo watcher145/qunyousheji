@@ -2,12 +2,14 @@
 
 # 测试目录（脚本与缓存产物均不入库）
 test/
-
+tools/角色添加器/backups/
 # 临时文件
 *.log
 *.tmp
 *.temp
-
+image/character/xiaobai__hufang.jpg
+xiaobai_malun.jpg
+xiaobai_lvzhu.jpg
 # Node 依赖（如有）
 node_modules/
 

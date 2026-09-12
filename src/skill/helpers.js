@@ -2364,24 +2364,50 @@ export function qunyou_getDiscardSuits() {
 
 // ====== 燼路 交换UI ======
 export async function jinluSwapUI(player) {
-	// 非本地玩家（AI）：不走交互UI，随机决定是否对调及对调哪两个位置
-	if (player != game.me) {
-		if (Math.random() < 0.5) return { bool: false };
+	// AI 策略(设计者给定):排列绝不可回到默认顺序(否则回合末自焚,等同与敌同归于尽);
+	// 在此前提下朝占优排列「准备,摸牌,出牌,判定,弃牌,结束」贪心——摸牌提前保证手牌,
+	// 出牌紧随其后,判定(乐/兵等)后置到行动之后,降低延时锦囊对本回合的干扰。
+	// 分支判断:非本地玩家或托管(_status.auto)一律走 AI——原判定漏掉托管,手写交互 UI 在托管下会永久挂起
+	if (player != game.me || _status.auto) {
 		const left = player.storage.zishu_mitu_left;
 		const right = player.storage.zishu_mitu_right;
-		const slots = [];
-		for (let i = 0; i < 3; i++) {
-			slots.push(["left", i]);
-			slots.push(["right", i]);
+		const base = (p) => (p || "").split("|")[0].split("-")[0];
+		const cur = [left[0], right[0], left[1], right[1], left[2], right[2]].map(base);
+		const def = ["phaseZhunbei", "phaseJudge", "phaseDraw", "phaseUse", "phaseDiscard", "phaseJieshu"];
+		const target = ["phaseZhunbei", "phaseDraw", "phaseUse", "phaseJudge", "phaseDiscard", "phaseJieshu"];
+		const isDef = (arr) => arr.every((p, k) => p === def[k]);
+		// 遍历全部对调方案:回到默认的一票否决;评分 = 朝占优排列的归位数变化
+		let best = null;
+		let bestScore = -Infinity;
+		for (let i = 0; i < 6; i++) {
+			for (let j = i + 1; j < 6; j++) {
+				if (cur[i] === cur[j]) continue;
+				const next = cur.slice();
+				[next[i], next[j]] = [next[j], next[i]];
+				if (isDef(next)) continue;
+				let score = 0;
+				for (let k = 0; k < 6; k++) {
+					if (next[k] === target[k] && cur[k] !== target[k]) score += 1;
+					if (next[k] !== target[k] && cur[k] === target[k]) score -= 1;
+				}
+				// 当前正处默认顺序(即将同归于尽)时,任何脱离默认的对调都是救命收益
+				if (isDef(cur)) score += 5;
+				if (score > bestScore) {
+					bestScore = score;
+					best = [i, j];
+				}
+			}
 		}
-		const a = slots.randomGet();
-		let b = slots.randomGet();
-		while (b[0] === a[0] && b[1] === a[1]) b = slots.randomGet();
-		const arr1 = a[0] === "left" ? left : right;
-		const arr2 = b[0] === "left" ? left : right;
-		const tmp = arr1[a[1]];
-		arr1[a[1]] = arr2[b[1]];
-		arr2[b[1]] = tmp;
+		// 已处占优排列且无改进空间 → 不对调
+		if (!best || bestScore <= 0) return { bool: false };
+		const [i, j] = best;
+		const pick = (slot) => (slot % 2 === 0 ? left : right)[Math.floor(slot / 2)];
+		const put = (slot, val) => {
+			(slot % 2 === 0 ? left : right)[Math.floor(slot / 2)] = val;
+		};
+		const a = pick(i);
+		put(i, pick(j));
+		put(j, a);
 		return { bool: true, swapped: true };
 	}
 	return new Promise(resolve => {

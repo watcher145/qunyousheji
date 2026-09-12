@@ -10,6 +10,7 @@ export const skillTranslate = {
 	qunyou_shenshi: "审时",
 	qunyou_shenshi_info:
 		"你成为基本牌或普通锦囊牌的目标时，你可以用三张牌交换一名角色区域或本回合弃牌堆的一张牌，若为前者，抉择：1.令你与其中的手牌较少者摸一张牌并明置；2.添加或减少其为此牌目标。若双方手牌数相同，只能选第二项。",
+	visible_qunyou_shenshi: "审时",
 	qunyou_jianjiang: "荐降",
 	qunyou_jianjiang_info:
 		"你获得过牌的回合结束时，若当前回合角色手牌数全场最少且其有明置手牌，你可以分配其一张明置手牌。持有此牌的角色使用牌无法指定手牌数全场最少的角色为目标，直到失去此牌。",
@@ -278,8 +279,24 @@ export const skillTranslate = {
 	xiaobai_kuotao_info: `${get.poptip("xiaobai_julan")}中断后，若与上次导致中断的牌类别相同，你本局游戏出牌阶段使用【杀】的次数+1；否则你可以将本局游戏出牌阶段使用【杀】的次数或连招条件减少至1，然后于当前阶段结束时视为使用一张多展示X张牌的【兵临城下】（X为减少值）。`,
 	xiaobai_danzhi: "胆执",
 	xiaobai_danzhi_info: "每回合首次使用牌后，若没有角色处于濒死状态，你可以令一名角色失去1点体力或获得此牌，然后本回合与该牌相同花色的牌被使用后，该角色回复1点体力或弃置一张牌。",
-	xiaobai_zhoubi: "骤笔",
+    xiaobai_zhoubi: "骤笔",
 	xiaobai_zhoubi_info: `当你需要使用基本牌时，可以弃置本回合角色一张牌，然后若：该牌字数比上一次更多，你视为使用之；点数比上一次更小，你将手牌数摸至5，此技能失效至你下一次手牌数变化为1。`,
+	xiaobai_liewu: "烈忤",
+	xiaobai_liewu_info: "每轮限一次，你的牌响应其他角色使用的黑色牌后，你可以弃置任意张类别不同的牌对其造成X点伤害，其因此进入濒死状态时，其可以回复至X点体力并令你摸X张牌（X为你弃置的牌数）。",
+    xiaobai_chongjuan: "宠眷",
+	xiaobai_chongjuan_info: "摸牌阶段或弃牌阶段结束时，你可以令手牌数唯一最多的角色摸一张牌，然后其可以令你将手牌数摸至比其少一张（至多摸5张）。",
+	xiaobai_huzhen: "斛珍",
+	xiaobai_huzhen_info: "当你失去手牌后，若与你上次失去手牌的方式不同，你可以摸一张牌，相同，你可以明置一张手牌。你手牌因此变为均明置时，你可以用两张手牌交换一名其他角色三张手牌。",
+	visible_xiaobai_huzhen: "明置",
+	xiaobai_liufang: "流芳",
+	xiaobai_liufang_info: "每回合限一次，你需要使用基本牌时，你可以翻转一张或三张手牌，若明置牌颜色数为一，你弃置所有暗置牌，然后视为使用之。",
+	visible_xiaobai_liufang: "明置",
+	xiaobai_bianmei: "辩眉",
+	xiaobai_bianmei_info:
+		`出牌阶段限一次，你可以与一名手牌比你多一张的角色拼点，赢者可以摸一张牌，或摸两张牌并令对方收回拼点牌，若你赢，你可以再发动${get.poptip("xiaobai_bianmei")}。`,
+	xiaobai_yingying: "营盈",
+	xiaobai_yingying_info:
+		`你可以将手牌数调整为手牌上限，视为使用或打出【杀】或【闪】。若你因${get.poptip("xiaobai_yingying")}累计的摸牌数大于弃牌数，则你只能通过弃牌发动${get.poptip("xiaobai_yingying")}。`,
 	qunyou_gouxian: "构陷",
 	qunyou_gouxian_info: "你每回合首次使用一种牌名的基本牌或普通锦囊牌指定了其他角色为目标时，若此牌为：伤害牌，你可以交给一名其他角色；非伤害牌，你可以令此牌效果改为展示一名此牌的目标角色全部手牌并对其使用其中所有伤害牌或弃置其中所有非伤害牌。",
 	yachai_jianshi: "鉴识",
@@ -460,6 +477,9 @@ export const skillTranslate = {
 	qunyou_shangbing: "上兵",
 	qunyou_shangbing_info:
 		"你可以选择一张手牌并将其余手牌当任意基本牌或【无懈可击】使用或打出；你失去唯一手牌时展示之，若与你上次因「上兵」使用或打出的牌同名，你摸X张牌（X为你上次因「上兵」转化的牌数）。",
+	qunyou_donglan: "栋澜",
+	qunyou_donglan_info:
+		"你使用每阶段第X张牌后，你可以摸X张牌，并令本阶段X翻倍，或使用一张【杀】。（X初始为1，每个阶段重新开始记数）",
 	xiaobai_zhiwen: "鸷刎",
 	xiaobai_zhiwen_info:
 		"你可以将三张牌或最后一张手牌当无次数限制的【杀】或【决斗】使用，然后你选择一项：1.下次仅能以另一种方式转化；2.下次仅能转化为另一种牌名。背水：此牌对其他角色造成的伤害+1，并依次执行上述所有选项。",
@@ -544,6 +564,8 @@ export const skillTranslate = {
 		"此技能的发动时机可通过效果移动（当前发动时机见技能标记）。你可以令此技能的发动时机前移任意个阶段（选择0则不移动，至多至准备阶段开始时）并摸三张牌，视为使用一张【杀】；然后你于下个该阶段开始前弃置所有手牌。",
 	qunyou_zhuhui: "逐辉",
 	qunyou_zhuhui_info: "锁定技，出牌阶段结束时，你的手牌数、体力值、同势力角色数每有一项为1，你便视为使用一张火【杀】。然后你可以回复以此法造成的总伤害值点体力并将你的下个阶段改为出牌阶段。",
+	qunyou_juelan: "绝澜",
+	qunyou_juelan_info: "锁定技，当你回复体力溢出时，你加1点体力上限（溢出的回复量由新的体力上限吸收）；当你受到大于1的伤害时，你减1点体力上限，然后将此伤害改为1点冰冻伤害，你可以选择弃置两张牌防止此伤害。",
 
 	threed_xuyi2: "序仪",
 	"threed_xuyi2_info":
@@ -620,12 +642,17 @@ export const skillTranslate = {
 	qunyou_mingce: "明策",
 	qunyou_mingce_info:
 		"你可以明置手牌中一种类型的所有牌视为使用本回合未以此法使用过的一张普通锦囊牌。当你有明置牌，成为牌的目标时，若此牌的类别与明置牌相同，你失去一点体力；否则你回复一点体力。你使用明置牌无距离和次数限制。",
+	visible_qunyou_mingce: "明策",
+	qunyou_huoni: "惑溺",
+	qunyou_huoni_info:
+		"出牌阶段限一次，你可以翻面并将手牌数调整至3，然后令一名此阶段未以此法选择过的角色获得你的一张手牌，若之为红色，你观看其手牌并使用其中一张；反之其视为使用一张【决斗】。",
 	xuandie_yuwei: "逾围",
 	xuandie_yuwei_info: "你可以以移出方式使用牌并摸牌至X张，令本技能于你使用X张牌前失效、失效X回合后失去。（X为上一张移出牌点数）",
 	xuandie_yuwei_append:
 		'<span style="font-family: yuanli"><li>作者注：玄蝶系列中的“以重铸、移出、明置、暗置等方式使用牌”仅改变使用牌的方式，不影响此牌结算。即是将原本“置入结算区，结算这张牌”改为了“置入弃牌堆并摸一张牌，结算这张牌”“置于你武将牌上，结算这张牌”“明置/暗置这张牌，结算这张牌”。若是装备牌或延时锦囊，依然会在结算时去它该去的地方，所以荀灌可以通过移出游戏方式使用装备牌和延时锦囊牌。另外这里的移出游戏是指置于武将牌上。</span>',
-	xuandie_yuwei_restore_bg: "复",
-	xuandie_yuwei_lose_bg: "失",
+xuandie_yuwei_restore_bg: "复",
+		xuandie_yuwei_lose_bg: "失",
+		xuandie_yuwei_get_bg: "获",
 	xuandie_junce: "君侧",
 	xuandie_junce_info:
 		"你可以将【杀/酒/铁索连环】、【闪/桃/过河拆桥】当另一侧一张牌使用并将两者移至同侧。任意侧唯一需要使用的牌名改为【无中生有】。",
@@ -699,6 +726,7 @@ export const skillTranslate = {
 	qunyou_xianlv: "弦率",
 	qunyou_xianlv_info:
 		"当你使用牌后，你可以明置一张/倒置一张手牌；当有牌被使用时，你可以弃置两张点数与此牌点数构成勾股数的牌，然后摸三张牌。",
+	visible_qunyou_xianlv: "明置",
 	qunyou_jingkuo: "精括",
 	qunyou_jingkuo_info:
 		"锁定技，当你区域内的暗置/明置/倒置手牌数变为三者相等后，你视为使用一张普通锦囊牌。",
@@ -727,6 +755,12 @@ export const skillTranslate = {
 	zishu_jieshuo: "桀朔",
 	zishu_jieshuo_info:
 		"本局游戏每名其他角色限四次，其可以：出牌阶段开始时，视为对你使用【决斗】（消耗1次），或成为你使用【杀】的目标时，消耗所有剩余次数以转移之。",
+	zishu_yuanjiang: "远疆",
+	zishu_yuanjiang_info:
+		"你手牌数减少的阶段结束后，你可以亮出牌堆顶的一张牌。若如此做，当前回合角色可以将之对你使用，否则你获得之。",
+	zishu_suqi: "肃齐",
+	zishu_suqi_info:
+		"你受到或造成伤害后，你可以令伤害来源选择是否与受伤角色拼点。结算后，你将放弃拼点或没赢的角色的一张牌置于牌堆顶或牌堆底。",
 	maokuo_luomo: "落墨",
 	maokuo_luomo_info:
 		"每轮每种花色限一次，一名角色的弃牌阶段结束时，你可以将其于此阶段内弃置过的一张♠/♣牌当普通锦囊牌/基本牌使用。",
