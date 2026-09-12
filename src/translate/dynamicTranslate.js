@@ -3,6 +3,7 @@ import { qunyou_no1Player } from "../skill/helpers.js";
 import { qunyouPhaseNames } from "../skill/sanshe.js";
 
 const blue = (text) => `<span class="bluetext">${text}</span>`;
+const red = (text) => `<span style="color:#f04a4a">${text}</span>`;
 const phaseName = (id) => blue(get.translation(id).replace("阶段", ""));
 
 const dynamicTranslates = {
@@ -190,6 +191,22 @@ qunyou_qiongji(player) {
 				return "你可以以移出方式使用牌并摸牌至X张，令本技能于你使用X张牌前失效、失效X回合后失去、失去X回合后获得。（X为上一张移出牌点数）";
 			}
 			return lib.translate["xuandie_yuwei_info"];
+		},
+		xiaobai_sanfa(player) {
+			const info = player.storage.xiaobai_sanfa || { names: ["thunder"], bases: ["sha"] };
+			const productName = (n) => (n == "fire" ? "火【杀】" : n == "ice" ? "冰【杀】" : "雷【杀】");
+			const baseName = (b) => (b == "basic" ? "基本牌" : "普通锦囊牌");
+			const products = blue(info.names.map(productName).join("/"));
+			const materials = blue(info.bases.map((b) => (b == "sha" ? "【杀】" : baseName(b))).join("/"));
+			const nameRemain = ["fire", "ice"].filter((n) => !info.names.includes(n)).map(productName).join("/");
+			const baseRemain = ["basic", "trick"].filter((b) => !info.bases.includes(b)).map(baseName).join("/");
+			const use = red(player.storage.xiaobai_dengxian ? "相互转化使用" : "使用");
+			let str = "你可以将一张" + materials + "当" + products + use;
+			let tail = "";
+			if (nameRemain.length) tail += "，然后若此【杀】：造成伤害，转换牌名依次添加" + nameRemain;
+			if (baseRemain.length) tail += (tail ? "；" : "，然后若此【杀】：") + "未造成伤害，转换底牌依次添加" + baseRemain;
+			if (tail) str += tail + "。";
+			return str;
 		},
 	};
 

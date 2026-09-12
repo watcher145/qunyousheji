@@ -253,6 +253,11 @@ function collectPayload() {
 	const extra = clansRaw
 		? { clans: clansRaw.split(/[、,，;；]/).map(s => s.trim()).filter(Boolean) }
 		: null;
+	// 势力：支持双势力（用 / 分隔，第一个为主势力；势力 id 统一小写）
+	const groups = ($("#charGroup").value.trim() || "qun")
+		.split(/[\/、,，|；;]+/)
+		.map(s => s.trim().toLowerCase())
+		.filter(Boolean);
 	return {
 		ext: state.ext,
 		targets: state.locate?.targets,
@@ -260,7 +265,8 @@ function collectPayload() {
 		char: {
 			id: $("#charId").value.trim(),
 			sex: $("#charSex").value.trim() || "male",
-			group: $("#charGroup").value.trim(),
+			group: groups[0] || "qun",
+			doubleGroup: groups.length > 1 ? groups : undefined,
 			hp: Number($("#charHp").value) || 4,
 			maxHp: Number($("#charMaxHp").value) || 4,
 			hujia: Number($("#charHujia").value) || 0,

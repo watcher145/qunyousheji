@@ -136,9 +136,19 @@ export const characterIntro = {
 
 	xiaobai__hufang: "设计：铝",
 
-	xiaobai_lvzhu: "设计：小叶子",
+	xiaobai_lvzhu: "设计：小叶子<br>修改：欢愉与希望<br>评价：将二技能的花色修改为颜色，是加强，不过写了那么多比赛设的代码，印基本牌的确要被diy玩坏了",
 
-	xiaobai_malun: "设计：易大剧",
+	xiaobai_malun: "设计：易大剧<br>修改：欢愉与希望<br>评价：将【杀】和【闪】改为了一张基本牌",
 
-	qunyou_taokan: "设计：余平方",
+	qunyou_taokan: "设计：余平方<br>修改：欢愉与希望<br>评价：原版太无脑了，直接使用一张【杀】极易造成永动",
+
+	qunyou_clan_kongyu: "设计：烦不烦吵死了 ",
+
+	xiaobai_zhaoshuang: "设计：小白杯主办组",
+
+	xiaobai_shenmu: "设计：超绝天",
+
+	qunyou_clan_yuankui: "设计：欢愉与希望",
+
+	xiaobai_gaoding: "设计：老酒馆的猫",
 };

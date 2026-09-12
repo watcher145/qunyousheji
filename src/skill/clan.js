@@ -287,16 +287,27 @@ clan_guoting: {
 		const cards = player.getCards("h", (card) => get.suit(card, player) == suit);
 		if (!cards.length) return;
 		await player.recast(cards);
-		// 横置等量名角色（超过场上人数则截断；含自己；已横置者保持横置）
+		// 横置或重置等量名角色（超过场上人数则截断；含自己）
 		const num = Math.min(cards.length, game.players.length);
 		if (num <= 0) return;
 		const result = await player
-			.chooseTarget(num, true, "过庭：横置" + get.cnNumber(num) + "名角色")
-			.set("ai", (target) => -get.attitude(get.player(), target))
+			.chooseTarget(num, true, "过庭：横置或重置" + get.cnNumber(num) + "名角色")
+			.set("ai", (target) => {
+				const player2 = get.player();
+				// 无法被横置的角色选了也白选（原生【铁索连环】的 ai 同款规避）
+				if (target.hasSkillTag("noLink")) return 0;
+				let value = -get.attitude(player2, target);
+				// 反转语义：已横置的目标会被"重置"（等于放他一马）→ 大幅降权，优先未横置的敌人
+				if (target.isLinked()) value *= 0.2;
+				return value;
+			})
 			.forResult();
 		if (!result?.targets?.length) return;
+		// 与【铁索连环】一致：content 是 `await event.target.link()`（无参）。
+		// link(bool) 传 true 时若已横置会直接移除事件、什么都不发生（player.js:9594-9606）；
+		// 无参才走 link content（content.js:12039）按当前状态反转——已横置者被重置。
 		for (const target of result.targets) {
-			if (!target.isLinked()) await target.link(true);
+			await target.link();
 		}
 	},
 },

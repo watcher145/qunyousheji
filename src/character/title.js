@@ -140,4 +140,14 @@ export const characterTitle = {
 	xiaobai_malun: "慧臻端节",
 
 	qunyou_taokan: "激流勇退",
+
+	qunyou_clan_kongyu: "放龟授左",
+
+	xiaobai_zhaoshuang: "朱黄行者",
+
+	xiaobai_shenmu: "上清元君",
+
+	qunyou_clan_yuankui: "东食西宿",
+
+	xiaobai_gaoding: "邈蛮心异",
 };

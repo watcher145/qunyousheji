@@ -233,4 +233,19 @@ export const characterTranslate = {
 	xiaobai_malun_prefix: "小白",
 
 	qunyou_taokan: "陶侃",
+
+	qunyou_clan_kongyu: "族孔愉",
+	qunyou_clan_kongyu_prefix: "族",
+
+	xiaobai_zhaoshuang: "小白赵爽",
+	xiaobai_zhaoshuang_prefix: "小白",
+
+	xiaobai_shenmu: "小白谌母",
+	xiaobai_shenmu_prefix: "小白",
+
+	qunyou_clan_yuankui: "族袁隗",
+	qunyou_clan_yuankui_prefix: "族",
+
+	xiaobai_gaoding: "小白高定",
+	xiaobai_gaoding_prefix: "小白",
 };

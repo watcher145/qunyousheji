@@ -1,5 +1,5 @@
 import { lib, game, get, ui, _status } from "noname";
-import { getTurnDiscardCards, jinluSwapUI, qunyou_beixuan_cancelEvent, qunyou_bingzhu_cardOptions, qunyou_bingzhu_counts, qunyou_damageCardInDiscardThisRound, qunyou_guiwu_targetKind, qunyou_guiwu_targets, qunyou_jidu_discardedShan, qunyou_jidu_isCard, qunyou_lingzhen_limit, qunyou_lingzhen_useLoop, qunyou_miaoyu_canUse, qunyou_miaoyu_controls, qunyou_miaoyu_modAiValue, qunyou_no1Player, qunyou_shuze_effect, qunyou_suijian_options, qunyou_suijian_prompt, qunyou_suijian_queueTargets, qunyou_yaliang_addDelayed, qunyou_yaliang_clearDelayed, qunyou_yaliang_damageCards, qunyou_yaliang_delayed, qunyou_yanghui_phaseDiscardCards, qunyou_yongxu_baseCards, qunyou_yongxu_isTrick, qunyou_shenshi_getTurnDiscardCards, zishu_yusan_getCards } from "./helpers.js";
+import { getTurnDiscardCards, jinluSwapUI, qunyou_adjustHandTo, qunyou_beixuan_cancelEvent, qunyou_bingzhu_cardOptions, qunyou_bingzhu_counts, qunyou_damageCardInDiscardThisRound, qunyou_guiwu_targetKind, qunyou_guiwu_targets, qunyou_jidu_discardedShan, qunyou_jidu_isCard, qunyou_lingzhen_limit, qunyou_lingzhen_useLoop, qunyou_miaoyu_canUse, qunyou_miaoyu_controls, qunyou_miaoyu_modAiValue, qunyou_no1Player, qunyou_shuze_effect, qunyou_suijian_options, qunyou_suijian_prompt, qunyou_suijian_queueTargets, qunyou_yaliang_addDelayed, qunyou_yaliang_clearDelayed, qunyou_yaliang_damageCards, qunyou_yaliang_delayed, qunyou_yanghui_phaseDiscardCards, qunyou_yongxu_baseCards, qunyou_yongxu_isTrick, qunyou_shenshi_getTurnDiscardCards, zishu_yusan_getCards } from "./helpers.js";
 
 // 群赛角色的技能
 export const skills = {
@@ -8535,12 +8535,13 @@ xiaobai_yingying: {
 		// 累计摸牌数大于弃牌数时锁定：只能通过弃牌发动（当前手牌数须超过手牌上限）
 		if (info.draw > info.discard && player.countCards("h") <= player.getHandcardLimit()) return false;
 		return get.inpileVCardList(info2 => {
-			if (info2[2] != "sha" && info2[2] != "shan") return false;
+			if (info2[0] !== "basic") return false;
 			return event.filterCard(new lib.element.VCard({ name: info2[2], nature: info2[3], isCard: true }), player, event);
 		}).length > 0;
 	},
 	hiddenCard(player, name) {
-		if (name != "sha" && name != "shan") return false;
+		// 可印任意基本牌（杀/闪/桃/酒）
+		if (get.type(name) != "basic") return false;
 		if (player.countCards("h") == player.getHandcardLimit()) return false;
 		const info = player.storage.xiaobai_yingying || { draw: 0, discard: 0 };
 		return !(info.draw > info.discard && player.countCards("h") <= player.getHandcardLimit());
@@ -8598,8 +8599,9 @@ xiaobai_yingying: {
 		result: { player: 1 },
 		respondSha: true,
 		respondShan: true,
+		save: true,
 		skillTagFilter(player, tag, arg) {
-			if (tag != "respondSha" && tag != "respondShan") return false;
+			if (tag != "respondSha" && tag != "respondShan" && tag != "save") return false;
 			if (player.countCards("h") == player.getHandcardLimit()) return false;
 			const info = player.storage.xiaobai_yingying || { draw: 0, discard: 0 };
 			return !(info.draw > info.discard && player.countCards("h") <= player.getHandcardLimit());
@@ -8642,6 +8644,611 @@ xiaobai_yingying: {
 					const info = player.storage.xiaobai_yingying || { draw: 0, discard: 0 };
 					return "累计摸牌" + get.cnNumber(info.draw) + "张大于累计弃牌" + get.cnNumber(info.discard) + "张：当前仅可通过弃牌发动〖营盈〗（发动时须弃置手牌至手牌上限）";
 				},
+			},
+		},
+	},
+},
+
+// === 横弦 ===
+xiaobai_hengxian: {
+	audio: 2,
+	trigger: { player: "phaseUseEnd" },
+	filter(event, player) {
+		// 场上存在三名角色的手牌数能构成三角形
+		return lib.skill.xiaobai_hengxian.hasTriangle(lib.skill.xiaobai_hengxian.getCounts(), false);
+	},
+	async content(event, trigger, player) {
+		// 将手牌数调整为4
+		await qunyou_adjustHandTo(player, 4);
+		// 用调整后的场上手牌数判定是否存在等腰三角形
+		if (!lib.skill.xiaobai_hengxian.hasTriangle(lib.skill.xiaobai_hengxian.getCounts(), true)) return;
+		const chooseResult = await player
+			.chooseTarget([3, 3], "横弦：选择三名能构成等腰三角形的角色", (card, player2, target) => {
+				// 单个角色可行性：场上存在包含该角色的等腰三角形三元组
+				const others = game.filterPlayer(current => current != target).map(current => current.countCards("h"));
+				const myNum = target.countCards("h");
+				for (let i = 0; i < others.length; i++) {
+					for (let j = i + 1; j < others.length; j++) {
+						if (lib.skill.xiaobai_hengxian.canFormTriangle(myNum, others[i], others[j]) && (myNum == others[i] || myNum == others[j] || others[i] == others[j])) {
+							return true;
+						}
+					}
+				}
+				return false;
+			})
+			.set("complexSelect", true)
+			.set("filterOk", () => {
+				// 确定按钮实时校验：当前选中的三人须构成等腰三角形
+				if (ui.selected.targets.length < 3) return false;
+				const [a, b, c] = ui.selected.targets.map(current => current.countCards("h"));
+				return lib.skill.xiaobai_hengxian.canFormTriangle(a, b, c) && (a == b || a == c || b == c);
+			})
+			.set("ai", target => -get.attitude(player, target))
+			.forResult();
+		if (!chooseResult?.bool || !chooseResult.targets?.length || chooseResult.targets.length < 3) return;
+		const three = chooseResult.targets;
+		const swapResult = await player
+			.chooseTarget([2, 2], "横弦：选择其中两名角色交换其全部手牌", (card, player2, target) => {
+				return three.includes(target);
+			})
+			.set("ai", target => -get.attitude(player, target))
+			.forResult();
+		if (!swapResult?.bool || !swapResult.targets?.length || swapResult.targets.length < 2) return;
+		await swapResult.targets[0].swapHandcards(swapResult.targets[1]);
+		game.log(swapResult.targets[0], "和", swapResult.targets[1], "交换了全部手牌");
+	},
+	canFormTriangle(a, b, c) {
+		return a + b > c && a + c > b && b + c > a;
+	},
+	getCounts() {
+		return game.filterPlayer().map(current => current.countCards("h"));
+	},
+	hasTriangle(counts, isosceles) {
+		// isosceles=true 时要求至少两人手牌数相等（等腰，含等边）
+		for (let i = 0; i < counts.length; i++) {
+			for (let j = i + 1; j < counts.length; j++) {
+				for (let k = j + 1; k < counts.length; k++) {
+					const a = counts[i], b = counts[j], c = counts[k];
+					if (!lib.skill.xiaobai_hengxian.canFormTriangle(a, b, c)) continue;
+					if (!isosceles || a == b || a == c || b == c) return true;
+				}
+			}
+		}
+		return false;
+	},
+	ai: {
+		threaten: 1.2,
+	},
+},
+
+// === 琢圆 ===
+xiaobai_zhuyuan: {
+	audio: 2,
+	locked: true,
+	trigger: { player: "phaseDiscardBefore" },
+	forced: true,
+	group: ["xiaobai_zhuyuan_refresh"],
+	mark: true,
+	marktext: "圆",
+	intro: {
+		markcount(storage, player) {
+			return game.countPlayer(current => current.countCards("h") == 4);
+		},
+		content(storage, player) {
+			const num = game.countPlayer(current => current.countCards("h") == 4);
+			let str = "你的弃牌阶段改为弃置" + get.cnNumber(num * num) + "张牌（X为场上手牌数为4的角色数：" + get.cnNumber(num) + "；不足全弃）";
+			if (player.hasSkill("xiaobai_zhuyuan_eff")) {
+				str += "<br>当前处于调整状态：直到你的下个回合开始，你的手牌数发生变化后，将调整为4";
+			}
+			return str;
+		},
+	},
+	async content(event, trigger, player) {
+		// 弃牌阶段改为弃置 X² 张牌（X为场上手牌数为4的角色数，不足全弃）
+		trigger.cancel();
+		const X = game.countPlayer(current => current.countCards("h") == 4);
+		const num = Math.min(X * X, player.countCards("h"));
+		if (num > 0) {
+			await player.chooseToDiscard(num, "h", true).set("prompt", "琢圆：弃置" + get.cnNumber(num) + "张手牌").set("ai", card => 5 - get.value(card)).forResult();
+		}
+		// 直到下个你的回合开始：手牌数发生变化后调整为4（本次弃牌即一次变化，会立即拉回4）
+		player.addTempSkill("xiaobai_zhuyuan_eff", { player: "phaseBeginStart" });
+		player.unmarkSkill("xiaobai_zhuyuan");
+	},
+	subSkill: {
+		refresh: {
+			// 手牌数变化时实时刷新计数气泡（圆/○ 状态共用，updateMarks 只刷新当前显示的标记）
+			name: "琢圆",
+			charlotte: true,
+			forced: true,
+			popup: false,
+			silent: true,
+			trigger: {
+				global: ["loseAfter", "gainAfter", "loseAsyncAfter", "equipAfter", "addToExpansionAfter", "addJudgeAfter"],
+			},
+			content(event, trigger, player) {
+				player.updateMarks();
+			},
+		},
+		eff: {
+			// 调整状态：手牌数变化后调整为4，直到下个你的回合开始（过期自动移除并切回"圆"标记）
+			name: "琢圆",
+			mark: true,
+			marktext: "○",
+			charlotte: true,
+			forced: true,
+			popup: false,
+			silent: true,
+			intro: {
+				markcount(storage, player) {
+					return game.countPlayer(current => current.countCards("h") == 4);
+				},
+				content(storage, player) {
+					const num = game.countPlayer(current => current.countCards("h") == 4);
+					return "直到你的下个回合开始：当你的手牌数发生变化后，你将手牌数调整为4（当前场上手牌数为4的角色数：" + get.cnNumber(num) + "）";
+				},
+			},
+			trigger: {
+				player: ["loseAfter", "gainAfter"],
+				global: ["loseAsyncAfter", "equipAfter", "addToExpansionAfter", "gainAfter", "addJudgeAfter"],
+			},
+			filter(event, player) {
+				return player.countCards("h") != 4;
+			},
+			async content(event, trigger, player) {
+				await qunyou_adjustHandTo(player, 4);
+			},
+			onremove(player) {
+				// 状态结束：切回"圆"标记
+				player.markSkill("xiaobai_zhuyuan");
+			},
+		},
+	},
+},
+
+// === 三法 ===
+xiaobai_sanfa: {
+	audio: 2,
+	enable: "chooseToUse",
+	group: ["xiaobai_sanfa_add_name", "xiaobai_sanfa_add_base"],
+	getTargets(player) {
+		// 转化目标：牌名池（正向）；登仙后 ⇄：牌名池的属性杀实体牌也可反转为底牌池类别
+		const info = lib.skill.xiaobai_sanfa.getInfo(player);
+		const targets = info.names.map(n => ["basic", "", "sha", n]);
+		if (player.storage.xiaobai_dengxian) {
+			if (info.bases.includes("sha")) targets.push(["basic", "", "sha", ""]);
+			if (info.bases.includes("basic")) for (const name of ["tao", "jiu", "shan"]) targets.push(["basic", "", name, ""]);
+			if (info.bases.includes("trick")) for (const name of get.inpile("trick")) targets.push(["trick", "", name, ""]);
+		}
+		return targets;
+	},
+	materialForTarget(card, target, info) {
+		// 配对转化：底牌池类别的牌→牌名池产物；牌名池的属性杀→底牌池类别产物（登仙后⇄）
+		const name = get.name(card);
+		const nature = get.nature(card);
+		const type = get.type(card);
+		if (target[2] == "sha" && info.names.includes(target[3])) {
+			return (name == "sha" && info.bases.includes("sha")) ||
+				(info.bases.includes("basic") && type == "basic") ||
+				(info.bases.includes("trick") && type == "trick");
+		}
+		return name == "sha" && nature && info.names.includes(nature);
+	},
+	filter(event, player) {
+		const info = lib.skill.xiaobai_sanfa.getInfo(player);
+		if (!player.hasCard(card => lib.skill.xiaobai_sanfa.isMaterial(card, info), "h")) return false;
+		return lib.skill.xiaobai_sanfa.getTargets(player).some(t =>
+			event.filterCard(new lib.element.VCard({ name: t[2], nature: t[3], isCard: true, storage: { xiaobai_sanfa: true } }), player, event) &&
+			player.hasCard(card => lib.skill.xiaobai_sanfa.materialForTarget(card, t, info), "h")
+		);
+	},
+	chooseButton: {
+		dialog(event, player) {
+			const info = lib.skill.xiaobai_sanfa.getInfo(player);
+			const targets = lib.skill.xiaobai_sanfa.getTargets(player).filter(t =>
+				event.filterCard(new lib.element.VCard({ name: t[2], nature: t[3], isCard: true, storage: { xiaobai_sanfa: true } }), player, event) &&
+				player.hasCard(card => lib.skill.xiaobai_sanfa.materialForTarget(card, t, info), "h")
+			);
+			const title = player.storage.xiaobai_dengxian
+				? "三法：相互转化使用"
+				: "三法：将一张【杀】当" + info.names.map(n => (n == "fire" ? "火" : n == "ice" ? "冰" : "雷") + "【杀】").join("、") + "使用";
+			return ui.create.dialog(title, [targets, "vcard"]);
+		},
+		check(button) {
+			const player = get.player();
+			return player.getUseValue(new lib.element.VCard({ name: button.link[2], nature: button.link[3], isCard: true }));
+		},
+		backup(links, player) {
+			const target = links[0];
+			const info = lib.skill.xiaobai_sanfa.getInfo(player);
+			return {
+				audio: "xiaobai_sanfa",
+				viewAs: { name: target[2], nature: target[3], isCard: true, storage: { xiaobai_sanfa: true } },
+				filterCard: card => lib.skill.xiaobai_sanfa.materialForTarget(card, target, info),
+				selectCard: 1,
+				prompt: "三法：将一张牌当" + (target[3] ? get.translation(target[3]) : "") + "【" + get.translation(target[2]) + "】使用",
+			};
+		},
+	},
+	getInfo(player) {
+		return (player.storage.xiaobai_sanfa ??= { names: ["thunder"], bases: ["sha"] });
+	},
+	isMaterial(card, info) {
+		// 底牌池：初始为【杀】（含雷/火/冰杀变体），随添加扩展基本牌/普通锦囊牌
+		const name = get.name(card);
+		if (name == "sha") return true;
+		if (info.bases.includes("basic") && get.type(card) == "basic") return true;
+		if (info.bases.includes("trick") && get.type(card) == "trick") return true;
+		return false;
+	},
+	addName(player) {
+		const info = lib.skill.xiaobai_sanfa.getInfo(player);
+		for (const n of ["fire", "ice"]) {
+			if (!info.names.includes(n)) {
+				info.names.push(n);
+				return n;
+			}
+		}
+		return null;
+	},
+	addBase(player) {
+		const info = lib.skill.xiaobai_sanfa.getInfo(player);
+		for (const b of ["basic", "trick"]) {
+			if (!info.bases.includes(b)) {
+				info.bases.push(b);
+				return b;
+			}
+		}
+		return null;
+	},
+	subSkill: {
+		add_name: {
+			name: "三法",
+			charlotte: true,
+			forced: true,
+			popup: false,
+			silent: true,
+			trigger: { source: "damage" },
+			filter(event, player) {
+				// 三法产出的杀造成伤害（被防止不算）：牌名池添加下一个未添加项（每次使用只添加一次）
+				if (!event.card?.storage?.xiaobai_sanfa || !(event.num > 0)) return false;
+				if (event.getParent("useCard").sanfa_damaged) return false;
+				const info = lib.skill.xiaobai_sanfa.getInfo(player);
+				return ["fire", "ice"].some(n => !info.names.includes(n));
+			},
+			async content(event, trigger, player) {
+				trigger.getParent("useCard").sanfa_damaged = true;
+				const n = lib.skill.xiaobai_sanfa.addName(player);
+				game.log(player, "的〖三法〗转换牌名添加了", "#g" + (n == "fire" ? "火【杀】" : "冰【杀】"));
+			},
+		},
+		add_base: {
+			name: "三法",
+			charlotte: true,
+			forced: true,
+			popup: false,
+			silent: true,
+			trigger: { player: "useCardAfter" },
+			filter(event, player) {
+				// 三法产出的牌未造成伤害：底牌池添加下一个未添加项
+				if (!event.card?.storage?.xiaobai_sanfa || event.sanfa_damaged) return false;
+				const info = lib.skill.xiaobai_sanfa.getInfo(player);
+				return ["basic", "trick"].some(b => !info.bases.includes(b));
+			},
+			async content(event, trigger, player) {
+				const b = lib.skill.xiaobai_sanfa.addBase(player);
+				game.log(player, "的〖三法〗转换底牌添加了", "#g" + (b == "basic" ? "基本牌" : "普通锦囊牌"));
+			},
+		},
+	},
+	ai: {
+		order: 6,
+		result: { player: 1 },
+		// 登仙后产物含闪/桃/任意锦囊：响应与濒死窗口的预检（未登仙时产物仅属性杀，无这些窗口）
+		respondSha: true,
+		respondShan: true,
+		save: true,
+		skillTagFilter(player, tag, arg) {
+			if (!player.storage.xiaobai_dengxian) return false;
+			if (tag != "respondSha" && tag != "respondShan" && tag != "save") return false;
+			return player.hasCard(card => lib.skill.xiaobai_sanfa.isMaterial(card, lib.skill.xiaobai_sanfa.getInfo(player)), "h");
+		},
+		hiddenCard(player, name) {
+			if (!player.storage.xiaobai_dengxian) return false;
+			return get.type(name) == "basic";
+		},
+	},
+},
+
+// === 释道 ===
+xiaobai_shidao: {
+	audio: 2,
+	trigger: { global: "phaseEnd" },
+	filter(event, player) {
+		// 本回合内有人造成过属性伤害（伤害历史在个人历史上，全局历史无 damage 键）
+		if (lib.skill.xiaobai_shidao.getTurnAttrs(event).size <= 0) return false;
+		// he 区域没有可重铸的牌：无事可做，不发动
+		return player.countCards("he", card => lib.filter.cardRecastable(card, player)) > 0;
+	},
+	getTurnAttrs(turnEvent) {
+		const attrs = new Set();
+		for (const current of game.players.concat(game.dead)) {
+			current.getHistory("damage", evt => {
+				if (evt.nature && evt.getParent?.("phase") === turnEvent) attrs.add(evt.nature);
+			});
+		}
+		return attrs;
+	},
+	async content(event, trigger, player) {
+		// he 区域没有可重铸的牌：直接返回
+		if (!player.countCards("he", card => lib.filter.cardRecastable(card, player))) return;
+		const result = await player
+			.chooseCard("he", true, "释道：重铸一张牌")
+			.set("filterCard", card => lib.filter.cardRecastable(card, player))
+			.set("ai", card => 5 - get.value(card))
+			.forResult();
+		const card = result?.cards?.[0];
+		if (!card) return;
+		await player.recast(card);
+		const info = lib.skill.xiaobai_sanfa.getInfo(player);
+		const type = get.type(card);
+		const name = get.name(card);
+		const nature = get.nature(card);
+		// 转换底牌匹配：【杀】（含雷/火/冰杀）/已添加的基本牌/已添加的普通锦囊牌——摸一张牌
+		const isBase =
+			(name == "sha" && info.bases.includes("sha")) ||
+			(info.bases.includes("basic") && type == "basic") ||
+			(info.bases.includes("trick") && type == "trick");
+		if (isBase) {
+			player.storage.xiaobai_shidao_base = true;
+			await player.draw();
+			game.log(player, "因〖释道〗摸了一张牌");
+		}
+		// 转换牌名匹配：雷/火/冰杀——对一名其他角色造成1点属性伤害（属性为本回合出现过的属性伤害中选一种）
+		// 雷杀等同时满足底牌与牌名：两效皆发
+		if (name == "sha" && nature && info.names.includes(nature)) {
+			player.storage.xiaobai_shidao_name = true;
+			const attrs = [...lib.skill.xiaobai_shidao.getTurnAttrs(trigger)];
+			let attr = attrs[0];
+			if (attrs.length > 1) {
+				const sel = await player
+					.chooseControl(attrs.map(a => get.translation(a) + "属性"))
+					.set("prompt", "释道：选择造成伤害的属性")
+					.set("ai", () => 0)
+					.forResult();
+				if (!sel?.control) return;
+				attr = attrs.find(a => get.translation(a) + "属性" == sel.control) || attr;
+			}
+			const targetResult = await player
+				.chooseTarget("释道：对一名其他角色造成1点" + get.translation(attr) + "属性伤害", (card, player2, target) => target != player2 && target.isIn())
+				.set("ai", target => get.damageEffect(target, player, player, attr))
+				.forResult();
+			if (!targetResult?.bool || !targetResult.targets?.length) return;
+			await targetResult.targets[0].damage(player, 1, attr);
+		}
+	},
+	ai: {
+		threaten: 1.2,
+	},
+},
+
+// === 登仙 ===
+xiaobai_dengxian: {
+	audio: 2,
+	juexingji: true,
+	skillAnimation: true,
+	animationColor: "wood",
+	lastDo: true,
+	trigger: { global: ["useCardAfter", "phaseEnd"] },
+	forced: true,
+	filter(event, player) {
+		if (player.awakenedSkills.includes("xiaobai_dengxian")) return false;
+		// 三法双池全满 + 释道两分支均执行过
+		const info = player.storage.xiaobai_sanfa;
+		if (!info || info.names.length < 3 || info.bases.length < 2) return false;
+		if (!player.storage.xiaobai_shidao_base || !player.storage.xiaobai_shidao_name) return false;
+		return true;
+	},
+	async content(event, trigger, player) {
+		player.awakenSkill("xiaobai_dengxian");
+		// 体力上限调整为9（只改上限，不动体力）
+		player.maxHp = 9;
+		player.update();
+		game.log(player, "的体力上限调整为9");
+		// 可令一名其他角色获得一个全新的〖三法〗
+		const result = await player
+			.chooseTarget("登仙：可令一名其他角色获得〖三法〗（可取消）", (card, player2, target) => target != player2 && !target.hasSkill("xiaobai_sanfa"))
+			.set("ai", target => (get.attitude(player, target) > 0 ? 1 : 0))
+			.forResult();
+		if (result?.bool && result.targets?.length) {
+			const target = result.targets[0];
+			target.addSkill("xiaobai_sanfa");
+			game.log(target, "获得了技能", "#g【三法】");
+		}
+		// 此后你的三法开启相互转化（动态描述与材料范围随之变化）
+		player.storage.xiaobai_dengxian = true;
+	},
+},
+
+// === 叛探 ===
+xiaobai_pantan: {
+	audio: 2,
+	enable: "phaseUse",
+	usable: 1,
+	position: "hes",
+	filterCard: true,
+	viewAs: { name: "zhibi" },
+	filter(event, player) {
+		if (!lib.card.zhibi) return false;
+		if (!player.countCards("hes")) return false;
+		return player.hasUseTarget({ name: "zhibi", isCard: true });
+	},
+	prompt: "将一张牌当【知己知彼】使用",
+	check(card) {
+		return 6 - get.value(card);
+	},
+	group: ["xiaobai_pantan_effect"],
+	ai: {
+		order: 5,
+		result: {
+			player: 1,
+		},
+	},
+	subSkill: {
+		effect: {
+			charlotte: true,
+			name: "叛探",
+			forced: true,
+			popup: false,
+			trigger: { player: "useCardAfter" },
+			filter(event, player) {
+				return event.skill == "xiaobai_pantan";
+			},
+			async content(event, trigger, player) {
+				// 转化的牌 + 观看的牌（身份局【知己知彼】观看的即目标手牌）
+				const cards = (trigger.cards || []).slice(0);
+				const target = trigger.targets?.find((current) => current.isIn());
+				const viewed = target ? target.getCards("h").slice(0) : [];
+				const all = cards.concat(viewed);
+				const hasDamage = all.some((card) => get.is.damageCard(card));
+				const names = all.map((card) => get.name(card, false));
+				const hasSame = new Set(names).size < names.length;
+				if (hasDamage) {
+					await player.draw();
+				}
+				if (hasSame) {
+					const vcard = get.autoViewAs({ name: "juedou", isCard: true }, "unsure");
+					if (player.hasUseTarget(vcard)) {
+						await player.chooseUseTarget(vcard, true);
+					}
+				}
+				// 乘势：其余分支的触发条件均满足后，你变更势力
+				if (hasDamage && hasSame) {
+					const groups = lib.group.filter((group) => !lib.selectGroup.includes(group) && group != player.group);
+					if (!groups.length) return;
+					const choice = await player
+						.chooseButton(["叛探：选择要变更的势力", [groups.map((group) => ["", "", `group_${group}`]), "vcard"]], true)
+						.set("direct", true)
+						.set("ai", (button) => {
+							const group = button.link[2].slice(6);
+							if (group === "wei") return 10;
+							if (group === "qun") return 5;
+							return 1;
+						})
+						.forResult();
+					if (choice?.bool && choice.links?.length) {
+						await player.changeGroup(choice.links[0][2].slice(6));
+					}
+				}
+			},
+		},
+	},
+},
+
+// === 蛮异 ===
+xiaobai_manyi: {
+	audio: 2,
+	direct: true,
+	trigger: { player: "phaseJieshuBegin" },
+	group: ["xiaobai_manyi_snapshot"],
+	filter(event, player) {
+		const info = player.storage.xiaobai_manyi_snapshot;
+		if (!info) return false;
+		const canDamage = game.hasPlayer(
+			(current) => current != player && current.isIn() && info.players[current.playerid] == info.group && current.group != player.group
+		);
+		const canDraw = game.hasPlayer((current) => current.isIn() && current.group == player.group);
+		return canDamage || canDraw;
+	},
+	async content(event, trigger, player) {
+		const info = player.storage.xiaobai_manyi_snapshot;
+		const canDamage = game.hasPlayer(
+			(current) => current != player && current.isIn() && info?.players[current.playerid] == info?.group && current.group != player.group
+		);
+		const canDraw = game.hasPlayer((current) => current.isIn() && current.group == player.group);
+		const controls = [];
+		const choiceList = [];
+		if (canDamage) {
+			controls.push("选项一");
+			choiceList.push("对一名与你本回合开始时势力相同但此时不同的角色造成1点伤害");
+		}
+		if (canDraw) {
+			controls.push("选项二");
+			choiceList.push("令一名与你此时势力相同的角色摸两张牌");
+		}
+		controls.push("背水", "cancel2");
+		choiceList.push("背水");
+		const result = await player
+			.chooseControl(controls)
+			.set("choiceList", choiceList)
+			.set("prompt", "蛮异：选择一项")
+			.set("ai", () => "cancel2")
+			.forResult();
+		if (result.control === "cancel2") return;
+		player.logSkill("xiaobai_manyi");
+		const backwater = result.control === "背水";
+		if (result.control === "选项一" || backwater) {
+			const targets = game.filterPlayer(
+				(current) => current != player && info?.players[current.playerid] == info?.group && current.group != player.group
+			);
+			if (targets.length) {
+				const result2 = await player
+					.chooseTarget("蛮异：对一名角色造成1点伤害", (card, player2, target) => targets.includes(target))
+					.set("ai", (target) => get.damageEffect(target, get.player(), get.player()))
+					.forResult();
+				if (result2?.bool && result2.targets?.length) {
+					await result2.targets[0].damage({ num: 1, source: player });
+				}
+			}
+		}
+		if (result.control === "选项二" || backwater) {
+			const targets = game.filterPlayer((current) => current.group == player.group);
+			if (targets.length) {
+				const result2 = await player
+					.chooseTarget("蛮异：令一名角色摸两张牌", (card, player2, target) => targets.includes(target))
+					.set("ai", (target) => (target == get.player() ? 3 : get.attitude(get.player(), target)))
+					.forResult();
+				if (result2?.bool && result2.targets?.length) {
+					await result2.targets[0].draw(2);
+				}
+			}
+		}
+		// 背水：本局游戏你不能变更至本回合开始时的势力
+		if (backwater) {
+			player.storage.xiaobai_manyi_forbidGroup = info?.group;
+			player.addSkill("xiaobai_manyi_forbid");
+			game.log(player, "发动了背水，本局游戏不能变更至", `#y${get.translation(info?.group)}`, "势力");
+		}
+	},
+	subSkill: {
+		snapshot: {
+			charlotte: true,
+			trigger: { player: "phaseBeginStart" },
+			forced: true,
+			popup: false,
+			silent: true,
+			content(event, trigger, player) {
+				const players = {};
+				game.players.forEach((current) => {
+					players[current.playerid] = current.group;
+				});
+				player.storage.xiaobai_manyi_snapshot = { group: player.group, players };
+			},
+		},
+		forbid: {
+			charlotte: true,
+			name: "蛮异",
+			trigger: { player: "changeGroupBegin" },
+			forced: true,
+			popup: false,
+			silent: true,
+			filter(event, player) {
+				const group = player.storage.xiaobai_manyi_forbidGroup;
+				return !!group && event.group == group;
+			},
+			content(event, trigger, player) {
+				trigger.cancel();
+				game.log(player, "不能变更至", `#y${get.translation(trigger.group)}`, "势力");
 			},
 		},
 	},

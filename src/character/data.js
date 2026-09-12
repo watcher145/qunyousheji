@@ -1091,4 +1091,52 @@ export const characterData = {
 		hujia: 0,
 		skills: ["qunyou_donglan"],
 	},
+
+	qunyou_clan_kongyu: {
+		sex: "male",
+		group: "jin",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		clans: ["鲁国孔氏"],
+		skills: ["qunyou_guchou", "qunyou_jipo", "clan_guoting"],
+	},
+
+	xiaobai_zhaoshuang: {
+		sex: "male",
+		group: "wu",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_hengxian", "xiaobai_zhuyuan"],
+	},
+
+	xiaobai_shenmu: {
+		sex: "female",
+		group: "wu",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_sanfa", "xiaobai_shidao", "xiaobai_dengxian"],
+	},
+
+	qunyou_clan_yuankui: {
+		sex: "male",
+		group: "qun",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		clans: ["汝南袁氏"],
+		skills: ["qunyou_touxie", "qunyou_yinshen", "clanguming"],
+	},
+
+	xiaobai_gaoding: {
+		sex: "male",
+		group: "qun",
+		doubleGroup: ["qun", "shu"],
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["xiaobai_pantan", "xiaobai_manyi"],
+	},
 };

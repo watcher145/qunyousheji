@@ -20,7 +20,7 @@ node server.mjs --port 9527 --no-open
 ## 用法
 
 1. 顶部下拉框选扩展（默认「群友设计」），五个文件自动定位，文件芯片显示定位结果（红色 = 没找到）。
-2. 填基础信息：id（自动查重）、体力/上限/护甲、性别、势力、角色全称、称号、简介；可选 JSON 额外字段（如 `{"clans":["陈郡谢氏"]}`）。
+2. 填基础信息：id（自动查重）、体力/上限/护甲、性别、势力、角色全称、称号、简介；可选 JSON 额外字段（如 `{"clans":["陈郡谢氏"]}`）。势力支持双势力：用 `/` 分隔（如 `wei/qun`，第一个为主势力），会写入 `doubleGroup` 数组。
 3. 「选择 / 浏览技能」打开副窗口：**本扩展 / 游戏本体**两个标签页，支持按中文名、id、描述关键词搜索；每条技能一张卡片（中文名 + id + 完整描述 + 来源文件），描述里的 `${get.poptip("xxx")}` 自动渲染成【技能名】。点击卡片加入，已选技能在主界面可排序（▲▼）。
 4. 前缀：输入框有自动补全（扫描扩展内所有已注册前缀 + pkgPrefixMap），可加多个，写入时按顺序用 `|` 合并成 `id_prefix`。
 5. 所属包：复选框列出扩展 `characterSort` 注册的所有包（带中文名），可多选，id 会追加进每个选中包的数组。
@@ -30,7 +30,7 @@ node server.mjs --port 9527 --no-open
 
 | 角色 | 文件 | 写入内容 |
 |------|------|---------|
-| data | `src/character/data.js` | `characterData` 里追加 `{ sex, group, hp, maxHp, hujia, 额外字段, skills }` |
+| data | `src/character/data.js` | `characterData` 里追加 `{ sex, group, doubleGroup?, hp, maxHp, hujia, 额外字段, skills }`（双势力时才写 `doubleGroup`，主势力排第一） |
 | translate | `src/character/translate.js` | `characterTranslate` 里追加 `id: "全称"` 和 `id_prefix: "前缀1\|前缀2"` |
 | title | `src/character/title.js` | `characterTitle` 里追加 `id: "称号"` |
 | intro | `src/character/intro.js` | `characterIntro` 里追加 `id: "简介"` |
@@ -40,7 +40,7 @@ node server.mjs --port 9527 --no-open
 
 - 写入前五个文件全部备份到 `backups/<时间戳>/`（保留原文件名，`/` 换成 `__`）。
 - 写入后对每个文件跑 `node --check`，结果直接显示在界面上。
-- 服务端校验：id 合法性 / 重复、技能存在性（可勾选「强制添加」跳过）、包存在性。
+- 服务端校验：id 合法性 / 重复、技能存在性（可勾选「强制添加」跳过）、包存在性、势力合法性（`group` 与 `doubleGroup` 需为小写英文 id；不在常见势力与本扩展已用势力中的值只警告不拦截）。
 - 扫描器是字符串/注释/模板串感知的线性解析，不执行任何扩展代码。
 
 ## 备注

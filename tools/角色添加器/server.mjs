@@ -189,6 +189,9 @@ function findObjectRange(src, anchorRe) {
 
 const TARGET_ROLES = ["data", "translate", "title", "intro", "package"];
 
+// 常见势力 id（扩展自定义势力会在校验时通过扫描 data 文件自动并入已知集合）
+const KNOWN_GROUPS = new Set(["wei", "shu", "wu", "qun", "jin", "god", "key"]);
+
 function walkJsFiles(dir, baseDir, out = []) {
 	let entries;
 	try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return out; }
@@ -268,6 +271,20 @@ function locateTargets(extName) {
 
 function readTarget(extName, rel) {
 	return fs.readFileSync(path.join(EXTENSIONS_DIR, extName, rel), "utf8");
+}
+
+/** 已知势力 = 常见势力 ∪ 扩展 data 文件中出现过的 group 值（用于双势力校验，未知只警告不拦截） */
+function scanKnownGroups(extName, targets) {
+	const groups = new Set(KNOWN_GROUPS);
+	if (targets?.data?.rel) {
+		try {
+			const src = readTarget(extName, targets.data.rel);
+			for (const m of src.matchAll(/\bgroup:\s*["']([^"']+)["']/g)) {
+				if (m[1]) groups.add(m[1].trim().toLowerCase());
+			}
+		} catch { /* ignore */ }
+	}
+	return groups;
 }
 
 /* ---------------- 技能扫描 ---------------- */
@@ -442,6 +459,10 @@ function buildDataEntry(char, indentUnit, eol) {
 	lines.push(`${quoteKey(char.id)}: {`);
 	lines.push(`\tsex: ${JSON.stringify(char.sex || "male")},`);
 	lines.push(`\tgroup: ${JSON.stringify(char.group)},`);
+	// 双势力：doubleGroup 数组（含主势力，引擎 get.is.double / 势力选择读取）
+	if (Array.isArray(char.doubleGroup) && char.doubleGroup.length > 1) {
+		lines.push(`\tdoubleGroup: ${JSON.stringify(char.doubleGroup)},`);
+	}
 	lines.push(`\thp: ${char.hp},`);
 	lines.push(`\tmaxHp: ${char.maxHp},`);
 	lines.push(`\thujia: ${char.hujia ?? 0},`);
@@ -490,6 +511,28 @@ async function handleAdd(body, dryRun) {
 		const known = new Set([...scanExtSkills(extName).keys(), ...scanGlobalSkills().keys()]);
 		const unknown = char.skills.filter(s => !known.has(s));
 		if (unknown.length && !body.force) errors.push(`以下技能在扫描结果中不存在（若确认无误可勾选“仍要添加”）：${unknown.join(", ")}`);
+	}
+	// 势力 / 双势力校验（group 为主势力；doubleGroup 为完整势力列表，主势力排第一，引擎按 get.is.double 读取）
+	char.group = String(char.group ?? "").trim().toLowerCase();
+	if (!char.group) {
+		errors.push("缺少势力（group）");
+	} else if (!/^[a-z][a-z0-9_]*$/.test(char.group)) {
+		errors.push(`势力 group "${char.group}" 不合法（应为小写英文 id，如 wei/qun）`);
+	}
+	if (char.group && char.doubleGroup != null) {
+		if (!Array.isArray(char.doubleGroup)) {
+			char.doubleGroup = String(char.doubleGroup).split(/[\/、,，|；;\s]+/).filter(Boolean);
+		}
+		char.doubleGroup = [char.group, ...char.doubleGroup.map(g => String(g).trim().toLowerCase()).filter(g => g && g !== char.group)];
+		if (char.doubleGroup.length < 2) {
+			char.doubleGroup = undefined; // 只剩主势力 = 单势力，不写 doubleGroup
+		} else {
+			const knownGroups = scanKnownGroups(extName, targets);
+			for (const g of char.doubleGroup) {
+				if (!/^[a-z][a-z0-9_]*$/.test(g)) errors.push(`doubleGroup 中的势力 "${g}" 不合法（应为小写英文 id）`);
+				else if (!knownGroups.has(g)) warns.push(`势力 "${g}" 在常见势力与本扩展 data 中均未出现，请确认拼写（如为新建自定义势力请忽略）`);
+			}
+		}
 	}
 	if (!Array.isArray(body.packages) || !body.packages.length) warns.push("未选择任何包（characterSort），武将将不会出现在任何武将包分组里");
 	// 重复 id

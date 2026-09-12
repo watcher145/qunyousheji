@@ -84,7 +84,7 @@ const characterSortTranslate = {
 const characterSort = {
 	threed: ["threed_dongbai", "threed_heji"],
 	qiufeng: ["qiufeng_zhangqiying", "qiufeng_hushi", "qiufeng_xiahouhui"],
-	xiaobai: ["xiaobai_lizhaoyi", "xiaobai_lite", "xiaobai_suojing", "xiaobai__hufang", "xiaobai_lvzhu", "xiaobai_malun"],
+	xiaobai: ["xiaobai_lizhaoyi", "xiaobai_lite", "xiaobai_suojing", "xiaobai__hufang", "xiaobai_lvzhu", "xiaobai_malun", "xiaobai_zhaoshuang", "xiaobai_shenmu", "xiaobai_gaoding"],
 	zishubei: ["zishu_liyan", "zishu_lvju", "zishu_xunyu", "zishu_wangguan","zishu_panshu", "zishu_sunhe", "zishu_zhangjinyun", "zishu_zangba", "zishu_duanjiong", "zishu_shantao", "zishu_maohuanghou", "zishu_guli","zishu_yongkai", "zishu_liangxi"],
 	zhuoming: ["zhuoming_gongsunyuan", "zhuoming_feili_gongsunyuan", "zhuoming_liuyan", "zhuoming_mateng", "zhuoming_fq_mateng", "zhuoming_sc_mateng"],
 	qunyou_chenjunxieshi: ["qunyou_xiedaoyun", "qunyou_xiean", "qunyou_xiexuan", "qunyou_xielingyun", "qunyou_xieshi"],

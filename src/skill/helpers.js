@@ -2683,3 +2683,113 @@ export function qunyou_gumingMove(player, dir) {
 	}
 	return moved;
 }
+
+// === 投协 / 引身 / 乘势 ===
+
+/** 即时牌：基本牌或普通锦囊牌（排除装备牌与延时锦囊） */
+export function qunyou_isInstantCard(card) {
+	return !!card && ["basic", "trick"].includes(get.type(card, false));
+}
+
+/**
+ * 投协：可为指定牌追加的目标候选（排除该牌已指定的目标）
+ * @param { any } card 被使用的牌
+ * @param { Player } user 该牌的使用者（目标的指定方）
+ * @param { Player[] } targets 该牌已指定的目标
+ */
+export function qunyou_touxie_candidates(card, user, targets) {
+	const list = Array.isArray(targets) ? targets : [];
+	return game.filterPlayer(
+		(current) =>
+			!list.includes(current) &&
+			lib.filter.targetInRange(card, user, current) &&
+			lib.filter.targetEnabled(card, user, current)
+	);
+}
+
+/** 引身：已记录的即时牌牌名列表 */
+export function qunyou_yinshen_records(player) {
+	const storage = player.storage.qunyou_yinshen;
+	if (Array.isArray(storage)) {
+		return storage;
+	}
+	if (typeof storage === "string" && storage.length) {
+		player.storage.qunyou_yinshen = [storage];
+		return player.storage.qunyou_yinshen;
+	}
+	player.storage.qunyou_yinshen = [];
+	return player.storage.qunyou_yinshen;
+}
+
+/** 引身：某牌名当前能否视为使用 */
+export function qunyou_yinshen_canUse(player, name) {
+	if (!player?.isIn() || !name) {
+		return false;
+	}
+	const vcard = get.autoViewAs({ name, isCard: true });
+	if (!lib.filter.cardEnabled(vcard, player)) {
+		return false;
+	}
+	if (get.info(vcard)?.notarget) {
+		return true;
+	}
+	return player.hasUseTarget(vcard, true, false);
+}
+
+/** 引身：当前可视为使用的记录牌名 */
+export function qunyou_yinshen_usableNames(player) {
+	return qunyou_yinshen_records(player).filter((name) => qunyou_yinshen_canUse(player, name));
+}
+
+/**
+ * 乘势：把 player 的技能还原为游戏开始时的状态
+ * 参照原生〖痛悼〗dctongdao（character/xianding/skill.js）：摘除全部非常驻技能，
+ * 重新获得初始技能，并清空以技能名为前缀的存储、次数、封印、觉醒与子技能后缀。
+ * @param { Player } player
+ */
+export function qunyou_chengshi_restore(player) {
+	const removeSkills = player.getSkills(null, false, false).filter((skill) => {
+		const info = get.info(skill);
+		return !info || !info.charlotte;
+	});
+	if (removeSkills.length) {
+		player.removeSkill(removeSkills);
+	}
+	const gainSkills = player.getStockSkills(true, true).filter((skill) => {
+		const info = get.info(skill);
+		return info && !info.charlotte && (!info.zhuSkill || player.isZhu2());
+	});
+	if (!gainSkills.length) {
+		return;
+	}
+	Object.keys(player.storage)
+		.filter((key) => gainSkills.some((skill) => key.startsWith(skill)))
+		.forEach((key) => delete player.storage[key]);
+	player.addSkill(gainSkills);
+	const suffixs = ["used", "round", "block", "blocker"];
+	for (const skill of gainSkills) {
+		const info = get.info(skill);
+		if (info.usable !== undefined) {
+			if (typeof player.getStat("triggerSkill")[skill] == "number" && player.getStat("triggerSkill")[skill] >= 1) {
+				delete player.getStat("triggerSkill")[skill];
+			}
+			if (typeof player.getStat("skill")[skill] == "number" && player.getStat("skill")[skill] >= 1) {
+				delete player.getStat("skill")[skill];
+			}
+		}
+		if (info.round && player.storage[skill + "_roundcount"]) {
+			delete player.storage[skill + "_roundcount"];
+		}
+		if (player.storage[`temp_ban_${skill}`]) {
+			delete player.storage[`temp_ban_${skill}`];
+		}
+		if (player.awakenedSkills.includes(skill)) {
+			player.restoreSkill(skill);
+		}
+		for (const suffix of suffixs) {
+			if (player.hasSkill(skill + "_" + suffix)) {
+				player.removeSkill(skill + "_" + suffix);
+			}
+		}
+	}
+}
