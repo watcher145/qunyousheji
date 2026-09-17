@@ -21,4 +21,7 @@ export const clanTranslate = {
 	clanzuguan: "族冠",
 	clanzuguan_info:
 			"宗族技，你一次性失去多张牌后，若没有角色处于濒死状态，你可以令一名同族角色使用其中一张牌。",
+	clanshuze: "树泽",
+	clanshuze_info:
+			"宗族技，当你翻至正面、解除横置、脱离醉酒状态时，你可以视为对一名同族角色使用【桃】，或对所有同族角色使用【五谷丰登】。",
 };

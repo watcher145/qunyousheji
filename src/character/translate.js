@@ -16,16 +16,16 @@ export const characterTranslate = {
 	qunyou_haopu: "郝普",
 	qunyou_chen_zhaoyun: "嗔赵云",
 	qunyou_chen_zhaoyun_prefix: "嗔",
-	qunyou_xiedaoyun: "族谢道韫",
-	qunyou_xiedaoyun_prefix: "族",
-	qunyou_xiean: "族谢安",
-	qunyou_xiean_prefix: "族",
-	qunyou_xiexuan: "族谢玄",
-	qunyou_xiexuan_prefix: "族",
-	qunyou_xielingyun: "族谢灵运",
-	qunyou_xielingyun_prefix: "族",
-	qunyou_xieshi: "族谢石",
-	qunyou_xieshi_prefix: "族",
+	wending_clan_xiedaoyun: "族谢道韫",
+	wending_clan_xiedaoyun_prefix: "族",
+	wending_clan_xiean: "族谢安",
+	wending_clan_xiean_prefix: "族",
+	wending_clan_xiexuan: "族谢玄",
+	wending_clan_xiexuan_prefix: "族",
+	wending_clan_xielingyun: "族谢灵运",
+	wending_clan_xielingyun_prefix: "族",
+	wending_clan_xieshi: "族谢石",
+	wending_clan_xieshi_prefix: "族",
 	qunyou_sunjiao: "孙皎",
 	qunyou_luxun: "陆逊",
 	qunyou_caozhi: "曹植",
@@ -223,8 +223,8 @@ export const characterTranslate = {
 	qunyou_clan_diaochan2: "族貂蝉",
 	qunyou_clan_diaochan2_prefix: "族",
 
-	xiaobai__hufang: "小白胡芳",
-	xiaobai__hufang_prefix: "小白",
+	xiaobai_hufang: "小白胡芳",
+	xiaobai_hufang_prefix: "小白",
 
 	xiaobai_lvzhu: "小白绿珠",
 	xiaobai_lvzhu_prefix: "小白",
@@ -248,4 +248,39 @@ export const characterTranslate = {
 
 	xiaobai_gaoding: "小白高定",
 	xiaobai_gaoding_prefix: "小白",
+
+	zhuoming_dongzhuo: "濯名梦董卓",
+	zhuoming_dongzhuo_prefix: "濯名|梦",
+
+	qunyou_jiananfeng: "贾南风",
+
+	qunyou_sunhao: "孙皓",
+
+	xingyu_sunshangxiang: "星玉孙尚香",
+	xingyu_sunshangxiang_prefix: "星玉",
+
+	qunyou_clan_wangjun: "族王浚",
+	qunyou_clan_wangjun_prefix: "族",
+
+	shanhe_maliang: "山河马良",
+	shanhe_maliang_prefix: "山河",
+
+	qunyou_zhugeguo: "诸葛果",
+
+	xiaobai_liusong: "小白刘颂",
+	xiaobai_liusong_prefix: "小白",
+
+	xiaobai_zhangjian: "小白张臶",
+	xiaobai_zhangjian_prefix: "小白",
+
+	xiaobai_shenyi: "小白申仪",
+	xiaobai_shenyi_prefix: "小白",
+
+	xiaobai_baoxun: "小白鲍勋",
+	xiaobai_baoxun_prefix: "小白",
+
+	xiaobai_chengxi: "小白程喜",
+	xiaobai_chengxi_prefix: "小白",
+
+	qunyou_mo_wangyun: "魔王允",
 };

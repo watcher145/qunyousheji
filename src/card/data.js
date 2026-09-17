@@ -177,6 +177,12 @@ export const cardData = {
 			},
 		},
 	},
+	// 长河：洗入牌堆的「白」牌，可当作某名小白杯武将技能描述中的一张基本牌/普通锦囊牌使用
+	xiaobai_dabai: {
+		fullskin: true,
+		type: "trick",
+		destroy: "discardPile",
+	},
 	zhuoming_fangma: {
 		type: "equip",
 		subtype: "equip3",

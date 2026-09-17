@@ -27,50 +27,50 @@ export const characterData = {
 		hujia: 0,
 		skills: ["qunyou_rongguo"],
 	},
-	qunyou_xiedaoyun: {
+	wending_clan_xiedaoyun: {
 		sex: "female",
 		group: "jin",
 		hp: 3,
 		maxHp: 3,
 		hujia: 0,
 		clans: ["陈郡谢氏"],
-		skills: ["qunyou_yongxu", "qunyou_miaoyu", "qunyou_shuze"],
+		skills: ["wending_yongxu", "wending_miaoyu", "clanshuze"],
 	},
-	qunyou_xiean: {
+	wending_clan_xiean: {
 		sex: "male",
 		group: "jin",
 		hp: 3,
 		maxHp: 3,
 		hujia: 0,
 		clans: ["陈郡谢氏"],
-		skills: ["qunyou_yanghui", "qunyou_yaliang", "qunyou_shuze"],
+		skills: ["wending_yanghui", "wending_yaliang", "clanshuze"],
 	},
-	qunyou_xiexuan: {
+	wending_clan_xiexuan: {
 		sex: "male",
 		group: "jin",
 		hp: 3,
 		maxHp: 4,
 		hujia: 0,
 		clans: ["陈郡谢氏"],
-		skills: ["qunyou_jidu", "qunyou_bingzhu", "qunyou_shuze"],
+		skills: ["wending_jidu", "wending_bingzhu", "clanshuze"],
 	},
-	qunyou_xielingyun: {
+	wending_clan_xielingyun: {
 		sex: "male",
 		group: "jin",
 		hp: 3,
 		maxHp: 3,
 		hujia: 0,
 		clans: ["陈郡谢氏"],
-		skills: ["qunyou_beixuan", "qunyou_guiwu", "qunyou_shuze"],
+		skills: ["wending_beixuan", "wending_guiwu", "clanshuze"],
 	},
-	qunyou_xieshi: {
+	wending_clan_xieshi: {
 		sex: "male",
 		group: "jin",
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
 		clans: ["陈郡谢氏"],
-		skills: ["qunyou_suijian", "qunyou_shuze"],
+		skills: ["wending_suijian", "clanshuze"],
 	},
 	qunyou_zhaoyun: {
 		sex: "male",
@@ -182,7 +182,7 @@ export const characterData = {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["qunyou_xiongbo", "qunyou_jinfa"],
+		skills: ["qunyou_xiongbo", "qunyou_jingfa"],
 	},
 	qunyou_sb_zhugeliang: {
 		sex: "male",
@@ -359,7 +359,7 @@ export const characterData = {
 		hp: 5,
 		maxHp: 5,
 		hujia: 0,  
-		skills: ["qunyou_yongli","shanhe_taoning","shanhe_fuzhu"],
+		skills: ["shanhe_yongli","shanhe_taoning","shanhe_fuzhu"],
 	},
 	qunyou_lvyi: {
 		sex: "male",
@@ -1034,7 +1034,7 @@ export const characterData = {
 		maxHp: 4,
 		hujia: 0,
 		clans: ["天水姜氏"],
-		skills: ["qunyou_zhuhui", "clan_xinggu"],
+		skills: ["qunyou_zhuhui","qunyou_juelan", "clan_xinggu"],
 	},
 
 	zishu_liangxi: {
@@ -1056,7 +1056,7 @@ export const characterData = {
 		skills: ["qunyou_huoni", "clanzhongliu"],
 	},
 
-	xiaobai__hufang: {
+	xiaobai_hufang: {
 		sex: "male",
 		group: "jin",
 		hp: 3,
@@ -1138,5 +1138,124 @@ export const characterData = {
 		maxHp: 4,
 		hujia: 0,
 		skills: ["xiaobai_pantan", "xiaobai_manyi"],
+	},
+
+	zhuoming_dongzhuo: {
+		sex: "male",
+		group: "han",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["zhuoming_tingfeng", "zhuoming_gongyan"],
+	},
+
+	qunyou_jiananfeng: {
+		sex: "female",
+		group: "jin",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["qunyou_jike"],
+	},
+
+	qunyou_sunhao: {
+		sex: "male",
+		group: "wu",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["qunyou_lanshe", "qunyou_funve", "qunyou_fushui"],
+	},
+
+	xingyu_sunshangxiang: {
+		sex: "female",
+		group: "wu",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xingyu_yingfeng", "xingyu_haowu"],
+	},
+
+	qunyou_clan_wangjun: {
+		sex: "male",
+		group: "jin",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		clans: ["太原王氏"],
+		skills: ["qunyou_yinhu", "clanzhongliu"],
+	},
+
+	shanhe_maliang: {
+		sex: "male",
+		group: "shu",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["shanhe_zhishu", "shanhe_hexi"],
+	},
+
+	qunyou_zhugeguo: {
+		sex: "female",
+		group: "shu",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["qunyou_qirang", "qunyou_shuzuo"],
+	},
+
+	xiaobai_liusong: {
+		sex: "male",
+		group: "jin",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_buxi", "xiaobai_zhenlv"],
+	},
+
+	xiaobai_zhangjian: {
+		sex: "male",
+		group: "qun",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["xiaobai_changhe", "xiaobai_jiudian", "xiaobai_shilang"],
+	},
+
+	xiaobai_shenyi: {
+		sex: "male",
+		group: "wei",
+		doubleGroup: ["wei", "shu"],
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["xiaobai_beibian", "xiaobai_nisi"],
+	},
+
+	xiaobai_baoxun: {
+		sex: "male",
+		group: "wei",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_gengjian", "xiaobai_bingyan"],
+	},
+
+	xiaobai_chengxi: {
+		sex: "male",
+		group: "wei",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["xiaobai_zuangong", "xiaobai_beisi"],
+	},
+
+	qunyou_mo_wangyun: {
+		sex: "male",
+		group: "devil",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["qunyou_jinfa", "qunyou_ranchen"],
 	},
 };

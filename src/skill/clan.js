@@ -24,6 +24,50 @@ function clanXingguSharedCard(player) {
 	return card;
 }
 
+/** 树泽：桃/五谷选择并执行 */
+async function clanshuze_effect(player) {
+	const clanName = "陈郡谢氏";
+	const mates = game.filterPlayer((p) => p.isIn() && p.hasClan(clanName));
+	if (!mates.length) {
+		return;
+	}
+	player.logSkill("clanshuze");
+	const choices = [];
+	if (mates.some((target) => target.isDamaged())) {
+		choices.push("【桃】（一名同族）");
+	}
+	const viewAs = get.autoViewAs({ name: "wugu", isCard: true });
+	const wuguTargets = mates.filter((target) => player.canUse(viewAs, target, false));
+	if (wuguTargets.length) {
+		choices.push("【五谷丰登】（所有同族）");
+	}
+	if (!choices.length) {
+		return;
+	}
+	const ctrl = await player
+		.chooseControl(choices)
+		.set("prompt", "树泽：视为使用其中一种牌")
+		.set("ai", () => {
+			const need = mates.some((t) => t.hp < t.maxHp);
+			return need && choices.includes("【桃】（一名同族）") ? "【桃】（一名同族）" : choices[0];
+		})
+		.forResult();
+	if (ctrl.control === "【桃】（一名同族）") {
+		const r = await player
+			.chooseTarget("树泽：请选择一名同族角色", true, (card, p, target) => {
+				return mates.includes(target) && target.isDamaged();
+			})
+			.set("ai", (target) => get.recoverEffect(target, player, player))
+			.forResult();
+		if (!r?.bool || !r.targets?.length) {
+			return;
+		}
+		await player.useCard({ name: "tao", isCard: true }, r.targets, false);
+	} else if (ctrl.control === "【五谷丰登】（所有同族）") {
+		await player.useCard(viewAs, wuguTargets, false);
+	}
+}
+
 // 宗族技 — clan*
 export const skills = {
 // === 沦佚 ===
@@ -398,6 +442,49 @@ clan_xinggu: {
 				}
 			}
 		}
+	},
+},
+
+// === 树泽 ===
+clanshuze: {
+	audio: 2,
+	clanSkill: true,
+	trigger: { player: ["turnOverEnd", "linkEnd", "removeJiu", "useCard1"], global: "phaseAfter" },
+	filter(event, player, name) {
+		if (event.name === "turnOver") {
+			return !player.isTurnedOver();
+		}
+		if (event.name === "link") {
+			return !player.isLinked();
+		}
+		if (event.name === "removeJiu") {
+			return true;
+		}
+		if (name === "useCard1") {
+			if (player.hasSkill("xu_jiu", true) && event.card?.name === "sha" && lib.skill.jiu2?.filter?.(event, player)) {
+				return true;
+			}
+			if (
+				player.hasSkill("xu_zuijiu", true) &&
+				!event.card?.xu_huangzui &&
+				["basic", "trick"].includes(get.type(event.card)) &&
+				!get.tag(event.card, "damage") &&
+				lib.skill.xu_zuijiu2?.filter?.(event, player)
+			) {
+				return true;
+			}
+			return false;
+		}
+		if (name === "phaseAfter") {
+			return player.hasSkill("xu_zuijiu", true) && !player.hasSkillTag("jiuSustain", null, name);
+		}
+		return false;
+	},
+	check() {
+		return true;
+	},
+	async content(event, trigger, player) {
+		await clanshuze_effect(player);
 	},
 },
 };

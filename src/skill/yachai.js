@@ -1355,6 +1355,14 @@ yachai_jingui: {
 		return true;
 	},
 	check(event, player) {
+		// AI 只对队友发动：把牌交给非队友等于资敌
+		let target = event.player;
+		if ((!target || target.isDead()) && event.name === "cardsDiscard") {
+			const parent = event.getParent();
+			target = parent?.relatedEvent?.player || parent?.player;
+		}
+		if (!target || !target.isIn()) return 0;
+		if (get.attitude(player, target) <= 0) return 0;
 		const cards = event.getd().filter(c => c && get.itemtype(c) === "card");
 		return cards.some(c => get.value(c) > 5) ? 1 : 0;
 	},
@@ -1370,11 +1378,18 @@ yachai_jingui: {
 		if (!player.storage.yachai_jingui_used) player.storage.yachai_jingui_used = [];
 		player.storage.yachai_jingui_used.push(target.playerid);
 
-		const go = await player.chooseBool(get.prompt("yachai_jingui"), "选择一张牌交给" + get.translation(target)).forResult();
+		const go = await player.chooseBool(get.prompt("yachai_jingui"), "选择一张牌交给" + get.translation(target))
+			.set("ai", () => {
+				// AI 只对队友发动：把牌交给非队友等于资敌
+				if (get.attitude(player, target) <= 0) return false;
+				const cards = trigger.getd().filter(c => c && get.itemtype(c) === "card");
+				return cards.some(c => get.value(c) > 5);
+			})
+			.forResult();
 		if (!go.bool) return;
 
 		const result = await player.chooseButton(["尽规：选择一张牌交给" + get.translation(target), cards])
-			.set("ai", button => 6 - get.value(button.link))
+			.set("ai", button => get.value(button.link))
 			.forResult();
 		if (!result.bool || !result.links || !result.links.length) return;
 		const card = result.links[0];
@@ -1411,11 +1426,17 @@ yachai_jingui_effect: {
 		}
 	},
 	mod: {
-		targetInRange(card, player, target, current) {
-			if (card.hasGaintag && card.hasGaintag("yachai_jingui_mark")) return true;
+		targetInRange(card, player, target) {
+			// 用 storage 标记识别：cardUsable 传给 mod 的是 autoViewAs 出的 VCard 副本，
+			// 不带 gaintag 也没有 hasGaintag 方法，但会拷贝 storage（实体牌同样有）
+			if (card.storage?.yachai_jingui) return true;
 		},
 		cardUsable(card, player, num) {
-			if (card.hasGaintag && card.hasGaintag("yachai_jingui_mark")) return num + 999;
+			if (card.storage?.yachai_jingui) {
+				// num 为 undefined 的牌本就没有次数字段，返回 true 即视为无限制；
+				// 直接 num+999 会在无 usable 字段时算出 NaN，导致牌反而不可用
+				return typeof num === "number" ? num + 999 : true;
+			}
 		},
 	},
 },

@@ -701,18 +701,18 @@ export function qunyou_hanguo_visibleTag() {
 }
 
 /** 咏絮：递归展开本次响应所用牌的实体底牌（兼容嵌套虚拟牌） */
-export function qunyou_yongxu_flatPhysical(card, list = []) {
+export function wending_yongxu_flatPhysical(card, list = []) {
 	if (!card) {
 		return list;
 	}
 	if (Array.isArray(card)) {
 		for (const item of card) {
-			qunyou_yongxu_flatPhysical(item, list);
+			wending_yongxu_flatPhysical(item, list);
 		}
 		return list;
 	}
 	if (card.cards?.length) {
-		qunyou_yongxu_flatPhysical(card.cards, list);
+		wending_yongxu_flatPhysical(card.cards, list);
 	} else if (get.itemtype(card) === "card") {
 		list.add(card);
 	}
@@ -720,20 +720,20 @@ export function qunyou_yongxu_flatPhysical(card, list = []) {
 }
 
 /** 咏絮：本次响应所用牌的实体底牌（闪/无懈等 event.cards 或 event.card.cards） */
-export function qunyou_yongxu_baseCards(event) {
-	const cards = qunyou_yongxu_flatPhysical(event.cards);
+export function wending_yongxu_baseCards(event) {
+	const cards = wending_yongxu_flatPhysical(event.cards);
 	if (cards.length) {
 		return cards;
 	}
-	return qunyou_yongxu_flatPhysical(event.card);
+	return wending_yongxu_flatPhysical(event.card);
 }
 
-export function qunyou_yongxu_isTrick(card, player) {
+export function wending_yongxu_isTrick(card, player) {
 	return get.type2(card, player) === "trick";
 }
 
 /** 妙喻：当前可选的 ±1 项（牌数须 ≥ 调整后 X；L-1<1 时不能选 -1） */
-export function qunyou_miaoyu_controls(player, cur) {
+export function wending_miaoyu_controls(player, cur) {
 	if (!cur?.isIn()) {
 		return [];
 	}
@@ -749,17 +749,17 @@ export function qunyou_miaoyu_controls(player, cur) {
 	return list;
 }
 
-export function qunyou_miaoyu_canUse(player, cur) {
-	return qunyou_miaoyu_controls(player, cur).length > 0;
+export function wending_miaoyu_canUse(player, cur) {
+	return wending_miaoyu_controls(player, cur).length > 0;
 }
 
-export function qunyou_miaoyu_modAiValue(player, card, num) {
+export function wending_miaoyu_modAiValue(player, card, num) {
 	const ev = get.event();
 	if (ev.type !== "wuxie" && ev.getParent?.()?.type !== "wuxie") {
 		return;
 	}
 	const cur = _status.currentPhase;
-	if (!cur?.isIn() || !qunyou_miaoyu_canUse(player, cur)) {
+	if (!cur?.isIn() || !wending_miaoyu_canUse(player, cur)) {
 		return;
 	}
 	const cards2 = player.getCards("hes");
@@ -1005,7 +1005,7 @@ export function qunyou_cangxiao_notBySkill(event) {
 	return !event.getParent((evt) => evt.skill, true);
 }
 
-export function qunyou_yanghui_phaseDiscardCards(event, player) {
+export function wending_yanghui_phaseDiscardCards(event, player) {
 	if (event.type !== "discard" || !event.getParent("phaseDiscard", true)) {
 		return [];
 	}
@@ -1019,88 +1019,45 @@ export function qunyou_yanghui_phaseDiscardCards(event, player) {
 	return [];
 }
 
-export function qunyou_yaliang_delayed(player, type) {
-	return player.storage[`qunyou_yaliang_${type}`] || 0;
+export function wending_yaliang_delayed(player, type) {
+	return player.storage[`wending_yaliang_${type}`] || 0;
 }
 
-export function qunyou_yaliang_updateMark(player) {
-	if (qunyou_yaliang_delayed(player, "draw") || qunyou_yaliang_delayed(player, "discard")) {
-		player.markSkill("qunyou_yaliang");
+export function wending_yaliang_updateMark(player) {
+	if (wending_yaliang_delayed(player, "draw") || wending_yaliang_delayed(player, "discard")) {
+		player.markSkill("wending_yaliang");
 	} else {
-		player.unmarkSkill("qunyou_yaliang");
+		player.unmarkSkill("wending_yaliang");
 	}
 }
 
-export function qunyou_yaliang_addDelayed(player, type, num) {
+export function wending_yaliang_addDelayed(player, type, num) {
 	if (num <= 0) {
 		return;
 	}
-	const key = `qunyou_yaliang_${type}`;
+	const key = `wending_yaliang_${type}`;
 	player.storage[key] = (player.storage[key] || 0) + num;
-	qunyou_yaliang_updateMark(player);
+	wending_yaliang_updateMark(player);
 }
 
-export function qunyou_yaliang_clearDelayed(player, type) {
-	delete player.storage[`qunyou_yaliang_${type}`];
-	qunyou_yaliang_updateMark(player);
+export function wending_yaliang_clearDelayed(player, type) {
+	delete player.storage[`wending_yaliang_${type}`];
+	wending_yaliang_updateMark(player);
 }
 
-export function qunyou_yaliang_damageCards(event) {
+export function wending_yaliang_damageCards(event) {
 	const cards = [];
-	qunyou_yongxu_flatPhysical(event.cards, cards);
-	qunyou_yongxu_flatPhysical(event.card, cards);
+	wending_yongxu_flatPhysical(event.cards, cards);
+	wending_yongxu_flatPhysical(event.card, cards);
 	return cards.filter((card) => ["o", "d"].includes(get.position(card, true)));
 }
 
-/** 树泽：桃/五谷选择并执行 */
-export async function qunyou_shuze_effect(player) {
-	const clanName = "陈郡谢氏";
-	const mates = game.filterPlayer((p) => p.isIn() && p.hasClan(clanName));
-	if (!mates.length) {
-		return;
-	}
-	player.logSkill("qunyou_shuze");
-	const choices = [];
-	if (mates.some((target) => target.isDamaged())) {
-		choices.push("【桃】（一名同族）");
-	}
-	const viewAs = get.autoViewAs({ name: "wugu", isCard: true });
-	const wuguTargets = mates.filter((target) => player.canUse(viewAs, target, false));
-	if (wuguTargets.length) {
-		choices.push("【五谷丰登】（所有同族）");
-	}
-	if (!choices.length) {
-		return;
-	}
-	const ctrl = await player
-		.chooseControl(choices)
-		.set("prompt", "树泽：视为使用其中一种牌")
-		.set("ai", () => {
-			const need = mates.some((t) => t.hp < t.maxHp);
-			return need && choices.includes("【桃】（一名同族）") ? "【桃】（一名同族）" : choices[0];
-		})
-		.forResult();
-	if (ctrl.control === "【桃】（一名同族）") {
-		const r = await player
-			.chooseTarget("树泽：请选择一名同族角色", true, (card, p, target) => {
-				return mates.includes(target) && target.isDamaged();
-			})
-			.set("ai", (target) => get.recoverEffect(target, player, player))
-			.forResult();
-		if (!r?.bool || !r.targets?.length) {
-			return;
-		}
-		await player.useCard({ name: "tao", isCard: true }, r.targets, false);
-	} else if (ctrl.control === "【五谷丰登】（所有同族）") {
-		await player.useCard(viewAs, wuguTargets, false);
-	}
+
+export function wending_jidu_isCard(card) {
+	return card?.name === "wanjian" && card.storage?.wending_jidu;
 }
 
-export function qunyou_jidu_isCard(card) {
-	return card?.name === "wanjian" && card.storage?.qunyou_jidu;
-}
-
-export function qunyou_jidu_discardedShan(event) {
+export function wending_jidu_discardedShan(event) {
 	const cards = [];
 	if (event.name === "loseAsyncAfter" && typeof event.getl === "function") {
 		for (const cur of game.filterPlayer()) {
@@ -1120,7 +1077,7 @@ export function qunyou_jidu_discardedShan(event) {
 	return cards.filter((card) => get.name(card) === "shan");
 }
 
-export function qunyou_bingzhu_cardOptions(event, player, count) {
+export function wending_bingzhu_cardOptions(event, player, count) {
 	const list = [];
 	if (typeof event.filterCard !== "function" || typeof event.filterTarget !== "function") {
 		return list;
@@ -1138,18 +1095,18 @@ export function qunyou_bingzhu_cardOptions(event, player, count) {
 	return list;
 }
 
-export function qunyou_bingzhu_counts(event, player) {
+export function wending_bingzhu_counts(event, player) {
 	const linked = game.filterPlayer((target) => target.isLinked()).length;
 	const list = [];
 	for (let count = 2; count <= linked; count++) {
-		if (qunyou_bingzhu_cardOptions(event, player, count).length) {
+		if (wending_bingzhu_cardOptions(event, player, count).length) {
 			list.push(count);
 		}
 	}
 	return list;
 }
 
-export function qunyou_beixuan_cancelEvent(event) {
+export function wending_beixuan_cancelEvent(event) {
 	if (event.forced) {
 		return false;
 	}
@@ -1168,7 +1125,7 @@ export function qunyou_beixuan_cancelEvent(event) {
 	return true;
 }
 
-export function qunyou_guiwu_isInstant(event) {
+export function wending_guiwu_isInstant(event) {
 	if (!event?.card || !event.targets?.length) {
 		return false;
 	}
@@ -1180,14 +1137,14 @@ export function qunyou_guiwu_isInstant(event) {
 	return type !== "equip" && type !== "delay";
 }
 
-export function qunyou_guiwu_targetKind(event) {
-	if (!qunyou_guiwu_isInstant(event)) {
+export function wending_guiwu_targetKind(event) {
+	if (!wending_guiwu_isInstant(event)) {
 		return null;
 	}
 	return event.targets.length === 1 ? "single" : "multi";
 }
 
-export function qunyou_guiwu_targets() {
+export function wending_guiwu_targets() {
 	const counts = new Map();
 	for (const target of game.filterPlayer()) {
 		const num = target.countCards("h");
@@ -1196,13 +1153,13 @@ export function qunyou_guiwu_targets() {
 	return game.filterPlayer((target) => counts.get(target.countCards("h")) === 1);
 }
 
-const qunyou_suijian_names = ["tiesuo", "suijiyingbian", "jiu", "sha"];
+const wending_suijian_names = ["tiesuo", "suijiyingbian", "jiu", "sha"];
 
-export function qunyou_suijian_vcard(name, storage) {
-	return { name, isCard: true, storage: { qunyou_suijian: true, ...(storage || {}) } };
+export function wending_suijian_vcard(name, storage) {
+	return { name, isCard: true, storage: { wending_suijian: true, ...(storage || {}) } };
 }
 
-export function qunyou_suijian_canUse(player, card) {
+export function wending_suijian_canUse(player, card) {
 	if (!player?.isIn() || !card || !lib.filter.cardEnabled(card, player)) {
 		return false;
 	}
@@ -1213,7 +1170,7 @@ export function qunyou_suijian_canUse(player, card) {
 	return player.hasUseTarget(card, true, false);
 }
 
-export function qunyou_suijian_historyOptions(player) {
+export function wending_suijian_historyOptions(player) {
 	const history = game.getGlobalHistory("everything", (evt) => {
 		if (evt.player !== player || !evt.card) {
 			return false;
@@ -1232,9 +1189,9 @@ export function qunyou_suijian_historyOptions(player) {
 		if (!name) {
 			continue;
 		}
-		const card = qunyou_suijian_vcard(name, {
-			qunyou_suijian_option: "suijiyingbian",
-			qunyou_suijian_origin: evt.card.name,
+		const card = wending_suijian_vcard(name, {
+			wending_suijian_option: "suijiyingbian",
+			wending_suijian_origin: evt.card.name,
 		});
 		const nature = get.nature(evt.card, player);
 		if (nature) {
@@ -1266,25 +1223,25 @@ export function qunyou_suijian_historyOptions(player) {
 	return list;
 }
 
-export function qunyou_suijian_options(player, used) {
+export function wending_suijian_options(player, used) {
 	if (!player?.isIn()) {
 		return [];
 	}
 	const list = [];
-	for (const name of qunyou_suijian_names) {
+	for (const name of wending_suijian_names) {
 		if (used.includes(name)) {
 			continue;
 		}
 		if (name === "suijiyingbian") {
-			for (const option of qunyou_suijian_historyOptions(player)) {
-				if (qunyou_suijian_canUse(player, option.card)) {
+			for (const option of wending_suijian_historyOptions(player)) {
+				if (wending_suijian_canUse(player, option.card)) {
 					list.push(option);
 				}
 			}
 			continue;
 		}
-		const card = qunyou_suijian_vcard(name);
-		if (qunyou_suijian_canUse(player, card)) {
+		const card = wending_suijian_vcard(name);
+		if (wending_suijian_canUse(player, card)) {
 			list.push({
 				key: name,
 				usedKey: name,
@@ -1296,7 +1253,7 @@ export function qunyou_suijian_options(player, used) {
 	return list;
 }
 
-export function qunyou_suijian_queueTargets(targets, player) {
+export function wending_suijian_queueTargets(targets, player) {
 	if (!targets?.length) {
 		return [];
 	}
@@ -1305,7 +1262,7 @@ export function qunyou_suijian_queueTargets(targets, player) {
 		.sortBySeat(_status.currentPhase || player);
 }
 
-export function qunyou_suijian_prompt(player, options) {
+export function wending_suijian_prompt(player, options) {
 	return `${get.translation(player)}：选择视为使用的牌（剩余：${options.map((option) => option.label).join("、")}）`;
 }
 
@@ -1442,27 +1399,27 @@ export function qunyou_xiongbo_majorityTargets(result, player) {
 		.filter((current) => current && current !== player && current.isIn() && player.canCompare(current));
 }
 
-export function qunyou_jinfa_getEventStorage(event, player, create = false) {
+export function qunyou_jingfa_getEventStorage(event, player, create = false) {
 	if (!event || !player) {
 		return null;
 	}
-	if (!event.qunyou_jinfa && create) {
-		event.qunyou_jinfa = {};
+	if (!event.qunyou_jingfa && create) {
+		event.qunyou_jingfa = {};
 	}
-	if (!event.qunyou_jinfa) {
+	if (!event.qunyou_jingfa) {
 		return null;
 	}
-	if (!event.qunyou_jinfa[player.playerid] && create) {
-		event.qunyou_jinfa[player.playerid] = {
+	if (!event.qunyou_jingfa[player.playerid] && create) {
+		event.qunyou_jingfa[player.playerid] = {
 			cards: [],
 			number: 0,
 			modify: false,
 		};
 	}
-	return event.qunyou_jinfa[player.playerid] || null;
+	return event.qunyou_jingfa[player.playerid] || null;
 }
 
-export function qunyou_jinfa_getCompareEvent(event) {
+export function qunyou_jingfa_getCompareEvent(event) {
 	if (!event) {
 		return null;
 	}
@@ -1472,7 +1429,7 @@ export function qunyou_jinfa_getCompareEvent(event) {
 	return event.getParent?.("chooseToCompare", true) || null;
 }
 
-export function qunyou_jinfa_sameSuitAndType(cards, player) {
+export function qunyou_jingfa_sameSuitAndType(cards, player) {
 	if (!cards?.length) {
 		return false;
 	}
@@ -1481,7 +1438,7 @@ export function qunyou_jinfa_sameSuitAndType(cards, player) {
 	return cards.every((card) => get.suit(card, player) === suit && get.type(card, player) === type);
 }
 
-export function qunyou_jinfa_sum(cards, player) {
+export function qunyou_jingfa_sum(cards, player) {
 	return cards.reduce((sum, card) => sum + get.number(card, player), 0);
 }
 
@@ -1507,7 +1464,7 @@ export function qunyou_xiongbo_selfCards(compareEvent, player) {
 	if (compareCard && ["o", "d"].includes(get.position(compareCard, true))) {
 		list.push(compareCard);
 	}
-	const storage = qunyou_jinfa_getEventStorage(compareEvent, player);
+	const storage = qunyou_jingfa_getEventStorage(compareEvent, player);
 	for (const card of storage?.cards || []) {
 		if (card && ["o", "d"].includes(get.position(card, true)) && !list.includes(card)) {
 			list.push(card);

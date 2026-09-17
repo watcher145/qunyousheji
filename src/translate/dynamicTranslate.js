@@ -1,13 +1,13 @@
 import { lib, get, _status } from "noname";
 import { qunyou_no1Player } from "../skill/helpers.js";
-import { qunyouPhaseNames } from "../skill/sanshe.js";
+import { qunyou_jike_del, qunyou_jike_texts, qunyouPhaseNames } from "../skill/sanshe.js";
 
 const blue = (text) => `<span class="bluetext">${text}</span>`;
 const red = (text) => `<span style="color:#f04a4a">${text}</span>`;
 const phaseName = (id) => blue(get.translation(id).replace("阶段", ""));
 
 const dynamicTranslates = {
-	qunyou_miaoyu(player, skill) {
+	wending_miaoyu(player, skill) {
 		const base = lib.translate[`${skill}_info`] || "";
 		const cur = _status.currentPhase;
 		if (!cur?.isIn()) {
@@ -207,6 +207,25 @@ qunyou_qiongji(player) {
 			if (baseRemain.length) tail += (tail ? "；" : "，然后若此【杀】：") + "未造成伤害，转换底牌依次添加" + baseRemain;
 			if (tail) str += tail + "。";
 			return str;
+		},
+		qunyou_jike(player) {
+			const del = qunyou_jike_del(player);
+			const labels = ["①", "②", "③", "④"];
+			const texts = qunyou_jike_texts();
+			const opts = labels
+				.map((label, i) =>
+					del.includes(i)
+						? `<span style="opacity:0.5">${label}${texts[i]}（已删除）</span>`
+						: blue(`${label}${texts[i]}`)
+				)
+				.join("；");
+			return `当你使用牌时，你可以执行一项并删除此项直到本回合结束：${opts}。选项的总数量减少/增加时你弃/摸一张牌。每回合结束时所有选项复原。`;
+		},
+	xiaobai_chenguang(player) {
+			if (player.hasMark("xiaobai_chenguang")) {
+				return "你受到伤害时，若你本轮获得过牌，你可以弃置一张牌，防止之；你回复体力时，若你本轮失去过牌，你可以摸一张牌，翻倍之。";
+			}
+			return "你受到伤害时，若你本轮未获得过牌，你可以摸一张牌，防止之；你回复体力时，若你本轮未失去过牌，你可以弃置一张牌，翻倍之。牌堆洗牌后，修改此技能。";
 		},
 	};
 

@@ -3,11 +3,11 @@ export const characterTitle = {
 	qunyou_wenyang: "独骑将军",
 	qunyou_shibao: "乐陵郡公",
 	qunyou_sunxiu: "紫气伤和",
-	qunyou_xiedaoyun: "咏絮之才",
-	qunyou_xiean: "雅志轩冕",
-	qunyou_xiexuan: "芝兰玉树",
-	qunyou_xielingyun: "不为之赋",
-	qunyou_xieshi: "岁寒松柏",
+	wending_clan_xiedaoyun: "咏絮之才",
+	wending_clan_xiean: "雅志轩冕",
+	wending_clan_xiexuan: "芝兰玉树",
+	wending_clan_xielingyun: "不为之赋",
+	wending_clan_xieshi: "岁寒松柏",
 	qunyou_zhaoyun: "炙龙烈胆",
 	qunyou_sunshao: "创基扶政",
 	qunyou_caocao: "山海归心",
@@ -133,7 +133,7 @@ export const characterTitle = {
 
 	qunyou_clan_diaochan2: "以色为戈",
 
-	xiaobai__hufang: "真绝傲枝",
+	xiaobai_hufang: "真艳傲枝",
 
 	xiaobai_lvzhu: "金谷一容",
 
@@ -150,4 +150,30 @@ export const characterTitle = {
 	qunyou_clan_yuankui: "东食西宿",
 
 	xiaobai_gaoding: "邈蛮心异",
+
+	zhuoming_dongzhuo: "奋峙群饕",
+
+	qunyou_jiananfeng: "乱华妖后",
+
+	qunyou_sunhao: "凶昏肆如疾",
+
+	xingyu_sunshangxiang: "韂剡鞘利",
+
+	qunyou_clan_wangjun: "神州陆沉",
+
+	shanhe_maliang: "身衔国命",
+
+	qunyou_zhugeguo: "金枝玉叶",
+
+	xiaobai_liusong: "忠鲠不挠",
+
+	xiaobai_zhangjian: "终极耄耋",
+
+	xiaobai_shenyi: "枕戈达旦",
+
+	xiaobai_baoxun: "丹墀蔽月",
+
+	xiaobai_chengxi: "瞋目睚眦",
+
+	qunyou_mo_wangyun: "易摄承陈",
 };

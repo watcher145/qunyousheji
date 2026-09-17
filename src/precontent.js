@@ -180,6 +180,36 @@ export function precontent() {
 			return span.outerHTML;
 		},
 	});
+	// 山河如梦：方正舒体取流动笔意，石青（青绿山水颜料色）+ 深色描边防势力光圈发虚
+	lib.namePrefix.set("山河", {
+		getSpan: () => {
+			const span = document.createElement("span"), style = span.style;
+			style.writingMode = style.webkitWritingMode = "horizontal-tb";
+			style.fontFamily = "FZShuTi, '方正舒体', STXingkai, KaiTi, '楷体', sans-serif";
+			style.fontSize = "12px";
+			style.color = "#2c9fcb";
+			style.textShadow = "0 0 1px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.55)";
+			style.fontWeight = "bold";
+			style.letterSpacing = "-0.5px";
+			span.textContent = "山河";
+			return span.outerHTML;
+		},
+	});
+	// 星玉扩展：华文新魏取玉册碑刻之意（全套前缀未用过的新魏体），芙蓉玉粉 + 深色描边防势力光圈发虚
+	lib.namePrefix.set("星玉", {
+		getSpan: () => {
+			const span = document.createElement("span"), style = span.style;
+			style.writingMode = style.webkitWritingMode = "horizontal-tb";
+			style.fontFamily = "STXinwei, '华文新魏', FZYaoTi, KaiTi, '楷体', sans-serif";
+			style.fontSize = "12px";
+			style.color = "#f7a8c4";
+			style.textShadow = "0 0 1px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.55)";
+			style.fontWeight = "bold";
+			style.letterSpacing = "-0.5px";
+			span.textContent = "星玉";
+			return span.outerHTML;
+		},
+	});
 	// 注册汉势力
 	game.addGroup("han", "汉", "汉势力", {
 		color: "#FAD6A2",
