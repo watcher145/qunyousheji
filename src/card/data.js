@@ -178,8 +178,28 @@ export const cardData = {
 		},
 	},
 	// 长河：洗入牌堆的「白」牌，可当作某名小白杯武将技能描述中的一张基本牌/普通锦囊牌使用
+	// fullimage + image 函数：牌面即对应武将图（character: 前缀走 setBackground(…,"character")，
+	// 读 lib.character[武将].img，无图时引擎自动回退性别剪影图）；悬浮描述用 cardPrompt 显示武将名与可当牌名
 	xiaobai_dabai: {
-		fullskin: true,
+		fullimage: true,
+		image(card) {
+			const general = card?.storage?.xiaobai_changhe?.general;
+			return general ? "character:" + general : null;
+		},
+		cardPrompt(card) {
+			const info = card?.storage?.xiaobai_changhe;
+			// xiaobai_dabai_info 已删除（有无 _info 是“武将牌上的技能”判定标准，大白不是真技能）
+			if (!info) return "「白」牌。";
+			const name =
+				typeof lib.xiaobaiChangheGeneralName == "function"
+					? lib.xiaobaiChangheGeneralName(info.general)
+					: get.translation(info.general);
+			const names = (info.names || []).map((n) => "【" + get.translation(n) + "】");
+			return (
+				`此牌对应“小白杯”武将：${name}。` +
+				(names.length ? `可当作${names.join("、")}使用。` : "该武将技能描述中没有牌名，此牌没有使用效果。")
+			);
+		},
 		type: "trick",
 		destroy: "discardPile",
 	},

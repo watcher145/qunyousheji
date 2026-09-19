@@ -4,6 +4,7 @@ import { lib } from "noname";
  */
 export const characterTranslate = {
 	"群友设计": "群友设计",
+	qunyou_zoushi: "邹氏",
 	qunyou_wenyang: "文鸯",
 	qunyou_shibao: "石苞",
 	qunyou_sunxiu: "孙秀",
@@ -281,6 +282,57 @@ export const characterTranslate = {
 
 	xiaobai_chengxi: "小白程喜",
 	xiaobai_chengxi_prefix: "小白",
+
+	xiaobai_xunyue: "小白荀悦",
+	xiaobai_xunyue_prefix: "小白",
+
+	xiaobai_feishi: "小白费诗",
+	xiaobai_feishi_prefix: "小白",
+
+	xiaobai_hanji: "小白韩暨",
+	xiaobai_hanji_prefix: "小白",
+
+	xiaobai_youchu: "小白游楚",
+	xiaobai_youchu_prefix: "小白",
+
+	xiaobai_lvyi: "小白吕壹",
+	xiaobai_lvyi_prefix: "小白",
+
+	xiaobai_fugu: "小白傅嘏",
+	xiaobai_fugu_prefix: "小白",
+
+	xiaobai_lisheng: "小白李胜",
+	xiaobai_lisheng_prefix: "小白",
+
+	xiaobai_tianxu: "小白田续",
+	xiaobai_tianxu_prefix: "小白",
+
+	xiaobai_zhushixing: "小白朱士行",
+	xiaobai_zhushixing_prefix: "小白",
+
+	xiaobai_xuci: "小白许慈",
+	xiaobai_xuci_prefix: "小白",
+
+	xiaobai_dinggu: "小白丁固",
+	xiaobai_dinggu_prefix: "小白",
+
+	xiaobai_zhugerong: "小白诸葛融",
+	xiaobai_zhugerong_prefix: "小白",
+
+	xiaobai_zhaoqi: "小白赵岐",
+	xiaobai_zhaoqi_prefix: "小白",
+
+	xiaobai_zhaorao: "小白赵娆",
+	xiaobai_zhaorao_prefix: "小白",
+
+	xiaobai_heyong: "小白何琰",
+	xiaobai_heyong_prefix: "小白",
+
+	xiaobai_liuhongx: "小白刘洪",
+	xiaobai_liuhongx_prefix: "小白",
+
+	xiaobai_liukun: "小白刘琨",
+	xiaobai_liukun_prefix: "小白",
 
 	qunyou_mo_wangyun: "魔王允",
 };

@@ -1305,7 +1305,7 @@ yachai_baizhou: {
 				const mScore = rareScore(minus);
 				if (pScore !== mScore) return pScore > mScore ? 0 : 1;
 				const att = get.attitude(player, trigger.source || trigger.player);
-				if (trigger.name === "damageBegin1") {
+				if (trigger.triggername === "damageBegin1") {
 					if (att > 0) return curNum <= 6 ? 0 : 1;
 					return curNum >= 8 ? 0 : 1;
 				}

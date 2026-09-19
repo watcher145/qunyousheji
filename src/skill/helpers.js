@@ -732,18 +732,22 @@ export function wending_yongxu_isTrick(card, player) {
 	return get.type2(card, player) === "trick";
 }
 
-/** 妙喻：当前可选的 ±1 项（牌数须 ≥ 调整后 X；L-1<1 时不能选 -1） */
+/** 妙喻：当前可选的 ±1 项
+ *  - 有牌即可选（牌数不再受上限约束）
+ *  - 「手牌上限-1」只在当前上限为 0 时不可选（0 不能再减）；上限为 1 时允许减到 0
+ *  - 「手牌上限+1」恒可选
+ *  （旧实现写的是 `L - 1 >= 1`，即上限 1 时不能 -1 —— 那是「牌数须 ≥ 调整后上限」时代的遗留限制） */
 export function wending_miaoyu_controls(player, cur) {
 	if (!cur?.isIn()) {
 		return [];
 	}
-	const L = cur.getHandcardLimit();
-	const n = player.countCards("hes");
-	const list = [];
-	if (L + 1 >= 1 && n >= L + 1) {
-		list.push("手牌上限+1");
+	if (player.countCards("hes") < 1) {
+		return [];
 	}
-	if (L - 1 >= 1 && n >= L - 1) {
+	const L = cur.getHandcardLimit();
+	const list = [];
+	list.push("手牌上限+1");
+	if (L > 0) {
 		list.push("手牌上限-1");
 	}
 	return list;
@@ -992,7 +996,7 @@ export function qunyou_dingyi_targets(player, yin) {
 }
 
 export function qunyou_zhichao_lostEquips(event, player) {
-	if (event.name === "loseAsyncAfter" && typeof event.getl === "function") {
+	if (event.name === "loseAsync" && typeof event.getl === "function") {
 		return event.getl(player)?.es || [];
 	}
 	if (event.name === "lose") {
@@ -1059,7 +1063,7 @@ export function wending_jidu_isCard(card) {
 
 export function wending_jidu_discardedShan(event) {
 	const cards = [];
-	if (event.name === "loseAsyncAfter" && typeof event.getl === "function") {
+	if (event.name === "loseAsync" && typeof event.getl === "function") {
 		for (const cur of game.filterPlayer()) {
 			const lost = event.getl(cur)?.cards2;
 			if (lost?.length) {

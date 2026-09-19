@@ -1,9 +1,10 @@
 /** 武将 designer / 简介 characterIntro */
 export const characterIntro = {
+	qunyou_zoushi: "设计：阿桔是我",
 	qunyou_wenyang: "设计：pioneer",
 	qunyou_shibao: "设计：滑溜溜。<br>评价：什么时候铁锁，什么时候戮力，都是要考虑的问题，用不好容易资敌，还容易烧到自己。",
 	qunyou_sunxiu: "设计：？。<br>",
-	wending_clan_xiedaoyun: '设计：元徒<br>太摸牌白了，以下这些都是屁话<span style="text-decoration: line-through;"><br>评价：需要攒牌，否则就没牌印无懈和触发响应，但是在敌方连续使用锦囊时，一旦滚起来，就非常恐怖了，无懈需要的底牌越来越少，手上的牌越来越多，属于才女的应对自如十分有画面感。</span>',
+	wending_clan_xiedaoyun: '设计：元徒<br>修改：欢愉与希望<br>修改点：“妙喻”的“当前回合角色的手牌上限张牌”改为“若干张牌”<br>评价：太摸牌白了，以下这些都是屁话<span style="text-decoration: line-through;"><br>评价：需要攒牌，否则就没牌印无懈和触发响应，但是在敌方连续使用锦囊时，一旦滚起来，就非常恐怖了，无懈需要的底牌越来越少，手上的牌越来越多，属于才女的应对自如十分有画面感。</span><br>个人是十分喜欢这个设计的，毕竟小谢也挺可爱吗，但是问题是回合外的三牌永远是不小的开销，而小谢也没有存牌能力，因此为了可玩性小幅修改，原版当然可以在回合内印印无懈来触发技能，但是小谢光着手牌出回合，好似在雪地里对诗之后光个身子去裸奔了',
 	wending_clan_xiean: "设计：夏商周在。<br>陈郡谢氏中最强的，族谢安的公式打法就是，延后摸3牌，之后的摸牌都不延后->遇到弃牌就延后->用一张伤害牌，然后摸三弃三捡回这张伤害牌。",
 	wending_clan_xiexuan: "设计：拉普拉斯。<br>评价：有点弱了，印杀和桃的条件太苛刻，况且横置角色的条件也很难，如果把兵主不限次数，强度就正常了。",
 	qunyou_zhaoyun: "设计：钟林。<br>评价：又有强度但也不至于太阴的设计。",
@@ -175,6 +176,40 @@ export const characterIntro = {
 	xiaobai_baoxun: "设计：雨幕江南",
 
 	xiaobai_chengxi: "设计：cyc",
+
+	xiaobai_xunyue: "设计：Strex",
+
+	xiaobai_feishi: "设计：食马者",
+
+	xiaobai_hanji: "设计：换家德没有马",
+
+	xiaobai_youchu: "设计：WWow",
+
+	xiaobai_lvyi: "设计：劉星壹閃",
+
+	xiaobai_fugu: "设计：易大剧",
+
+	xiaobai_lisheng: "设计：胖即是胖",
+
+	xiaobai_tianxu: "设计：超绝天",
+
+	xiaobai_zhushixing: "设计：虎鲸",
+
+	xiaobai_xuci: "设计：宫商催角羽",
+
+	xiaobai_dinggu: "设计：qqqqq",
+
+	xiaobai_zhugerong: "设计：七哀",
+
+	xiaobai_zhaoqi: "设计：扬林",
+
+	xiaobai_zhaorao: "设计：伯约的崛起",
+
+	xiaobai_heyong: "设计：大祭司",
+
+	xiaobai_liuhongx: "设计：小叶子",
+
+	xiaobai_liukun: "设计：劉星壹閃",
 
 	qunyou_mo_wangyun: "设计：砖<br>修改：欢愉与希望<br>修改点：原技能描述不明，改为“体力值唯一最大的角色”，轮次开始和结束特定条件能补牌",
 };

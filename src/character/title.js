@@ -1,5 +1,6 @@
 /** 武将称号 characterTitle */
 export const characterTitle = {
+	qunyou_zoushi: "淯水香魂",
 	qunyou_wenyang: "独骑将军",
 	qunyou_shibao: "乐陵郡公",
 	qunyou_sunxiu: "紫气伤和",
@@ -174,6 +175,40 @@ export const characterTitle = {
 	xiaobai_baoxun: "丹墀蔽月",
 
 	xiaobai_chengxi: "瞋目睚眦",
+
+	xiaobai_xunyue: "方寸经纬",
+
+	xiaobai_feishi: "率意而言",
+
+	xiaobai_hanji: "流泉铸锋",
+
+	xiaobai_youchu: "风起陇西",
+
+	xiaobai_lvyi: "桀犬吠尧",
+
+	xiaobai_fugu: "毅骨罡风",
+
+	xiaobai_lisheng: "虚才雅智",
+
+	xiaobai_tianxu: "锋回戮转",
+
+	xiaobai_zhushixing: "西行求法",
+
+	xiaobai_xuci: "鹬身诽蚌",
+
+	xiaobai_dinggu: "烈胆匡国",
+
+	xiaobai_zhugerong: "崖岸之露",
+
+	xiaobai_zhaoqi: "苦无时命",
+
+	xiaobai_zhaorao: "独步天下",
+
+	xiaobai_heyong: "烛夜逐明",
+
+	xiaobai_liuhongx: "算圣",
+
+	xiaobai_liukun: "志枭逆虏",
 
 	qunyou_mo_wangyun: "易摄承陈",
 };

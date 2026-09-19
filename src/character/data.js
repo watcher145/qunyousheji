@@ -3,6 +3,14 @@
  * 立绘：extension/群友设计/image/character/{武将id}.jpg（由 patchCharacterAssets 自动写入 img）
  */
 export const characterData = {
+	qunyou_zoushi: {
+		sex: "female",
+		group: "qun",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["qunyou_shehun", "qunyou_zhandeng"],
+	},
 	qunyou_wenyang: {
 		sex: "male",
 		group: "wei",
@@ -1248,6 +1256,159 @@ export const characterData = {
 		maxHp: 4,
 		hujia: 0,
 		skills: ["xiaobai_zuangong", "xiaobai_beisi"],
+	},
+
+	xiaobai_xunyue: {
+		sex: "male",
+		group: "qun",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_boyi"],
+	},
+
+	xiaobai_feishi: {
+		sex: "male",
+		group: "shu",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_cuanhe", "xiaobai_anzuo"],
+	},
+
+	xiaobai_hanji: {
+		sex: "male",
+		group: "wei",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_junjin", "xiaobai_anmang"],
+	},
+
+	xiaobai_youchu: {
+		sex: "male",
+		group: "wei",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_chengmo", "xiaobai_jingyi"],
+	},
+
+	xiaobai_lvyi: {
+		sex: "male",
+		group: "wu",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_jixun", "xiaobai_danggou"],
+	},
+
+	xiaobai_fugu: {
+		sex: "male",
+		group: "wei",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_yujie", "xiaobai_cetu"],
+	},
+
+	xiaobai_lisheng: {
+		sex: "male",
+		group: "wei",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_danglian", "xiaobai_tanxu"],
+	},
+
+	xiaobai_tianxu: {
+		sex: "male",
+		group: "wei",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["xiaobai_cairen", "xiaobai_shiqi"],
+	},
+
+	xiaobai_zhushixing: {
+		sex: "male",
+		group: "wei",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_qiudao", "xiaobai_chuanjing"],
+	},
+
+	xiaobai_xuci: {
+		sex: "male",
+		group: "shu",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_huisu", "xiaobai_boshe"],
+	},
+
+	xiaobai_dinggu: {
+		sex: "male",
+		group: "wu",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_chenzhu", "xiaobai_lvjie"],
+	},
+
+	xiaobai_zhugerong: {
+		sex: "male",
+		group: "wu",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_xingzu", "xiaobai_bowen"],
+	},
+
+	xiaobai_zhaoqi: {
+		sex: "male",
+		group: "qun",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_quanyi", "xiaobai_chenguang"],
+	},
+
+	xiaobai_zhaorao: {
+		sex: "female",
+		group: "qun",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_bizhao", "xiaobai_quanqing", "xiaobai_shanzi"],
+	},
+
+	xiaobai_heyong: {
+		sex: "male",
+		group: "qun",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_anmou", "xiaobai_shipin"],
+	},
+
+	xiaobai_liuhongx: {
+		sex: "male",
+		group: "qun",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_bozhu", "xiaobai_qianxiang"],
+	},
+
+	xiaobai_liukun: {
+		sex: "male",
+		group: "jin",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["xiaobai_huailie", "xiaobai_beijia"],
 	},
 
 	qunyou_mo_wangyun: {

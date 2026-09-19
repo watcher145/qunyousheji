@@ -7,14 +7,17 @@ const red = (text) => `<span style="color:#f04a4a">${text}</span>`;
 const phaseName = (id) => blue(get.translation(id).replace("阶段", ""));
 
 const dynamicTranslates = {
+	// 妙喻：① 显示当前回合角色的手牌上限（±1 的对象）② 按序号列出「武将牌上的技能」，玩家才知道第 X 张会失效
 	wending_miaoyu(player, skill) {
 		const base = lib.translate[`${skill}_info`] || "";
 		const cur = _status.currentPhase;
-		if (!cur?.isIn()) {
-			return `${base}<br>${blue("当前回合角色手牌上限：无当前回合角色")}`;
+		const limit = cur?.isIn() ? `${blue(`当前回合角色：${get.translation(cur)}；手牌上限：${cur.getHandcardLimit()}`)}` : blue("当前回合角色手牌上限：无当前回合角色");
+		const order = player?.getStockSkills?.(true, true) || [];
+		if (!order.length) {
+			return `${base}<br>${limit}`;
 		}
-		const L = cur.getHandcardLimit();
-		return `${base}<br>${blue(`当前回合角色：${get.translation(cur)}；手牌上限：${L}`)}`;
+		const list = order.map((sid, i) => `${i + 1}.${get.translation(sid)}`).join("　");
+		return `${base}<br>${limit}<br>${blue(`你武将牌上的技能（共${order.length}个）：${list}`)}`;
 	},
 	qunyou_guwo(player) {
 		const state = player.storage.qunyou_guwo_state || 0;
@@ -227,6 +230,19 @@ qunyou_qiongji(player) {
 			}
 			return "你受到伤害时，若你本轮未获得过牌，你可以摸一张牌，防止之；你回复体力时，若你本轮未失去过牌，你可以弃置一张牌，翻倍之。牌堆洗牌后，修改此技能。";
 		},
+	// 契定技：契定前后标签与措辞不同；已失效的代价项置灰（状态见 player.storage）
+	xiaobai_huailie(player) {
+		const contracted = Boolean(player?.storage?.xiaobai_huailie);
+		const disabled = player?.storage?.xiaobai_huailie_disabled || [];
+		const opt = (key, text) => (disabled.includes(key) ? `<font color='grey'>${text}</font>` : text);
+		const type = contracted ? "锁定技" : get.poptip("sxrm_qidingSkill");
+		const may = contracted ? "" : "可";
+		return (
+			`${type}，指定或途经你的【杀】没有造成伤害而进入弃牌堆时，你${may}明置一张♥牌，然后获得之。` +
+			`若不能，你需先「${opt("recast", "重铸三张牌")}」、「${opt("draw", "摸两张牌")}」或「${opt("obtain", "获得场上一张牌")}」；` +
+			"依然不能明置♥牌，你失去1点体力且不能再如此做。"
+		);
+	},
 	};
 
 export default dynamicTranslates;

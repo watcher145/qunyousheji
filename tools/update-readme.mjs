@@ -38,10 +38,11 @@ function parseObjText(text) {
 
 function parseObjStringValues(text) {
   const result = {};
-  const pairRx = /(\w+)\s*:\s*"((?:[^"\\]|\\.)*)"/g;
+  // 同时匹配单引号与双引号的字符串值（intro 里含 style="..." 的条目会用单引号包裹）
+  const pairRx = /(\w+)\s*:\s*(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)')/g;
   let match;
   while ((match = pairRx.exec(text)) !== null) {
-    result[match[1]] = match[2];
+    result[match[1]] = match[2] ?? match[3];
   }
   return result;
 }

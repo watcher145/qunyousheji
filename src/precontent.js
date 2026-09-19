@@ -273,6 +273,24 @@ export function precontent() {
 	}
 	*/
 
+	// 摄魂：原版【树上开花】的 ai.wuxie 恒为 0（它通常利目标）；摄魂的用法（storage 带标记）对目标是
+	// 纯损失（被撕1-2张牌+全手牌展示），这里包一层让 AI 按有害锦囊的惯例决定是否无懈，
+	// 其余所有场合原样透传原函数，不影响原版行为
+	if (lib.card.kaihua?.ai) {
+		const kaihuaWuxie = lib.card.kaihua.ai.wuxie;
+		lib.card.kaihua.ai.wuxie = function (target, card, player, viewer, status) {
+			if (card?.storage?.qunyou_shehun) {
+				if (!target) {
+					return 0;
+				}
+				// 判定结构与乐不思蜀等有害锦囊一致（|态度|过小不出无懈；友方/目标自己出，敌方不出）
+				const att = get.attitude(viewer, target) * status;
+				return att < 1 ? 0 : att;
+			}
+			return typeof kaihuaWuxie == "function" ? kaihuaWuxie.call(this, target, card, player, viewer, status) : kaihuaWuxie;
+		};
+	}
+
 	lib.dynamicTranslate ??= {};
 	for (const key of Object.keys(dynamicTranslates)) {
 		if (!lib.dynamicTranslate[key]) {

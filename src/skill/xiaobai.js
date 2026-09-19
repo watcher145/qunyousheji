@@ -1,74 +1,135 @@
 import { lib, game, get, ui, _status } from "noname";
 import { getTurnDiscardCards, qunyou_adjustHandTo } from "./helpers.js";
 
-// 狈变：改写【决斗】的结算流程，在每次响应前插入“是否变更势力至魏”的询问
-async function xiaobaiBeibianDuel(event, trigger, player) {
-	const target = event.target;
-	const source = player;
-	const responsers = [target, source];
-	let currentTurn = 1;
-	let currentResponser = target;
-	let doChange = true;
-	const doChanges = { 1: false, 2: false };
-	let extraDamage = 0;
-	while (currentResponser.isAlive()) {
-		let respond = false;
-		if (currentResponser.group != "wei" && doChange) {
-			const agree = (
-				await currentResponser
-					.chooseBool("狈变：是否将势力变更至魏？", () => !currentResponser.countCards("h", { name: "sha" }))
-					.forResult()
-			).bool;
-			doChange = agree;
-			if (!doChange) {
-				extraDamage++;
-			} else {
-				await currentResponser.changeGroup("wei");
-				doChanges[currentTurn] = true;
-				if (doChanges[1] && doChanges[2]) {
-					doChange = false;
-					await source.draw(2);
-					await target.draw(2);
-				}
-				respond = true;
-			}
-		}
-		if (!respond) {
-			const next = currentResponser.chooseToRespond();
-			next.set("filterCard", (card, player2) => get.name(card) == "sha" && lib.filter.cardRespondable(card, player2));
-			next.set("prompt", "狈变：请打出一张【杀】响应【决斗】");
-			next.set("respondTo", [responsers[currentTurn == 1 ? 1 : 0], event.card]);
-			const result = await next.forResult();
-			if (result?.bool) respond = true;
-		}
-		if (!respond) break;
-		currentTurn = (currentTurn % 2) + 1;
-		currentResponser = responsers[currentTurn - 1];
-	}
-	if (currentResponser.isAlive()) {
-		await responsers[currentTurn == 1 ? 1 : 0].damage(1 + extraDamage, currentResponser, event.card);
-	}
+
+// 预诫：可移出的角色（其他角色；排除「上轮」以此法移出过的）
+function xiaobaiYujieTargets(player) {
+	const last = player.storage.xiaobai_yujie_last;
+	return game.filterPlayer((current) => {
+		if (current == player) return false;
+		if (last && last.round == game.roundNumber - 1 && last.target == current.playerid) return false;
+		return true;
+	});
 }
 
-// 博涉：统计一名角色本回合失去过牌的方式集合
+// 预诫：本回合被使用/打出的牌的花色集合（不含无色）
+function xiaobaiYujieSuits() {
+	const suits = [];
+	for (const current of game.players.concat(game.dead)) {
+		for (const key of ["useCard", "respond"]) {
+			for (const evt of current.getHistory(key) || []) {
+				const suit = get.suit(evt.card);
+				if (!lib.suit.includes(suit) || suits.includes(suit)) continue;
+				suits.push(suit);
+			}
+		}
+	}
+	return suits;
+}
+
+// ===== 失去牌方式判定（12 种口径，斛珍/博涉共享）=====
+// 源码依据（2026-09 全面验证）：
+// 1. 所有失去路径的 lose 事件都会执行 content.js:10907 `player.getHistory("lose").push(event)`，
+//    且尾部无条件挂载 hs/es/js/ss 分类（content.js:10936）——getlx=false 只让 getl() 返回空 map，
+//    不影响直读事件字段。因此统计一律遍历 getHistory("lose") + 直读字段，绝不走 getl()。
+// 2. getHistory("loseAsync") 是死路：actionHistory 初始键只有 useCard/respond/skipped/lose/gain/
+//    sourceDamage/damage/custom/useSkill（player.js:117-129），没有 loseAsync 键，永远取不到。
+// 3. 各路径 lose 事件的 type/position/宿主（均在 content.js 实测）：
+//    使用：useCard content 直接 lose(type="use")；打出：respond content 直接 lose(type="use"——与使用同 type！须靠宿主链细分)
+//    装备：equip 前置 lose(type="equip",getlx=false,ui.special)；延时锦囊：addJudge 前置 lose(type="addJudge",getlx=false)
+//    弃置：discard→lose(type="discard")；重铸：recast→loseToDiscardpile→lose(type="loseToDiscardpile")
+//    交给/被获得：gain 前置 lose(type="gain",getlx=false,ui.special；宿主 gain.giver==失去者 为"交给")
+//    拼点：chooseToCompare→loseAsync(chooseToCompareLose)→lose(getlx=false,ui.ordering，relatedEvent=拼点事件)
+//    交换：swapHandcards→loseAsync(swapHandcardsx)→lose(getlx=false,ui.ordering，relatedEvent=swapHandcards)
+//    武将牌上：addToExpansion 前置 lose(type="loseToExpansion",getlx=false)
+//    木牛等特殊区域：loseToSpecial→loseAsync(tag)→lose(getlx=false,ui.special，宿主 loseAsync 带 tag)
+//    置入牌堆/移出游戏：技能直接 player.lose(cards, ui.cardPile/ui.special)，无 type，宿主是技能事件
+function xiaobaiLoseWay(evt) {
+	switch (evt.type) {
+		case "use":
+			break; // useCard 与 respond 共用 type="use"，落宿主链细分
+		case "discard":
+			return "discard";
+		case "gain":
+			break; // 交给/被获得共用 type="gain"，落宿主链按 gain.giver 细分
+		case "equip": // 使用装备（含换装时旧装备被换下）——三种"使用"合一
+		case "addJudge": // 使用延时锦囊
+			return "use";
+		case "loseToDiscardpile":
+			// 重铸默认实现走 loseToDiscardpile；但该 API 也被普通"置入弃牌堆"效果直接调用，按宿主区分
+			return evt.getParent("recast") ? "recast" : "discard";
+		case "loseToExpansion":
+			return "expansion";
+		default:
+			// 裸 lose（无 type）：直接进弃牌堆的按弃置归类
+			if (evt.position == ui.discardPile) return "discard";
+			break;
+	}
+	// 宿主链：relatedEvent 优先（拼点/交换的子 lose 靠它一层命中），沿 parent 穿透 loseAsync
+	let cur = evt;
+	for (let i = 0; i < 8 && cur; i++) {
+		switch (cur.name) {
+			case "useCard":
+				return "use";
+			case "respond":
+				return "respond";
+			case "gain":
+				return cur.giver == evt.player ? "give" : "obtained";
+			case "chooseToCompare":
+			case "chooseToCompareMeanwhile":
+				return "compare";
+			case "swapHandcards":
+			case "swapHandcardsx":
+			case "swapEquip":
+				return "swap";
+			case "recast":
+				return "recast";
+			case "equip":
+			case "addJudge":
+				return "use";
+			case "addToExpansion":
+				return "expansion";
+			case "loseAsync":
+				if (cur.tag) return "loseToSpecial"; // 木牛流马等 loseAsync(tag) 扣置包装
+				break;
+		}
+		cur = cur.relatedEvent || cur.parent;
+	}
+	// 去向兜底（宿主是技能事件等无法归类的直接 lose）
+	if (evt.position == ui.cardPile) return "pile"; // 置入牌堆顶/底
+	if (evt.position == ui.special) return "removed"; // 移出游戏（暂存处理区无宿主归属）
+	return "other";
+}
+
+// 博涉：统计一名角色本回合失去过牌的方式集合（"失去牌"=手牌/装备区/暗置手牌的牌离开；判定区 js、武将牌上 xs 不计）
 function xiaobaiBosheWays(target) {
 	const ways = new Set();
-	const add = (evt) => {
-		const l = evt.getl ? evt.getl(target) : null;
-		if (!l || !l.cards || !l.cards.length) return;
-		let way = evt.type;
-		if (!way) {
-			const name = evt.getParent()?.name;
-			if (name == "useCard") way = "use";
-			else if (name == "respond") way = "respond";
-			else if (name == "discard") way = "discard";
-			else way = name || "other";
-		}
-		ways.add(way);
-	};
-	(target.getHistory("lose") || []).forEach(add);
-	(target.getHistory("loseAsync") || []).forEach(add);
+	(target.getHistory("lose") || []).forEach((evt) => {
+		// 直读分类字段（getlx=false 的附属失去 getl() 返回空 map，不能走 getl）
+		if (!(evt.hs?.length || evt.es?.length || evt.ss?.length)) return;
+		ways.add(xiaobaiLoseWay(evt));
+	});
 	return ways;
+}
+
+// 博涉/斛珍：失去方式的中文显示（12 种口径 + 兜底，未知值回退原文）
+function xiaobaiBosheWayTranslate(way) {
+	const map = {
+		use: "使用牌",
+		respond: "打出牌",
+		discard: "弃置",
+		give: "交给他人",
+		obtained: "被他人获得",
+		compare: "拼点",
+		recast: "重铸",
+		swap: "交换",
+		pile: "置入牌堆",
+		expansion: "置于武将牌上",
+		removed: "移出游戏",
+		loseToSpecial: "扣置于场上",
+		other: "其他方式",
+	};
+	return map[way] || (lib.translate[way] ?? way);
 }
 
 // 博文：本阶段已使用的牌数（至多5）
@@ -77,6 +138,17 @@ function xiaobaiBowenX(player) {
 	// 后者会把「打出/响应」也计入。
 	const used = player.getHistory("useCard") || [];
 	return Math.min(5, used.length);
+}
+
+// 长河：「白」牌对应的武将名（去掉「小白」这类包名前缀，牌面左下角位置有限）
+function xiaobaiChangheGeneralName(general) {
+	const full = get.translation(general);
+	const prefix = lib.translate[`${general}_prefix`];
+	if (typeof prefix == "string") {
+		const first = prefix.split("|")[0];
+		if (first && full.startsWith(first)) return full.slice(first.length);
+	}
+	return full;
 }
 
 // 长河：从若干技能的描述中提取【】内的、可主动使用的基本牌/普通锦囊牌牌名
@@ -225,31 +297,40 @@ function xiaobaiShilangDestroyed(cards) {
 	return (cards || []).filter((card) => card && card.name == "xiaobai_dabai" && card._selfDestroyed && card.storage?.xiaobai_changhe?.general);
 }
 
-// 逝浪：武将的势力（含双势力的副势力）
+// 逝浪：武将的势力（含双势力的全部势力）
+// ⚠️ 本版 lib.character[id] 是 Character 实例：[0]=性别 [1]=势力 [2]=体力 [3]=技能
+// （noname/library/element/character.js:317-356）——不能按老数组格式取 info[2]，那是体力值。
+// 取法与 get.selectGroup（noname/get/index.js:6129）一致，对应 FreeKill 的 kingdom / subkingdom
 function xiaobaiShilangGroups(general) {
 	const info = lib.character[general];
 	if (!info) return [];
-	return [info[1], info[2]].filter((group) => group && group != "unknown");
+	const list = Array.isArray(info.doubleGroup) && info.doubleGroup.length ? info.doubleGroup : [info.group];
+	return list.filter((group, index) => group && group != "unknown" && list.indexOf(group) == index);
 }
 
 // 逝浪：这些「白」牌对应的势力中，已在本局「长河」牌堆里全部消逝的势力
+// 判定按「剔除本批之后」计算，因此与「长河移除记录」谁先执行无关
 function xiaobaiShilangVanished(cards, player) {
 	const list = player.storage.xiaobai_changhe_generals;
-	if (!Array.isArray(list) || !list.length) return [];
+	// 注意不能用 !list.length 提前返回：最后一张「白」被销毁时列表已空，
+	// 若「长河」的记录更新先执行，这里就再也判不出最后一个势力的消逝了
+	if (!Array.isArray(list)) return [];
 	if (!cards?.length) return [];
+	// 已消逝的势力只结算一次（loseAfter 与 cardsDiscardAfter 会对同一张牌各触发一次）
+	const done = player.storage.xiaobai_shilang_groups || [];
 	const remain = list.filter((general) => !cards.some((card) => card.storage.xiaobai_changhe.general == general));
 	const remainGroups = remain.flatMap((general) => lib.xiaobaiShilangGroups(general));
 	const groups = [];
 	for (const card of cards) {
 		for (const group of lib.xiaobaiShilangGroups(card.storage.xiaobai_changhe.general)) {
-			if (groups.includes(group)) continue;
+			if (groups.includes(group) || done.includes(group)) continue;
 			if (!remainGroups.includes(group)) groups.push(group);
 		}
 	}
 	return groups;
 }
 
-// 逝浪：把已消逝的势力从「长河」记录里移除
+// 逝浪：把已销毁的武将从「长河」记录里移除（每次销毁都要更新，不只是有势力消逝时）
 function xiaobaiShilangUpdate(cards, player) {
 	const list = (player.storage.xiaobai_changhe_generals || []).slice();
 	for (const card of cards || []) {
@@ -262,12 +343,21 @@ function xiaobaiShilangUpdate(cards, player) {
 	player.storage.xiaobai_changhe_generals = list;
 }
 
-// 逝浪：按「逝浪」层数刷新永久【酒】效果
+// 逝浪：按「逝浪」层数刷新永久【酒】效果（层数 + 技能 + 红色特效）
 function xiaobaiShilangRefresh(player) {
 	const num = player.countMark("xiaobai_shilang");
 	if (num <= 0) return;
 	player.storage.jiu = (player.storage.jiu || 0) + num;
-	player.addSkill("jiu");
+	// 引擎只在「使用【酒】」时创建 .playerjiu 节点（card/extra.js:100-106），
+	// 直接 addSkill("jiu") 不会有红色特效 → 按 game/index.js:3238 jiuNode 的写法补上
+	game.addVideo("jiuNode", player, true);
+	game.broadcastAll((player2) => {
+		player2.addSkill("jiu");
+		if (!player2.node.jiu && lib.config.jiu_effect) {
+			player2.node.jiu = ui.create.div(".playerjiu", player2.node.avatar);
+			player2.node.jiu2 = ui.create.div(".playerjiu", player2.node.avatar2);
+		}
+	}, player);
 }
 
 // 印牌技能公用：候选牌面里挑出当前事件真正可用的（铁律二：filter/dialog 都必须用 event.filterCard 探测）
@@ -291,10 +381,30 @@ function xiaobaiIsSelfSelect(event, skill) {
 	return event?.skill == skill || event?._skill == skill;
 }
 
-// 攒和：技能当前是否可用（未失效 + 场上存在手牌数相差 1/2/3 的其他角色）
+// 攒和：给定「我的手牌数 + 其他人的手牌数列表 + 剩余差值序列」，判断剩余交换能否全部走完。
+// 交换后：我 = 对方的手牌数，对方 = 我的旧手牌数 —— 所以只查「场上有没有某手牌数」是不够的
+function xiaobaiCuanheCanFinish(mine, list, diffs) {
+	if (!diffs.length) return true;
+	const diff = diffs[0];
+	for (let i = 0; i < list.length; i++) {
+		if (Math.abs(list[i] - mine) != diff) continue;
+		const next = list.slice(0);
+		next[i] = mine;
+		if (xiaobaiCuanheCanFinish(list[i], next, diffs.slice(1))) return true;
+	}
+	return false;
+}
+
+// 攒和：发动门槛——未失效，且场上存在手牌数与自己相差 1 的其他角色
 function xiaobaiCuanheUsable(player) {
 	if (player.hasSkill("xiaobai_cuanhe_disabled")) return false;
-	return game.hasPlayer((current) => current != player && current.isIn() && [1, 2, 3].includes(Math.abs(current.countCards("h") - player.countCards("h"))));
+	const mine = player.countCards("h");
+	return game.hasPlayer((current) => current != player && current.isIn() && Math.abs(current.countCards("h") - mine) == 1);
+}
+
+// 攒和：场上其他角色的手牌数列表（喂 xiaobaiCuanheCanFinish）
+function xiaobaiCuanheOthers(player) {
+	return game.filterPlayer((current) => current != player && current.isIn()).map((current) => current.countCards("h"));
 }
 
 // 大白：手牌中「白」牌能印出的全部牌名
@@ -353,6 +463,53 @@ function xiaobaiBeijiaFeasible(player, x) {
 		upper = next;
 	}
 	return true;
+}
+
+// 浚金：本回合是否有角色使用过「与此牌类型相同、花色不同」的牌（含自己）
+// 类型按基本/锦囊/装备三分（get.type2：延时锦囊归锦囊类，知识库 #12）
+function xiaobaiJunjinHasSameTypeDiffSuit(event, player) {
+	const card = event.card;
+	if (!card) return false;
+	const type = get.type2(card);
+	const suit = get.suit(card);
+	for (const current of game.players.concat(game.dead)) {
+		for (const evt of current.getHistory("useCard") || []) {
+			if (evt === event) continue;
+			const c = evt.card;
+			if (!c) continue;
+			if (get.type2(c) != type) continue;
+			const s = get.suit(c);
+			if (!lib.suit.includes(s) || s == suit) continue;
+			return true;
+		}
+	}
+	return false;
+}
+
+// 浚金：此牌当前可额外指定的目标（不占次数，只看目标合法性 + 距离）
+function xiaobaiJunjinExtraTargets(event, player) {
+	const card = event.card;
+	if (!card) return [];
+	const targets = event.targets || [];
+	return game.filterPlayer((current) => !targets.includes(current) && lib.filter.targetEnabled(card, player, current) && lib.filter.targetInRange(card, player, current));
+}
+
+// 狈变：被询问者是否同意「变更势力至魏」
+// 同意 = 永久变魏 + 本次视为打出【杀】（不用真出牌）+ 双方都同意则各摸两张牌；
+// 拒绝 = 本次照常打【杀】 + 令此【决斗】伤害 +1（对「最终没响应成功」的一方不利，敌我不分）。
+// 决策要点：
+//   ① 对方已同意 → 自己也同意才能触发「双方各摸两张」，**只对友方划算**（不给敌方摸牌）
+//   ② 自己打不出【杀】→ 同意可免于承受伤害（拒绝就得硬挨 1 点），一律同意
+//   ③ 打得出来 → 友方同意（促成双方各摸两张）；敌方拒绝（不让对方摸牌，且让伤害 +1 压对方）
+function xiaobaiBeibianAi(responder, duel, opposite) {
+	const player = get.player();
+	const friendly = get.attitude(player, opposite) > 0;
+	if (duel.xiaobai_beibian_agreed?.[opposite.playerid]) {
+		return friendly;
+	}
+	const canSha = player.mayHaveSha(player, "respond");
+	if (!canSha) return true;
+	return friendly;
 }
 
 // 悖伺：本次「获得」事件里，其他角色将获得的、原本属于你的牌（手牌/装备/判定区）
@@ -429,8 +586,8 @@ function xiaobaiZuangongClear(player) {
 }
 
 // content 在“全局化”编译环境下只能访问 lib/game/get/ui/_status，故把 content 内用到的 helper 挂到 lib 上
-lib.xiaobaiBeibianDuel = xiaobaiBeibianDuel;
 lib.xiaobaiChangheNames = xiaobaiChangheNames;
+lib.xiaobaiChangheGeneralName = xiaobaiChangheGeneralName;
 lib.xiaobaiCetuPlay = xiaobaiCetuPlay;
 lib.xiaobaiBoyiDo = xiaobaiBoyiDo;
 lib.xiaobaiJiudianUsedNames = xiaobaiJiudianUsedNames;
@@ -439,6 +596,11 @@ lib.xiaobaiShilangGroups = xiaobaiShilangGroups;
 lib.xiaobaiShilangVanished = xiaobaiShilangVanished;
 lib.xiaobaiShilangUpdate = xiaobaiShilangUpdate;
 lib.xiaobaiShilangRefresh = xiaobaiShilangRefresh;
+lib.xiaobaiYujieTargets = xiaobaiYujieTargets;
+lib.xiaobaiYujieSuits = xiaobaiYujieSuits;
+lib.xiaobaiJunjinHasSameTypeDiffSuit = xiaobaiJunjinHasSameTypeDiffSuit;
+lib.xiaobaiJunjinExtraTargets = xiaobaiJunjinExtraTargets;
+lib.xiaobaiBeibianAi = xiaobaiBeibianAi;
 lib.xiaobaiBeijiaFeasible = xiaobaiBeijiaFeasible;
 lib.xiaobaiBeisiCards = xiaobaiBeisiCards;
 lib.xiaobaiZuangongInfo = xiaobaiZuangongInfo;
@@ -1533,22 +1695,8 @@ xiaobai_huzhen: {
 		}
 	},
 	getLoseWay(event, player) {
-		const parent = event.getParent();
-		const name = parent?.name;
-		// loseAsync 只是包装层：向上递归取真实原因（交换→交换手牌、技能→其事件名）
-		if (name === "loseAsync" && parent !== event) return lib.skill.xiaobai_huzhen.getLoseWay(parent, player);
-		if (name === "useCard") return "use";
-		if (name === "respond") return "respond";
-		if (name === "phaseDiscard" || name === "discard") return "discard";
-		if (name === "compare" || name === "compareMultiple") return "compare";
-		if (name === "recast") return "recast";
-		if (name === "swapHandcards") return "swap";
-		if (name === "addToExpansion") return "expansion";
-		if (name === "gain") {
-			// 被获得：因 gain 事件失去手牌（被拿走/交给他人），统一归类
-			return "obtained";
-		}
-		return name || "unknown";
+		// 统一走共享判定 xiaobaiLoseWay（12 种口径：use/respond、give/obtained 细分 + type/宿主链/去向兜底）
+		return xiaobaiLoseWay(event);
 	},
 	ai: {
 		threaten: 1.2,
@@ -1566,12 +1714,15 @@ xiaobai_huzhen: {
 						use: "使用牌",
 						respond: "打出响应",
 						discard: "弃置",
+						give: "交给他人",
+						obtained: "被他人获得",
 						compare: "拼点",
 						recast: "重铸",
-						obtained: "被获得",
-						swap: "交换手牌",
-						expansion: "移出游戏",
-						unknown: "未知",
+						swap: "交换",
+						pile: "置入牌堆",
+						expansion: "置于武将牌上",
+						removed: "移出游戏",
+						loseToSpecial: "扣置于场上",
 					};
 					return "上次失去方式：" + (map[way] || "未知方式(" + way + ")");
 				},
@@ -2734,11 +2885,22 @@ xiaobai_anzuo: {
 		target.addSkill("xiaobai_anzuo_buff");
 	},
 },
-// 按祚·附加效果（挂在目标身上的常驻技）
+// 按祚·附加效果（挂在目标身上的常驻技；对外只呈现一个 mark，文本说明两个效果）
 xiaobai_anzuo_buff: {
 	audio: 2,
 	charlotte: true,
 	name: "按祚",
+	mark: true,
+	marktext: "祚",
+	intro: {
+		content(storage, player) {
+			const used = Boolean(player.storage.xiaobai_anzuo_buff_used);
+			return `每回合首次失去所有手牌后，回复1点体力；每回合首次回满体力后，减1点体力上限。<br>本回合${used ? "已" : "尚未"}触发。`;
+		},
+	},
+	init(player, skill) {
+		player.markSkill(skill);
+	},
 	group: ["xiaobai_anzuo_buff_hp", "xiaobai_anzuo_buff_max", "xiaobai_anzuo_buff_clear"],
 	subSkill: {
 		hp: {
@@ -2757,6 +2919,7 @@ xiaobai_anzuo_buff: {
 			},
 			async content(event, trigger, player) {
 				player.storage.xiaobai_anzuo_buff_used = true;
+				player.updateMarks();
 				if (player.isDamaged()) await player.recover();
 			},
 		},
@@ -2773,6 +2936,7 @@ xiaobai_anzuo_buff: {
 			},
 			async content(event, trigger, player) {
 				player.storage.xiaobai_anzuo_buff_used = true;
+				player.updateMarks();
 				player.loseMaxHp();
 			},
 		},
@@ -2788,10 +2952,12 @@ xiaobai_anzuo_buff: {
 			},
 			content(event, trigger, player) {
 				delete player.storage.xiaobai_anzuo_buff_used;
+				player.updateMarks();
 			},
 		},
 	},
 	onremove(player, skill) {
+		player.unmarkSkill(skill);
 		delete player.storage.xiaobai_anzuo_buff_used;
 	},
 },
@@ -3108,7 +3274,7 @@ xiaobai_beibian: {
 		return player.hasCard((card) => lib.skill.xiaobai_beibian.filterCard(card, player), "hes");
 	},
 	position: "hes",
-	viewAs: { name: "juedou" },
+	viewAs: { name: "juedou", storage: { xiaobai_beibian: true } },
 	viewAsFilter(player) {
 		if (player.group != "shu") return false;
 		return player.hasCard((card) => lib.skill.xiaobai_beibian.filterCard(card, player), "hes");
@@ -3128,18 +3294,68 @@ xiaobai_beibian: {
 	},
 	group: ["xiaobai_beibian_effect"],
 	subSkill: {
+		// 不再替换【决斗】的 content —— 原版 content 里有 shaReq（每人所需杀数，无双等技能改它）、
+		// directHit、baseDamage/extraDamage，以及每轮派发的 "juedou" 时机（card/standard.js:2021）。
+		// 钩住 "juedou" 时机即可完整保留这些机制，并在其中插入「变更势力至魏」的分支。
 		effect: {
 			charlotte: true,
 			popup: false,
 			forced: true,
-			firstDo: true,
-			priority: 100,
-			trigger: { player: "useCardToBefore" },
+			trigger: { global: "juedou" },
 			filter(event, player) {
-				return event.type === "card" && event.skill === "xiaobai_beibian";
+				// 只处理狈变转化出来的【决斗】
+				return Boolean(event.card?.storage?.xiaobai_beibian) && Boolean(event.turn?.isIn());
 			},
-			content(event, trigger, player) {
-				trigger.setContent(lib.xiaobaiBeibianDuel);
+			async content(event, trigger, player) {
+				const duel = trigger;
+				const responder = duel.turn;
+				const opposite = responder == duel.source ? duel.target : duel.source;
+				if (!duel.xiaobai_beibian_asked) {
+					duel.xiaobai_beibian_asked = {};
+				}
+				// 每人只问一次：已问过的（同意过 / 拒绝过）不再询问
+				if (duel.xiaobai_beibian_asked[responder.playerid]) {
+					// 同意过的人：本次响应要照常打【杀】（把之前置 0 的所需杀数恢复）
+					if (responder.group == "wei" && duel.shaReq?.[responder.playerid] === 0) {
+						duel.shaReq[responder.playerid] = 1;
+					}
+					return;
+				}
+				// 本来就是魏势力 → 不询问
+				if (responder.group == "wei") return;
+				duel.xiaobai_beibian_asked[responder.playerid] = true;
+				const agree = (
+					await responder
+						.chooseBool("狈变：是否将势力变更至魏以响应此【决斗】？")
+						.set("ai", () => lib.xiaobaiBeibianAi(responder, duel, opposite))
+						.forResult()
+				).bool;
+				if (!agree) {
+					// 拒绝：本次仍要正常打出【杀】；「一方拒绝」的伤害 +1 只结算一次
+					if (!duel.xiaobai_beibian_refused) {
+						duel.xiaobai_beibian_refused = true;
+						duel.extraDamage = (duel.extraDamage || 0) + 1;
+						game.log(responder, "拒绝变更势力，此【决斗】伤害 +1");
+					}
+					return;
+				}
+				// 同意：变更势力至魏（永久），本次视为已打出【杀】
+				await responder.changeGroup("wei");
+				if (!duel.xiaobai_beibian_agreed) {
+					duel.xiaobai_beibian_agreed = {};
+				}
+				duel.xiaobai_beibian_agreed[responder.playerid] = true;
+				// 双方都同意 → 各摸两张牌（只结算一次）
+				if (!duel.xiaobai_beibian_drawn && duel.xiaobai_beibian_agreed[duel.source.playerid] && duel.xiaobai_beibian_agreed[duel.target.playerid]) {
+					duel.xiaobai_beibian_drawn = true;
+					game.log(duel.source, "与", duel.target, "双方同意变更势力，各摸两张牌");
+					if (duel.source.isIn()) await duel.source.draw(2);
+					if (duel.target.isIn()) await duel.target.draw(2);
+				}
+				// 本次跳过响应：把该方所需杀数置 0，原版 content 的 while 会直接跳过
+				if (duel.shaReq) {
+					duel.shaReq[responder.playerid] = 0;
+				}
 			},
 		},
 	},
@@ -3147,6 +3363,26 @@ xiaobai_beibian: {
 // === 博涉 ===
 xiaobai_boshe: {
 	audio: 2,
+	// 实时标记：显示当前回合角色本回合失去牌的方式（intro）与方式总数（markcount）
+	mark: true,
+	marktext: "涉",
+	intro: {
+		markcount(storage, player) {
+			const current = _status.currentPhase;
+			return current ? xiaobaiBosheWays(current).size : 0;
+		},
+		content(storage, player) {
+			const current = _status.currentPhase;
+			if (!current) return "当前没有回合进行";
+			const ways = [...xiaobaiBosheWays(current)];
+			if (!ways.length) return `当前回合角色（${get.translation(current)}）本回合尚未失去过牌`;
+			return (
+				`当前回合角色（${get.translation(current)}）本回合失去方式（共${ways.length}种）：` +
+				ways.map((way) => xiaobaiBosheWayTranslate(way)).join("、")
+			);
+		},
+	},
+	group: ["xiaobai_boshe_track"],
 	trigger: { global: "phaseEnd" },
 	filter(event, player) {
 		const target = event.player;
@@ -3161,6 +3397,19 @@ xiaobai_boshe: {
 		await player.draw();
 		if (player.isIn()) await player.gain(game.createCard("ying", "spade", 1), "gain2");
 		if (target.isIn()) await target.gain(game.createCard("ying", "spade", 1), "gain2");
+	},
+	subSkill: {
+		// 每次有角色失去/弃置牌后刷新标记角标（markcount 函数在渲染时实时计算，updateMarks 触发重绘）
+		track: {
+			charlotte: true,
+			forced: true,
+			popup: false,
+			silent: true,
+			trigger: { global: ["loseAfter", "cardsDiscardAfter", "loseAsyncAfter"] },
+			content(event, trigger, player) {
+				player.updateMarks("xiaobai_boshe");
+			},
+		},
 	},
 },
 // === 博文 ===
@@ -3356,11 +3605,20 @@ xiaobai_changhe: {
 	audio: 2,
 	trigger: { global: "phaseBefore", player: "enterGame" },
 	forced: true,
+	group: ["xiaobai_changhe_remove", "xiaobai_changhe_destroy"],
 	filter(event, player) {
 		return !_status.xiaobaiChangheDone && (event.name != "phase" || game.phaseNumber == 0);
 	},
 	async content(event, trigger, player) {
 		_status.xiaobaiChangheDone = true;
+		// 小白杯武将图位于 image/character/xiaobai_*.jpg，而引擎注册扩展武将时回填的
+		// img 是扩展根路径（不存在）——统一纠正后 setBackground(…,"character") 才能取到图；
+		// 无图文件的武将走引擎的性别剪影回退，不会空白
+		for (const name of Object.keys(lib.character)) {
+			if (name.startsWith("xiaobai_")) {
+				lib.character[name].img = "extension/群友设计/image/character/" + name + ".jpg";
+			}
+		}
 		const inPlay = [];
 		for (const current of game.players.concat(game.dead)) {
 			for (const key of [current.name, current.name1, current.name2]) {
@@ -3373,24 +3631,80 @@ xiaobai_changhe: {
 			if (!info || !Array.isArray(info[3]) || inPlay.includes(name)) continue;
 			const skills = info[3].filter((skill) => skill.startsWith("xiaobai_") && lib.skill[skill]);
 			if (!skills.length) continue;
+			// 无牌名的小白杯武将也生成「白」：names 为空，仅为一张黑桃9的普通锦囊牌（仍参与逝浪的势力判定）
 			const names = xiaobaiChangheNames(skills);
-			if (!names.length) continue;
 			const card = game.createCard2("xiaobai_dabai", "spade", 9);
 			card.storage.xiaobai_changhe = { general: name, names };
+			// 预设 destroyed=false：绕开引擎 lose content 分支三（destroy 牌“首次不移动只标记”，content.js:10770），
+			// 使 recast/使用/弃置时正常进入目标区域（离开手牌区），由〖长河〗的 destroy 兜底子技能统一补销毁
+			card.destroyed = false;
+			// 牌面左下角显示对应武将（对应 FreeKill 原版 room:setCardMark(card, "@xiaobai__tianxiadaba", 武将名)）
+			card.addGaintag(lib.xiaobaiChangheGeneralName(name));
+			// $init 渲染牌面时 storage 尚未赋值（image 函数取不到武将），此处手动补渲染武将图
+			card.setBackground(name, "character");
 			cards.push(card);
 		}
 		if (!cards.length) return;
 		// 记录仍在牌堆里的“小白杯”武将，供〖逝浪〗判断某势力是否已全部消逝
 		player.storage.xiaobai_changhe_generals = cards.map((card) => card.storage.xiaobai_changhe.general);
+		// 初始总数，供〖逝浪〗标记提示显示「剩余 / 总数」
+		player.storage.xiaobai_changhe_total = cards.length;
 		await game.cardsGotoPile(cards, () => ui.cardPile.childNodes[get.rand(0, ui.cardPile.childNodes.length - 1)]);
 		game.log(player, `将${get.cnNumber(cards.length)}张「白」洗入了牌堆`);
-		if (!lib.skill.global.has("xiaobai_dabai")) game.addGlobalSkill("xiaobai_dabai");
+		// 大白挂全场角色：addGlobalSkill 的全局技能只进触发派发链、不渲染进技能栏（按钮无法显示）；
+		// addSkill 后技能栏正常显示「大白」，手里没「白」时 filter 自然置灰；无 trigger 字段，无需 global 注册
+		for (const current of game.players) {
+			if (!current.hasSkill("xiaobai_dabai")) current.addSkill("xiaobai_dabai");
+		}
 	},
 	onremove(player, skill) {
 		delete player.storage.xiaobai_changhe_generals;
+		delete player.storage.xiaobai_changhe_total;
 	},
-},
-// === 大白 ===
+	subSkill: {
+		// 「白」牌销毁后即时从「长河」记录里移除该武将
+		// 对应 FreeKill 原版长河的第二个 effect（白牌进弃牌堆就从 @&xiaobai__changhe 表标记里删掉该武将）
+			remove: {
+				charlotte: true,
+				silent: true,
+				popup: false,
+				forced: true,
+				trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
+				filter(event, player) {
+					if (!Array.isArray(player.storage.xiaobai_changhe_generals)) return false;
+					return lib.xiaobaiShilangDestroyed(event.cards).length > 0;
+				},
+				content(event, trigger, player) {
+					lib.xiaobaiShilangUpdate(lib.xiaobaiShilangDestroyed(trigger.cards), player);
+				},
+			},
+			// 兜底销毁：「白」预设 destroyed=false 绕开引擎 lose 分支三（destroy 牌“首次不移动只标记”），
+			// 经 recast/使用/弃置正常进入弃牌堆后，在此统一补销毁（对齐描述“进入弃牌堆后销毁”）。
+			// 用 getd() 取已入弃牌堆的牌（lose 的 getlx=false 时返回空则退回 event.cards），按位置双保险
+			destroy: {
+				charlotte: true,
+				forced: true,
+				popup: false,
+				silent: true,
+				name: "长河",
+				trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
+				filter(event, player) {
+					const cards = (event.getd ? event.getd() : null) || event.cards || [];
+					return cards.some(
+						(card) => card?.name == "xiaobai_dabai" && card.storage?.xiaobai_changhe && get.position(card, true) == "d" && !card._selfDestroyed
+					);
+				},
+				async content(event, trigger, player) {
+					for (const card of trigger.getd ? trigger.getd() : trigger.cards) {
+						if (card?.name == "xiaobai_dabai" && card.storage?.xiaobai_changhe && get.position(card, true) == "d" && !card._selfDestroyed) {
+							card.selfDestroy(event);
+						}
+					}
+				},
+			},
+		},
+	},
+	// === 大白 ===
 xiaobai_dabai: {
 	audio: 2,
 	enable: ["chooseToUse", "chooseToRespond"],
@@ -3712,6 +4026,8 @@ xiaobai_cuanhe: {
 		return xiaobaiCuanheUsable(player);
 	},
 	filter(event, player) {
+		// 一次询问只能发动一次：中止后引擎 goto(0) 重开询问，此处拦掉重复弹出
+		if (event.xiaobai_cuanhe) return false;
 		if (!xiaobaiCuanheUsable(player)) return false;
 		if (xiaobaiIsSelfSelect(event, "xiaobai_cuanhe")) return true;
 		return xiaobaiViewAsList(event, player, get.inpileVCardList((info) => info[0] == "basic")).length > 0;
@@ -3721,8 +4037,11 @@ xiaobai_cuanhe: {
 			return ui.create.dialog("攒和：视为使用一张基本牌", [xiaobaiViewAsList(event, player, get.inpileVCardList((info) => info[0] == "basic")), "vcard"]);
 		},
 		check(button) {
+			const player2 = get.player();
+			// AI：走不完 1/2/3 三次交换就不会视为使用，白白换手牌 → 直接不给分（ai.basic.chooseButton ≤0 即不选）
+			if (!xiaobaiCuanheCanFinish(player2.countCards("h"), xiaobaiCuanheOthers(player2), [1, 2, 3])) return 0;
 			if (_status.event.getParent().type != "phase") return 1;
-			return get.player().getUseValue(get.autoViewAs({ name: button.link[2], nature: button.link[3], isCard: true }, null, true));
+			return player2.getUseValue(get.autoViewAs({ name: button.link[2], nature: button.link[3], isCard: true }, null, true));
 		},
 		backup(links, player) {
 			return {
@@ -3737,24 +4056,35 @@ xiaobai_cuanhe: {
 				async precontent(event, trigger, player2) {
 					player2.logSkill("xiaobai_cuanhe");
 					const before = player2.countCards("h");
+					const diffs = [1, 2, 3];
 					let count = 0;
-					for (const diff of [1, 2, 3]) {
-						const targets = game.filterPlayer((current) => current != player2 && current.isIn() && Math.abs(current.countCards("h") - player2.countCards("h")) == diff);
-						if (!targets.length) break;
+					// 依次找手牌数相差 1 / 2 / 3 的其他角色交换手牌；每步都可取消，取消或没有合格角色即中止
+					for (const diff of diffs) {
 						const res = await player2
-							.chooseTarget(`攒和：你可以和一名手牌数相差${get.cnNumber(diff)}的其他角色交换手牌`, (card, player3, target) => targets.includes(target))
+							.chooseTarget(`攒和：你可以与一名手牌数相差${get.cnNumber(diff)}的其他角色交换手牌`, (card, player3, target) => {
+								return target != player3 && target.isIn() && Math.abs(target.countCards("h") - player3.countCards("h")) == diff;
+							})
 							.set("ai", () => 1)
 							.forResult();
-						if (!res.bool) break;
+						if (!res.bool || !res.targets?.length) break;
 						await player2.swapHandcards(res.targets[0]);
 						count++;
 					}
-					// 手牌数未减少 → 本技能本轮失效（图标变灰 + 标记）
+					// 后续（换满三次与否都要走）：手牌数未减少 → 本技能本轮失效（图标变灰 + 标记）
+					// 注意：此判定必须在 useResult 之前，否则用牌本身会让手牌减少，永远判不出"未减少"
 					if (player2.countCards("h") >= before) {
 						player2.disableSkill("xiaobai_cuanhe_disabled", "xiaobai_cuanhe");
 						player2.addTempSkill("xiaobai_cuanhe_disabled", "roundStart");
 					}
-					if (count < 3) event.result.bool = false;
+					if (count < 3) {
+						// 没换满三次 → 不视为使用。保持 bool=true + cancel，让引擎 goto(0) 重开本次用牌询问：
+						// ① 不能写 bool=false（那会让出牌阶段循环视为结束阶段）；
+						// ② 换到手的新牌（闪/桃）在重开的询问里依然可选
+						const evt = event.getParent();
+						evt.set("xiaobai_cuanhe", true);
+						evt._aiexclude.add("xiaobai_cuanhe");
+						event.result.cancel = true;
+					}
 				},
 			};
 		},
@@ -3818,20 +4148,25 @@ xiaobai_danggou: {
 			2,
 			"党构：是否弃置两张牌令此【杀】额外结算一次？",
 			(card) => true,
-			(card) => 6 - get.value(card)
+			(card) => {
+				// 目标为我方 → 弃牌令此【杀】多结算一次有害，AI 倾向不弃；目标为敌方 → 弃低价值牌
+				return get.attitude(player, to) < 0 ? 6 - get.value(card) : -get.value(card);
+			}
 		);
 		chooseEvent._args.remove("glow_result");
 		const result = await chooseEvent.forResult();
 		const chosen = valid.map((current, index) => Boolean(result?.[index]?.bool && result[index].cards?.length == 2));
-		const throwSelf = chosen[0];
 		const use = trigger.getParent("useCard");
 		for (let i = 0; i < valid.length; i++) {
 			if (!chosen[i]) continue;
 			if (use) use.effectCount = (typeof use.effectCount == "number" ? use.effectCount : 1) + 1;
 			await valid[i].discard(result[i].cards);
 		}
-		const differs = valid.filter((current, index) => chosen[index] !== throwSelf);
-		if (differs.length != 1 || !use) return;
+		// “唯一与你意见不一致”：你不参与询问（无两张可弃牌）时不存在“你的意见”，不结算翻面
+		const myIndex = valid.indexOf(player);
+		if (!use || myIndex < 0) return;
+		const differs = valid.filter((current, index) => chosen[index] !== chosen[myIndex]);
+		if (differs.length != 1) return;
 		const onlyDifferent = differs[0];
 		trigger.player
 			.when({ player: "useCardAfter" })
@@ -3850,14 +4185,33 @@ xiaobai_danglian: {
 		draw: {
 			audio: "xiaobai_danglian",
 			usable: 1,
-			trigger: { player: "loseAfter" },
+			// 「失去牌」全家桶入口（七巧/沦佚同款）：
+			// loseAfter 覆盖 player.lose（含 gain/equip/addToExpansion 的前置 lose、loseToSpecial 的子 lose，
+			// 如木牛流马置牌/移动装备）；discardAfter 覆盖弃置（弃置的牌必来自手牌/装备区，无需分类）；
+			// loseAsyncAfter 为批量失去的冗余保险
+			trigger: {
+				player: ["loseAfter", "discardAfter"],
+				global: ["loseAsyncAfter"],
+			},
 			filter(event, player) {
-				// 不因「使用/打出」失去牌（原生：move.moveReason ~= ReasonUse / ReasonResponse）
+				// 仅未横置时可发动（横置状态下没有“横置”可执行）
+				if (player.isLinked()) return false;
+				// 不因「使用/打出」失去牌
 				const evt = event.relatedEvent || event.getParent();
 				if (["useCard", "respond"].includes(evt?.name)) return false;
-				// 失去的须是手牌或装备区的牌（原生 fromArea == PlayerHand or PlayerEquip）
-				const evtx = event.getl(player);
-				return Boolean(evtx?.hs?.length || evtx?.es?.length);
+				// 失去的须是手牌或装备区的牌（FreeKill 原版语义 fromArea == PlayerHand or PlayerEquip）
+				// ⚠ lose 事件的 getl 对 getlx=false 的附属失去（gain/equip/addToExpansion 的前置 lose）
+				// 返回空 map（player.js:8566），须直接读事件自身的 hs/es 分类（content 尾部无条件挂载）
+				if (event.name == "lose") {
+					return event.player == player && Boolean(event.hs?.length || event.es?.length);
+				}
+				if (event.name == "loseAsync") {
+					// 木牛流马置牌（loseToSpecial）等批量失去：getl 聚合该 player 的子 lose 记录
+					const evtx = event.getl?.(player);
+					return Boolean(evtx?.hs?.length || evtx?.es?.length);
+				}
+				// discardAfter：弃置的牌必来自手牌/装备区（he），无需再分类
+				return true;
 			},
 			async cost(event, trigger, player) {
 				event.result = await player.chooseBool("党连：你可以横置并摸两张牌").set("ai", () => true).forResult();
@@ -3872,7 +4226,8 @@ xiaobai_danglian: {
 			usable: 1,
 			trigger: { player: "damageBegin4" },
 			filter(event, player) {
-				// 原生只判「非属性伤害」（damageType == NormalDamage），不要求已横置
+				// 仅翻面或横置状态（或两者皆有）时可发动；只判「非属性伤害」
+				if (!player.isTurnedOver() && !player.isLinked()) return false;
 				return !event.nature && event.num > 0;
 			},
 			async cost(event, trigger, player) {
@@ -3894,8 +4249,9 @@ xiaobai_cetu: {
 		return game.hasPlayer((current) => current != player && current.isIn());
 	},
 	async cost(event, trigger, player) {
+		// 可取消（不传 true）：取消则本回合正常进行，不消耗任何资源
 		event.result = await player
-			.chooseTarget("策图：是否跳过额定回合，改为询问一名其他角色是否使用一张牌？", lib.filter.notMe, true)
+			.chooseTarget("策图：是否跳过额定回合，改为询问一名其他角色是否使用一张牌？", lib.filter.notMe)
 			.set("ai", (target) => get.attitude(get.player(), target))
 			.forResult();
 	},
@@ -3949,6 +4305,15 @@ xiaobai_boyi: {
 	},
 	async content(event, trigger, player) {
 		const all = ["peach", "recast", "put", "draw"];
+		// chooseControl 的按钮文本 = get.translation(控件值)（control.js:88），
+		// 直接传 "recast"/"put" 这类英文键会原样显示英文 → 控件值必须用中文短标签
+		const names = {
+			peach: "用桃",
+			recast: "重铸",
+			put: "放牌",
+			draw: "摸牌",
+		};
+		// 对话框里展示的完整说明（choiceList）
 		const labels = {
 			peach: "将一张牌当作【桃】使用",
 			recast: "重铸两张牌并进行一次【闪电】判定",
@@ -3958,12 +4323,12 @@ xiaobai_boyi: {
 		const choices = all.filter((item) => xiaobaiBoyiCan(player, item));
 		if (!choices.length) return;
 		const control = await player
-			.chooseControl(choices)
+			.chooseControl(choices.map((item) => names[item]))
 			.set("prompt", "博议：执行一项")
 			.set("choiceList", choices.map((item) => labels[item]))
 			.set("ai", () => choices.indexOf("draw"))
 			.forResult();
-		const choice = control.control;
+		const choice = choices.find((item) => names[item] === control.control);
 		if (!choice) return;
 		await lib.xiaobaiBoyiDo(player, choice, true);
 		if (!player.isIn()) return;
@@ -4004,28 +4369,23 @@ xiaobai_jianjie: {
 	},
 	async content(event, trigger, player) {
 		const suit = get.suit(trigger.card);
-		const suits = (player.storage.xiaobai_jianjie_suits || []).slice();
 		if (suit && suit != "none") {
-			if (!suits.includes(suit)) suits.push(suit);
-			player.storage.xiaobai_jianjie_suits = suits;
 			player.storage.xiaobai_jianjie_last = suit;
 		}
-		// 一份「鉴戒」结算一次，按份数依次弃置
+		// 一份「鉴戒」结算一次，每份弃置一张
 		const count = player.countMark("xiaobai_jianjie");
 		for (let i = 0; i < count; i++) {
 			if (!player.isIn()) break;
-			const num = Math.min(suits.length, player.countCards("he", (card) => lib.filter.cardDiscardable(card, player, "xiaobai_jianjie")));
-			if (num <= 0) break;
+			if (!player.countCards("he", (card) => lib.filter.cardDiscardable(card, player, "xiaobai_jianjie"))) break;
 			await player
-				.chooseToDiscard(num, "he", true)
-				.set("prompt", `鉴戒：弃置${get.cnNumber(num)}张牌`)
+				.chooseToDiscard(1, "he", true)
+				.set("prompt", "鉴戒：弃置一张牌")
 				.set("skill", "xiaobai_jianjie")
 				.forResult();
 		}
 	},
 	group: ["xiaobai_jianjie_reset"],
 	onremove(player, skill) {
-		delete player.storage[`${skill}_suits`];
 		delete player.storage[`${skill}_last`];
 	},
 	subSkill: {
@@ -4108,6 +4468,9 @@ xiaobai_jiudian: {
 				async precontent(event, trigger, player2) {
 					const cards = player2.getCards("h", (card) => card.name == "xiaobai_dabai");
 					if (cards.length) await player2.recast(cards);
+					// 「白」经 loseToDiscardpile→lose 时，引擎对 destroy 牌“首次不移动只标记
+					// （card.destroyed='discardPile'，延迟删除且可能被手牌区刷新取消）”，
+					// 导致白牌回手牌区：由〖长河〗的 destroy 兜底子技能统一补销毁
 				},
 			};
 		},
@@ -4136,8 +4499,23 @@ xiaobai_jiudian_gift: {
 		return target != player && target.hasSkill("xiaobai_jiudian");
 	},
 	selectTarget: 1,
+	ai: {
+		order: 4,
+		result: {
+			// 送出对自己无用的「白」换摸一张，纯赚；目标按敌我打分，避免资敌（仅剩敌方究典时 AI 取消目标选择）
+			player: 1,
+			target: (player, target) => get.attitude(player, target),
+		},
+	},
 	async content(event, trigger, player) {
-		await player.give(event.cards[0], event.targets[0]);
+		const card = event.cards[0];
+		// destroy 牌经 give 的前置 lose 会被引擎“标记不移动”（留在赠予者手里、受赠者拿不到）：
+		// 赠予前临时放行（走 lose 分支二正常移动），赠予后恢复销毁属性
+		const saved = card.destroyed;
+		card.destroyed = false;
+		await player.give(card, event.targets[0]);
+		if (saved === undefined) delete card.destroyed;
+		else card.destroyed = saved;
 		await player.draw();
 	},
 },
@@ -4147,14 +4525,32 @@ xiaobai_shilang: {
 	locked: true,
 	forced: true,
 	mark: true,
-	intro: { content: "永久【酒】效果层数" },
+	marktext: "浪",
+	intro: {
+		content(storage, player) {
+			const remain = (player.storage.xiaobai_changhe_generals || []).length;
+			const total = player.storage.xiaobai_changhe_total || remain;
+			const vanished = player.storage.xiaobai_shilang_groups || [];
+			return [
+				`永久【酒】效果：${player.countMark("xiaobai_shilang")}层`,
+				`「白」剩余武将：${remain}/${total}`,
+				`已消逝势力：${vanished.length ? vanished.map((group) => get.translation(group)).join("、") : "无"}`,
+			].join("<br>");
+		},
+	},
 	trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
 	filter(event, player) {
 		return lib.xiaobaiShilangVanished(lib.xiaobaiShilangDestroyed(event.cards), player).length > 0;
 	},
+	init(player, skill) {
+		// 开局就显示标记，方便随时查看「白」剩余武将数
+		player.markSkill(skill);
+	},
 	async content(event, trigger, player) {
 		const cards = lib.xiaobaiShilangDestroyed(trigger.cards);
 		const groups = lib.xiaobaiShilangVanished(cards, player);
+		// 记录已消逝的势力（既用于去重，也用于标记提示）
+		player.storage.xiaobai_shilang_groups = (player.storage.xiaobai_shilang_groups || []).concat(groups);
 		lib.xiaobaiShilangUpdate(cards, player);
 		for (let i = 0; i < groups.length; i++) {
 			if (!player.isIn()) break;
@@ -4165,6 +4561,11 @@ xiaobai_shilang: {
 			player.addMark("xiaobai_shilang", 1, false);
 		}
 		if (player.isIn()) lib.xiaobaiShilangRefresh(player);
+	},
+	onremove(player, skill) {
+		delete player.storage.xiaobai_shilang_groups;
+		// 引擎的 jiu 技能 onremove 会一并清掉 node.jiu / storage.jiu（card/extra.js:1048-1056）
+		player.removeSkill("jiu");
 	},
 	group: ["xiaobai_shilang_refresh"],
 	subSkill: {
@@ -4457,4 +4858,1452 @@ xiaobai_zuangong: {
 		},
 	},
 },
+// === 浚金 ===
+xiaobai_junjin: {
+	audio: 2,
+	mark: true,
+	marktext: "金",
+	intro: {
+		name2: "金",
+		markcount: (storage, player) => player.countMark("xiaobai_junjin"),
+		content(storage, player) {
+			const n = player.countMark("xiaobai_junjin");
+			return n > 0 ? "本回合下次摸牌数 +" + n : "本回合下次摸牌数无加成";
+		},
+	},
+	trigger: { player: "useCard1" },
+	filter(event, player) {
+		const card = event.card;
+		if (!card || !player.countCards("he")) return false;
+		const suit = get.suit(card);
+		if (!lib.suit.includes(suit)) return false;
+		return lib.xiaobaiJunjinHasSameTypeDiffSuit(event, player);
+	},
+	async cost(event, trigger, player) {
+		const res = await player
+			.chooseCard("he", "浚金：重铸一张牌", true)
+			.set("ai", (card) => 5 - get.value(card))
+			.forResult();
+		if (!res?.bool || !res.cards?.length) {
+			event.result = { bool: false };
+			return;
+		}
+		// 即时牌（基本/普通锦囊）且有合法候选 → 可多指定一个目标；取消则仅重铸
+		let targets = [];
+		const type = get.type(trigger.card);
+		const list = lib.xiaobaiJunjinExtraTargets(trigger, player);
+		if ((type == "basic" || type == "trick") && list.length) {
+			const res2 = await player
+				.chooseTarget("浚金：可以为此牌多指定一个目标", (card, player2, target) => list.includes(target))
+				.set("ai", (target) => get.effect(target, trigger.card, player, player))
+				.forResult();
+			if (res2?.bool && res2.targets?.length) targets = res2.targets;
+		}
+		event.result = { bool: true, cards: res.cards, targets };
+	},
+	async content(event, trigger, player) {
+		const cards = event.cards || [];
+		const target = event.targets?.[0];
+		const isEquip = cards.length > 0 && get.type(cards[0]) == "equip";
+		// 记录本次使用：供「造成伤害」分支判断，并保证每次使用只记一次
+		trigger.xiaobai_junjin_user = player.playerid;
+		if (cards.length) await player.recast(cards);
+		if (target?.isIn()) {
+			if (!trigger.targets) trigger.targets = [];
+			trigger.targets.push(target);
+			game.log(player, "为", trigger.card, "额外指定了目标", target);
+		}
+		// 重铸了装备牌 → 你本回合下次摸牌数 +1
+		if (isEquip) player.addMark("xiaobai_junjin", 1, false);
+	},
+	onremove(player) {
+		const n = player.countMark("xiaobai_junjin");
+		if (n > 0) player.removeMark("xiaobai_junjin", n, false);
+	},
+	group: ["xiaobai_junjin_damage", "xiaobai_junjin_draw"],
+	subSkill: {
+		damage: {
+			charlotte: true,
+			forced: true,
+			popup: false,
+			silent: true,
+			trigger: { global: "damageBegin1" },
+			filter(event, player) {
+				if (!event.source || event.source != player) return false;
+				const use = event.getParent("useCard");
+				if (!use || use.xiaobai_junjin_user != player.playerid) return false;
+				return !use.xiaobai_junjin_damage_added;
+			},
+			content(event, trigger, player) {
+				const use = trigger.getParent("useCard");
+				use.xiaobai_junjin_damage_added = true;
+				player.addMark("xiaobai_junjin", 1, false);
+			},
+		},
+		draw: {
+			charlotte: true,
+			forced: true,
+			popup: false,
+			silent: true,
+			trigger: { player: "drawBegin" },
+			filter(event, player) {
+				return event.num > 0 && player.countMark("xiaobai_junjin") > 0;
+			},
+			content(event, trigger, player) {
+				const n = player.countMark("xiaobai_junjin");
+				trigger.num += n;
+				player.removeMark("xiaobai_junjin", n, false);
+			},
+		},
+	},
+},
+
+// === 境颐 ===
+xiaobai_jingyi: {
+	audio: 2,
+	locked: true,
+	forced: true,
+	trigger: { global: "phaseEnd" },
+	filter(event, player) {
+		return Boolean(player.storage.xiaobai_jingyi_damage || player.storage.xiaobai_jingyi_lose);
+	},
+	async content(event, trigger, player) {
+		const noDamage = Boolean(player.storage.xiaobai_jingyi_damage);
+		const lostLast = Boolean(player.storage.xiaobai_jingyi_lose);
+		delete player.storage.xiaobai_jingyi_damage;
+		delete player.storage.xiaobai_jingyi_lose;
+		if (!noDamage && !lostLast) return;
+		player.logSkill("xiaobai_jingyi");
+		await player.draw();
+		// 均满足：重置「诚谟」，当前回合角色也摸一张牌
+		if (noDamage && lostLast) {
+			if (player.storage["xiaobai_chengmo_roundcount"] != null) {
+				delete player.storage["xiaobai_chengmo_roundcount"];
+				player.unmarkSkill("xiaobai_chengmo_roundcount");
+			}
+			game.log(player, "重置了", "#g【诚谟】");
+			const current = trigger.player;
+			if (current?.isIn()) await current.draw();
+		}
+	},
+	onremove(player) {
+		delete player.storage.xiaobai_jingyi_damage;
+		delete player.storage.xiaobai_jingyi_lose;
+	},
+	group: ["xiaobai_jingyi_track"],
+	subSkill: {
+		track: {
+			charlotte: true,
+			forced: true,
+			popup: false,
+			silent: true,
+			trigger: { global: ["phaseBegin", "damageAfter", "loseAfter"] },
+			filter(event, player) {
+				if (event.name == "damage") return !event.cancelled;
+				return true;
+			},
+			content(event, trigger, player) {
+				if (trigger.name == "phase") {
+					// 回合开始：重置两个记录
+					player.storage.xiaobai_jingyi_damage = true;
+					delete player.storage.xiaobai_jingyi_lose;
+				} else if (trigger.name == "damage") {
+					delete player.storage.xiaobai_jingyi_damage;
+				} else if (trigger.name == "lose") {
+					// 有角色失去过最后一张手牌
+					// ⚠ 不能用 trigger.getl()：give/分配等 gain 附属的 lose 带 getlx=false，
+					// getl() 对其永远返回空 map（player.js:8566），须直接读事件自身的 hs 分类
+					const loser = trigger.player;
+					if (loser && trigger.hs?.length > 0 && !loser.countCards("h")) {
+						player.storage.xiaobai_jingyi_lose = true;
+					}
+				}
+			},
+		},
+	},
+},
+
+// === 羁讯 ===
+xiaobai_jixun: {
+	audio: 2,
+	enable: "phaseUse",
+	usable: 1,
+	filter(event, player) {
+		return game.hasPlayer((current) => current != player && current.countCards("h") >= 2);
+	},
+	async content(event, trigger, player) {
+		const res = await player
+			.chooseTarget("羁讯：获得一名其他角色两张牌", (card, player2, target) => target != player2 && target.countCards("h") >= 2, true)
+			.set("ai", (target) => -get.attitude(player, target))
+			.forResult();
+		const target = res?.targets?.[0];
+		if (!target) return;
+		const res2 = await player
+			.choosePlayerCard(target, "he", 2, true, "羁讯：选择获得其两张牌")
+			.set("ai", (card) => get.value(card))
+			.forResult();
+		if (!res2?.bool || res2.cards?.length != 2) return;
+		const cards = res2.cards.slice();
+		await player.gain(cards, target, "giveAuto");
+		// “羁讯”标记：直到原角色收回这些牌时才移除
+		player.addGaintag(cards, "xiaobai_jixun");
+		// 记录：目标此回合结束后收回这些牌（used 按次记录，多持有者互不干扰）
+		if (!Array.isArray(target.storage.xiaobai_jixun_cards)) target.storage.xiaobai_jixun_cards = [];
+		const recs = cards.map((card) => ({ card: card, used: false }));
+		target.storage.xiaobai_jixun_cards.addArray(recs);
+		// 其可以视为使用一张由你指定目标的【杀】（无视距离）
+		const vcard = new lib.element.VCard({ name: "sha", isCard: true });
+		// canUse 第三参须传 false 才关闭距离检查（“无视距离”）
+		const usable = game.hasPlayer((current) => current != target && target.canUse(vcard, current, false, true));
+		let used = false;
+		if (usable) {
+			const want = await target
+				.chooseBool("羁讯：你可以视为使用一张由" + get.translation(player) + "指定目标的【杀】（无视距离）")
+				.set("ai", () => get.attitude(target, player) > 0)
+				.forResult();
+			if (want.bool) {
+				const res3 = await player
+					.chooseTarget("羁讯：替" + get.translation(target) + "选择【杀】的目标", (card, player2, current) => current != target && target.canUse(vcard, current, false, true), true)
+					.set("ai", (current) => -get.attitude(player, current))
+					.forResult();
+				const slashTarget = res3?.targets?.[0];
+				if (slashTarget) {
+					await target.useCard(vcard, slashTarget, false, "xiaobai_jixun");
+					used = true;
+				}
+			}
+		}
+		if (used) {
+			for (const rec of recs) rec.used = true;
+		}
+	},
+	group: ["xiaobai_jixun_settle"],
+	ai: {
+		order: 6,
+		// 拿敌人两张牌（回合末归还）+ 可令其被指定目标出【杀】，净收益为正
+		result: { player: 1 },
+	},
+	subSkill: {
+		settle: {
+			charlotte: true,
+			forced: true,
+			popup: false,
+			silent: true,
+			trigger: { player: "phaseEnd" },
+			filter(event, player) {
+				return game.hasPlayer((current) => (current.storage.xiaobai_jixun_cards || []).length > 0);
+			},
+			async content(event, trigger, player) {
+				for (const current of game.filterPlayer((p) => (p.storage.xiaobai_jixun_cards || []).length > 0)) {
+					const list = current.storage.xiaobai_jixun_cards.slice();
+					delete current.storage.xiaobai_jixun_cards;
+					const cards = [];
+					for (const rec of list) {
+						if (!rec?.card) continue;
+						// 拒绝使用【杀】者：只能收回当前仍在弃牌堆里的那些牌
+						if (!rec.used && get.position(rec.card) != "d") continue;
+						cards.push(rec.card);
+					}
+					if (cards.length && current.isIn()) {
+						// “羁讯”标记到收回为止
+						current.removeGaintag("xiaobai_jixun", cards);
+						await current.gain(cards, "gain2");
+					}
+				}
+			},
+		},
+	},
+},
+
+
+// === 预诫 ===
+xiaobai_yujie: {
+	audio: 2,
+	group: ["xiaobai_yujie_draw"],
+	trigger: { global: "phaseBegin" },
+	filter(event, player) {
+		if (player.hasSkill("xiaobai_yujie_used")) return false;
+		return lib.xiaobaiYujieTargets(player).length > 0;
+	},
+	async cost(event, trigger, player) {
+		const list = lib.xiaobaiYujieTargets(player);
+		const res = await player
+			.chooseTarget("预诫：将一名角色于本回合移出游戏", (card, player2, target) => list.includes(target), true)
+			.set("ai", (target) => -get.attitude(player, target))
+			.forResult();
+		event.result = res?.bool && res.targets?.length ? res : { bool: false };
+	},
+	async content(event, trigger, player) {
+		player.addTempSkill("xiaobai_yujie_used", "roundStart");
+		const target = event.targets[0];
+		// 记录本轮移出过谁（下一轮以此法移出过的角色除外）
+		player.storage.xiaobai_yujie_last = { round: game.roundNumber, target: target.playerid };
+		// 摸牌结算时按归属找到目标
+		target.storage.xiaobai_yujie_owner = player.playerid;
+		// 调虎离山同款：tempSkill 不传 expire → 引擎默认本回合结束（phaseAfter/phaseBeforeStart）自动过期
+		target.addTempSkill("xiaobai_yujie_out");
+	},
+	onremove(player) {
+		delete player.storage.xiaobai_yujie_last;
+	},
+	subSkill: {
+		out: {
+			charlotte: true,
+			group: "undist",
+			mark: true,
+			marktext: "诫",
+			// markcount 实时刷新：intro.markcount 只在 updateMarks 被调用时求值（player.js:4700），
+			// 标记创建于回合开始时花色数为 0，必须随牌被使用/打出主动刷新，否则数字永远不出现
+			trigger: { global: ["useCardAfter", "respondAfter"] },
+			forced: true,
+			popup: false,
+			silent: true,
+			filter(event, player) {
+				return player.hasSkill("xiaobai_yujie_out");
+			},
+			content(event, trigger, player) {
+				player.updateMarks("xiaobai_yujie_out");
+			},
+			intro: {
+				markcount(storage, player) {
+					return player.hasSkill("xiaobai_yujie_out") ? lib.xiaobaiYujieSuits().length : 0;
+				},
+				content: "已移出游戏：本回合结束时回到游戏；移出期间每有一种花色的牌被使用或打出，摸一张牌。",
+			},
+			init(player) {
+				if (player.isIn()) {
+					game.broadcastAll((player2) => {
+						player2.classList.add("out");
+					}, player);
+					game.log(player, "移出了游戏");
+				}
+			},
+			onremove(player) {
+				if (player.isOut()) {
+					game.broadcastAll((player2) => {
+						player2.classList.remove("out");
+					}, player);
+					game.log(player, "移回了游戏");
+					// 记下移出期间被使用/打出的花色种数（= 回来时摸牌数），由持有者的 _draw 结算
+					player.storage.xiaobai_yujie_heals = lib.xiaobaiYujieSuits().length;
+				}
+			},
+		},
+		draw: {
+			charlotte: true,
+			forced: true,
+			name: "预诫",
+			popup: false,
+			silent: true,
+			// 不能 group 挂在 _out 下（_out 被引擎过期清理时 group 断链，知识库 #59），
+			// 故常驻持有者：phaseAfter 派发时目标的 _out 已先被清理并写入摸牌数
+			trigger: { global: "phaseAfter" },
+			filter(event, player) {
+				return game.hasPlayer(
+					(current) => current.storage.xiaobai_yujie_owner == player.playerid && (current.storage.xiaobai_yujie_heals || 0) > 0
+				);
+			},
+			async content(event, trigger, player) {
+				for (const current of game.filterPlayer()) {
+					if (current.storage.xiaobai_yujie_owner != player.playerid) continue;
+					const n = current.storage.xiaobai_yujie_heals || 0;
+					if (n <= 0) continue;
+					delete current.storage.xiaobai_yujie_heals;
+					if (!current.isIn()) continue;
+					game.log(current, "移出期间有", get.cnNumber(n), "种花色的牌被使用或打出，摸", get.cnNumber(n), "张牌");
+					await current.draw(n);
+				}
+			},
+		},
+	},
+},
+
+
+// === 探虚 ===
+xiaobai_tanxu: {
+	audio: 2,
+	enable: "phaseUse",
+	usable: 1,
+	filter(event, player) {
+		return game.hasPlayer((current) => current != player);
+	},
+	filterTarget(card, player, target) {
+		return target != player;
+	},
+	selectTarget: 1,
+	async content(event, trigger, player) {
+		// ① 凭空获得一张【影】（不是从牌堆摸）：影=黑桃1基本牌，enable:false、destroy:"discardPile"
+		await player.gain(lib.card.ying.getYing(1), "gain2");
+		if (!player.isIn()) return;
+		const target = event.targets[0];
+		if (!target?.isIn()) return;
+		// ② 由目标「视为对你使用【推心置腹】」：直接 useCard 不查距离（对齐 FreeKill 的 useVirtualCard 语义），
+		//    从而绕过【推心置腹】自带的 range.global:1；可被无懈，且无论是否被无懈都继续后续步骤
+		await target.useCard({ name: "tuixinzhifu", isCard: true }, player, false, "xiaobai_tanxu");
+		if (!player.isIn()) return;
+		// ③ 展示所有手牌
+		let shown = [];
+		if (player.countCards("h")) {
+			const show = player.showHandcards("探虚：展示所有手牌");
+			await show;
+			shown = show.cards || [];
+		}
+		// ④ 展示的牌里还有【影】→ 可对其造成1点伤害（影被对方换走则不触发）
+		if (shown.some((cardx) => get.name(cardx) == "ying")) {
+			const go = await player
+				.chooseBool(`探虚：是否对${get.translation(target)}造成1点伤害？`)
+				.set("ai", () => (get.attitude(player, target) < 0 ? 1 : 0))
+				.forResult();
+			if (go?.bool && target.isIn()) {
+				await target.damage(player);
+			}
+		}
+	},
+	ai: {
+		order: 6,
+		result: {
+			player: 1,
+			target: -0.5,
+		},
+	},
+},
+
+// === 噬契 ===
+xiaobai_shiqi: {
+	audio: 2,
+	limited: true,
+	animationColor: "water",
+	// ⚠️ reset（效果②）绝不能进 group：awakenSkill 内部的 disableSkill 会沿 group 级联禁用子技能
+	// （player.js:11214-11253，知识库#59），而效果②恰恰要在「已发动」之后继续触发。
+	// 所以它走「动态独立挂载」（才瑕 dccaixia_clear 同款）：id 与被禁用键不同名，不被摘除。
+	group: ["xiaobai_shiqi_use"],
+	subSkill: {
+		// 效果①（未发动时）：一名角色使用装备牌后，可视为使用【过河拆桥】；发动即消耗限定技
+		use: {
+			audio: "xiaobai_shiqi",
+			charlotte: true,
+			sub: true,
+			name: "噬契",
+			trigger: { global: "useCardAfter" },
+			direct: true,
+			popup: false,
+			filter(event, player) {
+				if (player.awakenedSkills.includes("xiaobai_shiqi")) return false;
+				if (!event.card || get.type(event.card) != "equip") return false;
+				// 有合法拆桥目标才询问（过河拆桥 enable:true，任意时机可用；牌 id 是 guohe）
+				return player.hasUseTarget({ name: "guohe", isCard: true });
+			},
+			async content(event, trigger, player) {
+				// 非强制：玩家可直接取消选目标 → bool=false，不消耗限定技（对齐 FreeKill 的 skip 语义）
+				const result = await player
+					.chooseUseTarget({ name: "guohe", isCard: true }, "噬契：是否视为使用【过河拆桥】？", false)
+					.forResult();
+				if (!result?.bool) return;
+				player.awakenSkill("xiaobai_shiqi");
+				// 把效果②独立挂上来（不在 group 里 → 不会被上面那句的级联禁用波及）
+				player.addSkill("xiaobai_shiqi_reset");
+			},
+		},
+		// 效果②（行置期间）：其他角色的准备阶段可视为对田续使用【借刀杀人】；
+		// 田续被迫使用的【杀】造成伤害 → 重置限定技（效果①重新可用、效果②关闭）
+		reset: {
+			audio: "xiaobai_shiqi",
+			charlotte: true,
+			sub: true,
+			name: "噬契",
+			trigger: { global: "phaseZhunbeiBegin" },
+			direct: true,
+			popup: false,
+			filter(event, player) {
+				if (!player.awakenedSkills.includes("xiaobai_shiqi")) return false;
+				const current = event.player;
+				if (current == player || !current.isIn()) return false;
+				// 【借刀杀人】的前置：被借刀方（田续）须有武器，且其攻击范围内存在合法的出杀目标
+				if (!player.getEquips(1).length) return false;
+				const sha = { name: "sha", isCard: true };
+				return game.hasPlayer((cur) => cur != player && player.inRange(cur) && lib.filter.targetEnabled(sha, player, cur));
+			},
+			async content(event, trigger, player) {
+				const current = trigger.player;
+				const go = await current
+					.chooseBool(`噬契：是否视为对${get.translation(player)}使用【借刀杀人】？`)
+					.set("ai", () => {
+						// 队友：持有者手牌有【杀】（借刀后可出杀造成伤害、重置限定技）才同意；敌人无条件同意
+						if (get.attitude(current, player) > 0) {
+							return player.hasCard((card) => get.name(card) == "sha", "h") ? 1 : 0;
+						}
+						return 1;
+					})
+					.forResult();
+				if (!go?.bool) return;
+				// 出杀目标：照抄【借刀杀人】自带的 filterAddedTarget（standard.js:2791）
+				const result = await current
+					.chooseTarget(`选择【杀】的目标（须在${get.translation(player)}的攻击范围内）`, 1, (card, playerx, targetx) => {
+						return targetx != player && player.inRange(targetx) && lib.filter.targetEnabled({ name: "sha", isCard: true }, player, targetx);
+					})
+					.set("ai", (targetx) => get.effect(targetx, { name: "sha" }, player, current))
+					.forResult();
+				if (!result?.bool || !result.targets?.length) return;
+				// 【借刀杀人】singleCard:true → useCard 时引擎自动拆成 event.target=田续、event.addedTarget=出杀目标（player.js:7478）
+				const useEvent = current.useCard({ name: "jiedao", isCard: true }, [player, result.targets[0]], "xiaobai_shiqi");
+				await useEvent;
+				if (!player.isIn()) return;
+				// 重置判定：借刀结算子树里唯一的伤害来源就是田续被迫使用的【杀】
+				// （对应 FreeKill 的 getActualDamageEvents(… data.card == 被响应的杀)）
+				const dealt = (function find(evt) {
+					for (const child of evt.childEvents || []) {
+						if (child.name == "damage" && child.num > 0 && (!child.source || child.source == player)) return true;
+						if (find(child)) return true;
+					}
+					return false;
+				})(useEvent);
+				if (dealt) {
+					player.restoreSkill("xiaobai_shiqi");
+					game.log(player, "重置了", "#g【噬契】");
+				}
+			},
+		},
+	},
+},
+
+// === 求道 ===
+// 字母牌 = 点数 A/J/Q/K，即 1/11/12/13
+xiaobai_qiudao: {
+	audio: 2,
+	trigger: { global: "phaseAfter" },
+	direct: true,
+	filter(event, player) {
+		if (!player.isIn()) return false;
+		// 本回合（不限回合角色）没有被使用过字母牌。
+		// getHistory 取的是「当前回合」的 actionHistory 记录（content.js:4055-4068 每回合为全体角色各推一条），
+		// 遍历全体含阵亡角色，与预诫的 xiaobaiYujieSuits 同款
+		return !game.players.concat(game.dead).some((current) =>
+			(current.getHistory("useCard") || []).some((evt) => evt.card && [1, 11, 12, 13].includes(get.number(evt.card)))
+		);
+	},
+	async cost(event, trigger, player) {
+		// chooseControl 的结果没有 bool，只有 control/index（阵行 xinfu_zhenxing 同款）
+		const result = await player
+			.chooseControl("一张", "两张", "三张", "四张", "五张", "cancel2")
+			.set("prompt", "求道：你可以观看牌堆顶至多五张牌，使用最后一张牌")
+			.set("ai", () => 0)
+			.forResult();
+		event.result = { bool: result.control !== "cancel2", cost_data: result.index + 1 };
+	},
+	async content(event, trigger, player) {
+		const num = event.cost_data;
+		// ★ 第二参必须传 true（peek）：看完仍按原序留在牌堆顶。
+		//   漏传会把这 n 张牌真的拿走，「其余牌」就不在牌堆里了（get/index.js:3502-3506）
+		const cards = get.cards(num, true);
+		if (!cards.length) return;
+		await player.viewCards("求道：观看牌堆顶" + get.cnNumber(num) + "张牌", cards);
+		if (!player.isIn()) return;
+		const cardx = cards[cards.length - 1];
+		// 使用牌堆里的真实牌（可放弃：目标型走 chooseTarget 可取消、无目标型走 chooseBool 可拒绝；
+		// 放弃则整体结束，牌仍留在牌堆顶）。
+		// 第三参 false → addCount:false，对齐 Lua 的 bypass_times（不占每回合限用次数）
+		const use = await player
+			.chooseUseTarget(cardx, "求道：你可以使用" + get.translation(cardx), false)
+			.forResult();
+		if (!use?.bool || !player.isIn()) return;
+		// 只有用出去的牌是字母牌才拿其余牌
+		if (![1, 11, 12, 13].includes(get.number(cardx))) return;
+		// 其余牌：用掉的那张已被 useCard 移走；若结算中牌堆被洗/被摸走，这里会自动剔除
+		const rest = cards.slice(0, -1).filter((card) => (ui.cardPile ? ui.cardPile.contains(card) : get.position(card, true) == "c"));
+		if (!rest.length) return;
+		await player.gain(rest, "draw");
+		if (!player.isIn()) return;
+		const gained = rest.filter((card) => player.getCards("h").includes(card));
+		if (!gained.length) return;
+		// 可将其中任意张置于牌堆底（取消 = 一张都不置底）
+		const put = await player
+			.chooseCard("h", "求道：你可以将任意张获得的牌置于牌堆底", [1, gained.length], (card) => gained.includes(card))
+			.forResult();
+		if (put?.bool && put.cards?.length) await game.cardsGotoPile(put.cards);
+	},
+	ai: {
+		result: { player: 1 },
+	},
+},
+
+// === 毁诉 ===
+xiaobai_huisu: {
+	audio: 2,
+	enable: "phaseUse",
+	usable: 1,
+	filter(event, player) {
+		return game.hasPlayer((current) => current != player && current.countCards("h") > 0);
+	},
+	filterTarget(card, player, target) {
+		return target != player && target.countCards("h") > 0;
+	},
+	selectTarget: 1,
+	async content(event, trigger, player) {
+		const target = event.targets[0];
+		// 奖池：因上一项双方「展示或失去过」的手牌。跨项持久（拼点平局时不清池，滚入下一项）
+		let pot = [];
+		let win = 0;
+		let otherWin = 0;
+		// ① 议事：双方各展示一张手牌（展示后留在各自手上，不移走）
+		if (player.countCards("h")) {
+			const debate = await player.chooseToDebate([player, target]).forResult();
+			if (!player.isIn() || !target.isIn()) return;
+			for (const color of ["red", "black", "others"]) {
+				for (const pair of debate?.[color] || []) {
+					const card = pair?.[1];
+					if (get.itemtype(card) == "card" && !pot.includes(card)) pot.push(card);
+				}
+			}
+		}
+		if (!player.isIn() || !target.isIn()) return;
+		// ② 拼点
+		let compareEvent = null;
+		if (player.canCompare(target)) {
+			compareEvent = player.chooseToCompare(target);
+			const compare = await compareEvent.forResult();
+			if (!player.isIn() || !target.isIn()) return;
+			// 赢家自比 num1/num2 判定（result.winner 在平局时缺失；发起者 = num1）
+			const winner = compare?.num1 > compare?.num2 ? player : compare?.num2 > compare?.num1 ? target : null;
+			if (winner) {
+				if (winner == player) win++;
+				else otherWin++;
+				// 赢家拿走奖池里「不在自己手上」的牌——自己展示的那张还在自己手里，不拿
+				const take = pot.filter((card) => !winner.getCards("h").includes(card));
+				if (take.length) await winner.gain(take, winner == player ? target : player, "gain2");
+				pot = [];
+			}
+			// ⚠️ 平局（winner 为 nil）时上面整块不执行 → 议事牌留在奖池滚入下一项，与 Lua 一致
+			// 拼点牌（此时已进弃牌堆）追加进奖池
+			for (const card of [compareEvent.card1, compareEvent.card2]) {
+				if (get.itemtype(card) == "card" && get.position(card, true) == "d" && !pot.includes(card)) pot.push(card);
+			}
+		}
+		// ③ 视为使用【决斗】（不绕每回合限用：canUse 先查，useCard 不传 addCount:false）
+		if (player.isIn() && target.isIn() && player.canUse({ name: "juedou", isCard: true }, target)) {
+			const useEvent = player.useCard({ name: "juedou", isCard: true }, target, "xiaobai_huisu");
+			await useEvent;
+			let playerHurt = false;
+			let targetHurt = false;
+			// 决斗里唯一对对方造成伤害的一方为赢家（child.player 是受伤者）
+			(function find(evt) {
+				for (const child of evt.childEvents || []) {
+					if (child.name == "damage" && child.num > 0) {
+						if (child.player == player) playerHurt = true;
+						if (child.player == target) targetHurt = true;
+					}
+					find(child);
+				}
+			})(useEvent);
+			if (targetHurt && !playerHurt) {
+				win++;
+				const take = pot.filter((card) => !player.getCards("h").includes(card));
+				if (take.length && player.isIn()) await player.gain(take, "gain2");
+			} else if (playerHurt && !targetHurt) {
+				otherWin++;
+				const take = pot.filter((card) => !target.getCards("h").includes(card));
+				if (take.length && target.isIn()) await target.gain(take, "gain2");
+			}
+		}
+		if (!player.isIn()) return;
+		// ④ 赢的次数更多 → 可重铸至多三张牌（可放弃）
+		if (win > otherWin && player.countCards("h")) {
+			const recast = await player
+				.chooseCard("he", "毁诉：你可以重铸至多三张牌", [1, 3], lib.filter.cardRecastable)
+				.forResult();
+			if (recast?.bool && recast.cards?.length) await player.recast(recast.cards);
+		}
+	},
+	ai: {
+		order: 5,
+		result: { player: 1, target: -1 },
+	},
+},
+
+
+// === 履阶 ===
+xiaobai_lvjie: {
+	audio: 2,
+	// ①你造成伤害后（source = 你是伤害来源）②装备牌置入你的装备区后
+	trigger: { source: "damage", player: "equipAfter" },
+	prompt: "履阶：你可以视为使用一张【树上开花】",
+	filter(event, player) {
+		// 每轮每项限一次：两项各自独立计数
+		if (event.name == "damage") return !player.hasSkill("xiaobai_lvjie_used1");
+		return !player.hasSkill("xiaobai_lvjie_used2");
+	},
+	check(event, player) {
+		return player.countCards("he") > 0;
+	},
+	async content(event, trigger, player) {
+		const isDamage = trigger.name == "damage";
+		const maxKey = isDamage ? "xiaobai_lvjie_max1" : "xiaobai_lvjie_max2";
+		player.addTempSkill(isDamage ? "xiaobai_lvjie_used1" : "xiaobai_lvjie_used2", "roundStart");
+		// 视为使用一张【树上开花】（目标为你自己）。【树上开花】本身 toself + selectTarget:-1，
+		// 直接 useCard 不查距离，对齐 Lua 的 useVirtualCard("bogus_flower", nil, player, {player}, lvjie.name)
+		const useEvent = player.useCard({ name: "kaihua", isCard: true }, player, "xiaobai_lvjie");
+		await useEvent;
+		// 统计本次【树上开花】结算中你因此摸到的牌
+		// （= Lua 里 skillName 为 bogus_flower_skill、toArea 为 PlayerHand 的牌。
+		//   卡牌结算事件以牌名作事件名（content.js:9436 的 game.createEvent(event.card.name)），
+		//   其下 draw 事件的 result.cards 即此次摸到的牌，用 getParent 限定在本次结算内。
+		//   ⚠️ getParent(name) 找不到时返回 {}（真值！），必须传第二参 forced=true 才会返回 undefined）
+		let cardNum = 0;
+		const collect = (evt) => {
+			for (const child of evt.childEvents || []) {
+				if (child.name == "draw" && child.player == player && child.getParent("kaihua", true)) {
+					cardNum += child.result?.cards?.length || 0;
+				}
+				collect(child);
+			}
+		};
+		collect(useEvent);
+		if (!player.isIn()) return;
+		// 「为此前唯一最多」= 严格大于历史最大值 → 摸一张牌并刷新记录
+		if (cardNum > player.countMark(maxKey)) {
+			player.setMark(maxKey, cardNum, false);
+			await player.draw();
+		}
+		if (!player.isIn()) return;
+		// 另一项也以此法摸过至少三张 → 可移动场上一张牌（moveCard 可取消，取消则无事发生）
+		if (player.countMark("xiaobai_lvjie_max1") >= 3 && player.countMark("xiaobai_lvjie_max2") >= 3 && player.canMoveCard()) {
+			await player.moveCard("履阶：你可以移动场上一张牌");
+		}
+	},
+	subSkill: {
+		used1: {
+			charlotte: true,
+			onremove: true,
+		},
+		used2: {
+			charlotte: true,
+			onremove: true,
+		},
+		max1: {
+			charlotte: true,
+			mark: true,
+			marktext: "履伤",
+			intro: {
+				name2: "履阶·伤害",
+				markcount: (storage, player) => player.countMark("xiaobai_lvjie_max1"),
+				content: (storage, player) => "以此法（造成伤害后）获得的牌数最大值：" + player.countMark("xiaobai_lvjie_max1"),
+			},
+		},
+		max2: {
+			charlotte: true,
+			mark: true,
+			marktext: "履备",
+			intro: {
+				name2: "履阶·装备",
+				markcount: (storage, player) => player.countMark("xiaobai_lvjie_max2"),
+				content: (storage, player) => "以此法（装备牌置入装备区后）获得的牌数最大值：" + player.countMark("xiaobai_lvjie_max2"),
+			},
+		},
+	},
+},
+
+// === 兴族 ===
+xiaobai_xingzu: {
+	audio: 2,
+	forced: true,
+	mark: true,
+	marktext: "兴",
+	// 手牌上限 +1 要作用在「被选中」的角色身上，只能走全局 mod
+	// （game.checkMod 会把 lib.skill.global 一并纳入（game/index.js:8493），mod 的第一参即被计算的玩家）
+	global: "xiaobai_xingzu_g",
+	group: ["xiaobai_xingzu_draw", "xiaobai_xingzu_lose", "xiaobai_xingzu_death", "xiaobai_xingzu_turn"],
+	trigger: { global: "gameStart" },
+	filter(event, player) {
+		return game.hasPlayer((current) => current != player);
+	},
+	intro: {
+		name2: "兴族",
+		content(storage, player) {
+			const id = player.storage.xiaobai_xingzu_target;
+			const target = id == null ? null : game.players.concat(game.dead).find((current) => current.playerid == id);
+			return target ? "兴族目标：" + get.translation(target) : "尚未选择兴族目标";
+		},
+	},
+	async content(event, trigger, player) {
+		// 锁定技：forced 已跳过「是否发动」，这里的选择本身不可取消
+		const result = await player
+			.chooseTarget("兴族：选择一名其他角色", lib.filter.notMe, true)
+			.set("ai", (target) => get.attitude(player, target))
+			.forResult();
+		const target = result?.targets?.[0];
+		if (!target) return;
+		player.storage.xiaobai_xingzu_target = target.playerid;
+		player.updateMarks("xiaobai_xingzu");
+		game.log(player, "选择了", target, "作为「兴族」目标");
+	},
+	subSkill: {
+		// 其摸牌阶段多摸一张牌（妙风发 mia_fengfa 同款：phaseDrawBegin2 改 num）
+		draw: {
+			charlotte: true,
+			forced: true,
+			silent: true,
+			popup: false,
+			trigger: { global: "phaseDrawBegin2" },
+			filter(event, player) {
+				return !event.numFixed && player.storage.xiaobai_xingzu_target == event.player.playerid;
+			},
+			content(event, trigger, player) {
+				trigger.num++;
+			},
+		},
+		// 其因弃置或打出而失去牌后，你摸一张牌（每回合至多摸5张）
+		// 弃置/打出在引擎里分别是 discard 事件与 respond 事件，各自派发 discardAfter / respondAfter
+		lose: {
+			charlotte: true,
+			forced: true,
+			name: "兴族",
+			trigger: { global: ["discardAfter", "respondAfter"] },
+			filter(event, player) {
+				if (player.countMark("xiaobai_xingzu_turn") >= 5) return false;
+				if (player.storage.xiaobai_xingzu_target != event.player.playerid) return false;
+				return (event.cards || []).length > 0;
+			},
+			async content(event, trigger, player) {
+				player.addMark("xiaobai_xingzu_turn", 1, false);
+				await player.draw();
+			},
+		},
+		// 其死亡后，你直接死亡（player.die() 是直接死亡，不经濒死求桃，对齐 room:killPlayer）
+		death: {
+			charlotte: true,
+			forced: true,
+			name: "兴族",
+			trigger: { global: "dieAfter" },
+			filter(event, player) {
+				return player.storage.xiaobai_xingzu_target == event.player.playerid;
+			},
+			async content(event, trigger, player) {
+				game.log(player, "因「兴族」目标", trigger.player, "的死亡而死亡");
+				await player.die();
+			},
+		},
+		// 每回合至多摸5张：对齐 FreeKill 的 -turn 后缀标记（回合结束后清除）
+		turn: {
+			charlotte: true,
+			forced: true,
+			silent: true,
+			popup: false,
+			trigger: { global: "phaseAfter" },
+			filter(event, player) {
+				return player.countMark("xiaobai_xingzu_turn") > 0;
+			},
+			content(event, trigger, player) {
+				player.setMark("xiaobai_xingzu_turn", 0, false);
+			},
+		},
+	},
+},
+// 兴族的手牌上限 +1：全局技能，只对「被某名兴族持有者选中」的角色生效。
+// 对齐 Lua 的 maxcards correct_func：只数**存活**的兴族持有者（alive_players），
+// 所以用 game.countPlayer（内部按 isOut() 过滤），不是 hasPlayer 的一次性判断。
+xiaobai_xingzu_g: {
+	charlotte: true,
+	mod: {
+		maxHandcard(player, num) {
+			if (!game.players || !game.players.length) return;
+			const count = game.countPlayer((current) => current.hasSkill("xiaobai_xingzu") && current.storage.xiaobai_xingzu_target == player.playerid);
+			if (count > 0) return num + count;
+		},
+	},
+},
+
+// === 权宜 ===
+xiaobai_quanyi: {
+	audio: 2,
+	// 你的上家回合结束时（phaseAfter 的 event.player 就是回合角色；
+	// getPrevious/getNext 走的是**活人链**——arrangePlayers 只在 game.players 之间维护 next/previous，
+	// 死亡时会把 player.next/previous 互相接上，所以等价于 FreeKill 的 getLastAlive/getNextAlive）
+	trigger: { global: "phaseAfter" },
+	prompt(event, player) {
+		const next = player.getNext();
+		return next ? `权宜：你可以与${get.translation(next)}交换位次` : "权宜：你可以与下家交换位次";
+	},
+	filter(event, player) {
+		// 每轮限一次（Lua: usedSkillTimes(quanyi.name, Player.HistoryRound) < 1）
+		if (!player.isIn() || player.hasSkill("xiaobai_quanyi_used")) return false;
+		const next = player.getNext();
+		if (!next || !next.isIn()) return false;
+		return event.player == player.getPrevious();
+	},
+	async content(event, trigger, player) {
+		player.addTempSkill("xiaobai_quanyi_used", "roundStart");
+		// ⚠️ game.swapSeat 会调 game.arrangePlayers() 重排座位链，
+		// 换位后 getNext() 就变了 —— 所有引用必须在换位前取好
+		const next = player.getNext();
+		if (!next?.isIn()) return;
+		// 换位标记打在**对方**身上：对方身上已有此标记 = 「曾与该角色交换过位置」
+		// （Lua 的 room:addPlayerMark(next, "@@xiaobai__quanyi")）
+		const did = next.hasSkill("xiaobai_quanyi_swapped");
+		// 官方换位写法：game.broadcastAll 包 game.swapSeat（baiyi 败移 mobile/skill.js:25897、shiji.js:4187）
+		game.broadcastAll((t1, t2) => game.swapSeat(t1, t2), player, next);
+		next.addSkill("xiaobai_quanyi_swapped");
+		if (!player.isIn()) return;
+		// 视为使用一张「未以此法使用过」的基本牌或普通锦囊牌。
+		// 候选 = 基本牌 + 普通锦囊（get.type 里延时锦囊是 "delay"，自然被排除），
+		// 且**当前确实可用**（对齐 Lua 的 Fk:getAllCardNames("bt") + getViewAsCardNames 的 canUse 过滤）。
+		// ⚠️ 可用性判定一律走 player.hasUseTarget —— 闪/无懈无 enable、满血桃 enable 为假，都会被正确排除
+		const record = player.storage.xiaobai_quanyi_record || [];
+		const list = get.inpileVCardList((info) => {
+			if (info[0] != "basic" && info[0] != "trick") return false;
+			if (record.includes(info[2])) return false;
+			return player.hasUseTarget(get.autoViewAs({ name: info[2], nature: info[3], isCard: true }));
+		});
+		if (list.length) {
+			const pick = await player
+				.chooseButton(["权宜：你可以视为使用一张基本牌或普通锦囊牌", [list, "vcard"]])
+				.set("ai", (button) => get.player().getUseValue(get.autoViewAs({ name: button.link[2], nature: button.link[3], isCard: true })))
+				.forResult();
+			if (pick?.bool && pick.links?.length) {
+				const link = pick.links[0];
+				const vcard = get.autoViewAs({ name: link[2], nature: link[3], isCard: true });
+				// chooseUseTarget 第三参 false = addCount:false（不占次数，对齐 Lua 的 skillName 出牌）；
+				// 非 forced，取消 → result.bool = false；牌不可用时引擎内部直接返回 {bool:false}，不会卡住
+				const useRes = await player.chooseUseTarget(vcard, `权宜：是否使用${get.translation(vcard)}`, false).forResult();
+				if (useRes?.bool) {
+					// 确认使用后才记录牌名（放弃使用不记录，下次还能选它）
+					record.push(link[2]);
+					player.storage.xiaobai_quanyi_record = record;
+				}
+			}
+		}
+		if (!player.isIn()) return;
+		// 与同一人重复换位：把「所有已用过的牌名」逐个再问一遍（每个可放弃），然后失去此技能
+		if (did) {
+			for (const name of (player.storage.xiaobai_quanyi_record || []).slice()) {
+				if (!player.isIn()) return;
+				const vcard = get.autoViewAs({ name, isCard: true });
+				if (!player.hasUseTarget(vcard)) continue;
+				await player.chooseUseTarget(vcard, `权宜：是否视为使用【${get.translation(name)}】`, false).forResult();
+			}
+			if (player.isIn()) {
+				player.removeSkillLog("xiaobai_quanyi");
+				delete player.storage.xiaobai_quanyi_record;
+			}
+		}
+	},
+	subSkill: {
+		// 每轮限一次标记（动态挂载，绝不放进 group，否则 hasSkill 恒真 → addTempSkill 直接 return）
+		used: {
+			charlotte: true,
+		},
+		// 对方身上的「已换位」标记（Lua 的 @@xiaobai__quanyi）
+		swapped: {
+			charlotte: true,
+			mark: true,
+			marktext: "宜",
+			intro: { content: "曾因〖权宜〗与你交换过位置" },
+		},
+	},
+	ai: { result: { player: 1 } },
+},
+
+// === 权倾 ===
+xiaobai_quanqing: {
+	audio: 2,
+	limited: true,
+	skillAnimation: true,
+	animationColor: "water",
+	// 议事结束后（原生参照 jsrgfumou character/jsrg.js:2663）
+	trigger: { global: "chooseToDebateAfter" },
+	filter(event, player) {
+		if (!player.isIn() || player.awakenedSkills.includes("xiaobai_quanqing")) return false;
+		const result = event.result;
+		if (!result) return false;
+		// 自己的意见必须是红/黑（Lua: table.contains({"red","black"}, results[player].opinion)）
+		const myColor = ["red", "black"].find((key) => (result[key] || []).some((pair) => pair[0] == player));
+		if (!myColor) return false;
+		// 存在「意见不同、且展示牌仍在手牌中」的其他参与者
+		return (result.opinions || []).some((key) => {
+			if (key == myColor) return false;
+			return (result[key] || []).some((pair) => pair[0] != player && pair[0]?.isIn() && get.itemtype(pair[1]) == "card" && get.position(pair[1]) == "h");
+		});
+	},
+	async content(event, trigger, player) {
+		player.awakenSkill("xiaobai_quanqing");
+		const result = trigger.result;
+		const myColor = ["red", "black"].find((key) => (result[key] || []).some((pair) => pair[0] == player));
+		if (!myColor) return;
+		// 收集所有「与自己意见不同」的展示牌（按持有者分组，只取仍在手牌里的）
+		// 议事按颜色分组：result.red / result.black / result.others = [[角色, 展示的牌], ...]，
+		// result.opinions 是完整颜色列表（debateIgnore 为假时还会有额外颜色组），照它遍历最稳
+		const groups = [];
+		for (const key of result.opinions || []) {
+			if (key == myColor) continue;
+			for (const pair of result[key] || []) {
+				const [owner, card] = pair;
+				if (owner == player || !owner?.isIn()) continue;
+				if (get.itemtype(card) != "card" || get.position(card) != "h") continue;
+				const group = groups.find((i) => i.owner == owner);
+				if (group) group.cards.push(card);
+				else groups.push({ owner, cards: [card] });
+			}
+		}
+		if (!groups.length) return;
+		// 由持有者弃置、归因于你（discard 第二参 = discarder），对齐 Lua 的 room:throwCard(cards, name, p, player)
+		let num = 0;
+		for (const { owner, cards } of groups) {
+			player.line(owner, "green");
+			await owner.discard(cards, player);
+			num += cards.length;
+		}
+		if (num > 0 && player.isIn()) await player.draw(num);
+	},
+	ai: { result: { player: 1 } },
+},
+
+// === 施贫 ===
+xiaobai_shipin: {
+	audio: 2,
+	// 你使用非伤害牌后。
+	// ⚠️ Lua 用的是 fk.CardUsing（= 牌效果结算**前**，对应无名杀的 useCard2）；
+	// 这里按技能描述「使用非伤害牌后」用 useCardAfter —— 避免在牌结算中途把角色移出游戏，
+	// 导致同一张牌的后续目标结算时场上状态已变（例如多目标锦囊的其余目标）。
+	trigger: { player: "useCardAfter" },
+	filter(event, player) {
+		if (!player.isIn() || !event.card) return false;
+		// 非伤害牌（杀/决斗/南蛮/万箭等 ai.tag.damage 为真 → 排除）
+		if (get.tag(event.card, "damage")) return false;
+		// 至少要有一名「非当前回合」的其他存活角色
+		return game.hasPlayer((current) => current != _status.currentPhase);
+	},
+	async cost(event, trigger, player) {
+		// 「体力值或手牌数最低」的比较范围是**全部存活角色**（含当前回合角色），
+		// 只有选择对象排除当前回合角色（Lua: table.every(room.alive_players, ...) + cp ~= room.current）
+		const players = game.filterPlayer();
+		const minHp = Math.min(...players.map((current) => current.hp));
+		const minHand = Math.min(...players.map((current) => current.countCards("h")));
+		const targets = players.filter((current) => current != _status.currentPhase && (current.hp == minHp || current.countCards("h") == minHand));
+		if (!targets.length) {
+			event.result = { bool: false };
+			return;
+		}
+		const res = await player
+			.chooseTarget("施贫：令一名体力值或手牌数最低的非当前回合角色摸一张牌", (card, player2, target) => targets.includes(target))
+			.set("ai", (target) => get.attitude(player, target))
+			.forResult();
+		event.result = res?.bool && res.targets?.length ? res : { bool: false };
+	},
+	async content(event, trigger, player) {
+		const target = event.targets[0];
+		await target.draw(1);
+		if (!target.isIn()) return;
+		// 枚举本回合**未公开**的延时拼点：chooseToCompare 事件带 isDelay，
+		// 且两张拼点牌都还停在移出区（get.position(card, true) == "s"）。
+		// 已公开的会被 cardsGotoOrdering 搬走（position 变 "o"），已作废的 isDestroyed 为真。
+		// ⚠️ globalHistory 里没有 chooseToCompare 这个键（只有 cardMove/custom/useCard/changeHp/everything），
+		// 必须从 everything 里筛（everything 就是本回合全事件；globalHistory 每回合开始时压栈重建）
+		const pendings = (game.getGlobalHistory("everything") || []).filter(
+			(evt) =>
+				evt.name == "chooseToCompare" &&
+				evt.isDelay &&
+				!evt.isDestroyed &&
+				evt.card1 &&
+				evt.card2 &&
+				get.position(evt.card1, true) == "s" &&
+				get.position(evt.card2, true) == "s"
+		);
+		// 「其未参与」= 目标既不是该拼点的发起者、也不是对方
+		const usable = pendings.filter((evt) => evt.player != target && evt.target != target);
+		const participants = [];
+		for (const evt of usable) {
+			for (const current of [evt.player, evt.target]) {
+				if (current?.isIn() && !participants.includes(current)) participants.push(current);
+			}
+		}
+		// 目标选择：替换延时拼点牌 / 本回合移出游戏 / 放弃（Lua 的 UI.ComboBox，cancelable = true）
+		let choice;
+		if (participants.length) {
+			const ctrl = await target
+				.chooseControl("替换延时拼点牌", "本回合移出游戏", "cancel2")
+				.set("prompt", "施贫：请选择一项")
+				.set("ai", () => "本回合移出游戏")
+				.forResult();
+			choice = ctrl?.control;
+		} else {
+			const go = await target.chooseBool("施贫：是否本回合移出游戏？").set("ai", () => true).forResult();
+			choice = go?.bool ? "本回合移出游戏" : "cancel2";
+		}
+		if (!choice || choice == "cancel2") return;
+		if (choice == "本回合移出游戏") {
+			// 调虎离山同款：不传 expire → 引擎默认本回合结束（phaseAfter / phaseBeforeStart）自动过期
+			target.addTempSkill("xiaobai_shipin_out");
+			return;
+		}
+		// 替换：选参与者 → 选自己一张手牌 → 顶替其拼点牌，旧牌回目标手牌
+		const pick = await target
+			.chooseTarget("施贫：选择要替换其拼点牌的一名角色", (card, player2, targetx) => participants.includes(targetx))
+			.forResult();
+		const participant = pick?.targets?.[0];
+		if (!participant) return;
+		const cmpEvt = usable.find((evt) => evt.player == participant || evt.target == participant);
+		if (!cmpEvt) return;
+		const isInitiator = cmpEvt.player == participant;
+		const oldCard = isInitiator ? cmpEvt.card1 : cmpEvt.card2;
+		const cardPick = await target.chooseCard("h", "施贫：选择用于替换的一张手牌", true).forResult();
+		const newCard = cardPick?.cards?.[0];
+		if (!newCard) return;
+		// 新牌进移出区（与延时拼点牌同区，position "s"）
+		await target.lose([newCard], ui.special);
+		// ⚠️ chooseToCompareEffect 是**运行时**才从 parentEvent 拷贝 card1/card2 并重算点数
+		// （content.js:6553 的 for (const key of [...]) event[key] = evt[key]）→ 改字段即完成替换
+		if (isInitiator) cmpEvt.card1 = newCard;
+		else cmpEvt.card2 = newCard;
+		// 旧牌回目标手牌（Lua: room:obtainCard(to, cid, ...)）
+		await target.gain([oldCard], "gain2");
+	},
+	subSkill: {
+		// 本回合移出游戏：调虎离山同款（group: "undist" → hasSkill("undist") 为真 →
+		// getNext/getPrevious 断开、inRange/targetInRange 为假、targetEnabled2 因 isOut() 拒绝指定目标），
+		// 另加三处「数值归零」保护，全部随 tempSkill 到回合结束一起失效
+		out: {
+			charlotte: true,
+			group: "undist",
+			mark: true,
+			marktext: "贫",
+			intro: { content: "本回合移出游戏：不可被指定为目标，受到的伤害、回复与失去体力均无效。" },
+			trigger: { player: ["damageBegin4", "recoverBegin", "loseHpBegin"] },
+			forced: true,
+			popup: false,
+			silent: true,
+			content(event, trigger, player) {
+				// 三者的 content 都在 Begin 之后才读 num（damage 的 num 在 damageBegin4 之后解构），
+				// 所以 Begin 里归零即可
+				trigger.num = 0;
+			},
+			init(player) {
+				if (player.isIn()) {
+					game.broadcastAll((player2) => {
+						player2.classList.add("out");
+					}, player);
+					game.log(player, "移出了游戏");
+				}
+			},
+			onremove(player) {
+				if (player.isOut()) {
+					game.broadcastAll((player2) => {
+						player2.classList.remove("out");
+					}, player);
+					game.log(player, "移回了游戏");
+				}
+			},
+		},
+	},
+	ai: { result: { player: 1 } },
+},
+
+// === 乾象 ===
+xiaobai_qianxiang: {
+	audio: 2,
+	// 一名角色回合结束时（Lua 的 fk.TurnEnd；on_cost = Util.TrueFunc → 不询问是否发动，
+	// 用 direct: true 跳过询问又不误判成锁定技）
+	trigger: { global: "phaseAfter" },
+	direct: true,
+	filter(event, player) {
+		if (!player.isIn()) return false;
+		const { lost, gained } = lib.skill.xiaobai_qianxiang.count(player);
+		return lost > 0 && gained > 0;
+	},
+	async content(event, trigger, player) {
+		const { lost, gained } = lib.skill.xiaobai_qianxiang.count(player);
+		let X = Math.abs(lost - gained);
+		if (X > 5) X = 5;
+		// X = 0 的退化分支：获得数 = 失去数 ≠ 0 → 可弃置全部手牌
+		if (X == 0) {
+			const go = await player.chooseBool("乾象：是否将你的手牌数调整为0？").set("ai", () => false).forResult();
+			if (go?.bool && player.countCards("h")) await player.discard(player.getCards("h"));
+			return;
+		}
+		// peek 牌堆顶 X 张（第二参 true = 只看不拿，对齐 FreeKill 的 room:getNCards 只切片不抽走）
+		const cards = get.cards(X, true);
+		if (!cards.length) return;
+		const pick = await player
+			.chooseCardButton(cards, "乾象：你可以使用其中一张牌")
+			.set("filterButton", (button) => get.player().hasUseTarget(button.link))
+			.set("ai", (button) => get.player().getUseValue(button.link))
+			.forResult();
+		const picked = pick?.bool && pick.links?.length ? pick.links[0] : null;
+		if (picked) {
+			// 第三参 false = addCount:false（不占次数，对齐 Lua 的 bypass_times/extraUse）
+			const useRes = await player.chooseUseTarget(picked, `乾象：是否使用${get.translation(picked)}`, false).forResult();
+			if (useRes?.bool) return; // 已以此法使用牌 → 不再调整手牌
+		}
+		// 未以此法使用牌 → 可将手牌数调整为 X
+		const num = X - player.countCards("h");
+		if (!num) return;
+		const go = await player
+			.chooseBool(`乾象：是否将你的手牌数调整为${get.cnNumber(X)}张？`)
+			.set("ai", () => num > 0)
+			.forResult();
+		if (!go?.bool) return;
+		if (num > 0) await player.draw(num);
+		else await player.chooseToDiscard(-num, "h", true).forResult();
+	},
+	// 本回合「失去 / 获得」牌的计数（对齐 FreeKill 的 AfterCardsMove refresh：只看手牌区与装备区的进出）
+	// getHistory 本身就是**本回合**范围（引擎每回合开始重建 actionHistory），无需子技能清零
+	count(player) {
+		let lost = 0;
+		let gained = 0;
+		for (const evt of player.getHistory("lose") || []) {
+			lost += (evt.hs?.length || 0) + (evt.es?.length || 0);
+			// 装备牌置入装备区时，引擎在 equip 里先建一条 type:"equip" 的 lose（牌离开手牌/装备区），
+			// 而「进入装备区」不入任何历史 → 借这条 lose 补记，保证两侧同步（否则手牌→装备会凭空多算 1 点差值）
+			if (evt.type == "equip") gained += evt.cards?.length || 0;
+		}
+		for (const evt of player.getHistory("gain") || []) {
+			gained += (evt.cards || []).length;
+		}
+		return { lost, gained };
+	},
+	ai: { result: { player: 1 } },
+},
+
+// === 擅恣 ===
+xiaobai_shanzi: {
+	audio: 2,
+	// 每轮开始时（roundStart 在 phaseLoop 给全员补好 seatNum 之后才派发，所以一号位一定查得到）
+	trigger: { global: "roundStart" },
+	filter(event, player) {
+		if (!player.isIn()) return false;
+		const first = game.findPlayer((current) => current.getSeatNum() == 1);
+		if (!first) return false;
+		// 一号位是别人时，其必须手牌/装备区有牌才能交（对齐 Lua 的 not first:isNude()）
+		return first == player || first.countCards("he") > 0;
+	},
+	async content(event, trigger, player) {
+		const first = game.findPlayer((current) => current.getSeatNum() == 1);
+		if (!first) return;
+		if (first != player) {
+			// Lua 的 askToChooseCard(flag "he") + obtainCard(ReasonGive) → noname 的 give
+			const res = await first.chooseCard("he", `擅恣：交给${get.translation(player)}一张牌`, true).forResult();
+			if (res?.cards?.length) await first.give(res.cards, player);
+		}
+		if (!player.isIn()) return;
+		// 手牌数比较发生在**收牌之后**（Lua 原样）；「为全场最多」= 没有人比赵娆多（并列也算）
+		if (!game.hasPlayer((current) => current != player && current.countCards("h") > player.countCards("h"))) {
+			// addTempSkill 的 expire 用 "roundStart" 与 trigger 同名是安全的：
+			// GameEvent.trigger 里先清 tempSkill 再派发 hook（gameEvent.js:541-579），所以下轮开始时会先过期再重新授予
+			if (!player.hasSkill("xiaobai_shanzi_feiyang")) player.addTempSkill("xiaobai_shanzi_feiyang", "roundStart");
+			if (!player.hasSkill("xiaobai_shanzi_bahu")) player.addTempSkill("xiaobai_shanzi_bahu", "roundStart");
+			return;
+		}
+		// 不为最多 → 由**一号位**决定是否令「权倾」视为未发动过（仅当权倾已发动过）
+		if (!player.awakenedSkills.includes("xiaobai_quanqing")) return;
+		const go = await first
+			.chooseBool(`擅恣：是否令${get.translation(player)}的〖权倾〗视为未发动过？`)
+			.set("ai", () => get.attitude(first, player) < 0)
+			.forResult();
+		if (go?.bool) player.restoreSkill("xiaobai_quanqing");
+	},
+	subSkill: {
+		// 飞扬：对齐 FreeKill 的 m_feiyang（不是斗地主的 feiyang）——
+		// 判定阶段开始时，弃置**两张手牌**，然后弃置自己判定区的**一张**牌
+		feiyang: {
+			name: "飞扬",
+			trigger: { player: "phaseJudgeBegin" },
+			filter(event, player) {
+				return player.countCards("h") >= 2 && player.countCards("j") > 0;
+			},
+			async cost(event, trigger, player) {
+				event.result = await player
+					.chooseToDiscard(2, "h", "飞扬：你可以弃置两张手牌，然后弃置判定区的一张牌")
+					.set("ai", (card) => 9 - get.value(card))
+					.forResult();
+			},
+			async content(event, trigger, player) {
+				if (event.cards?.length) await player.discard(event.cards);
+				if (player.isIn() && player.countCards("j")) await player.discardPlayerCard(player, "j", true, 1);
+			},
+		},
+		// 跋扈：对齐 FreeKill 的 m_bahu —— 锁定技，准备阶段摸一张牌；出牌阶段可以多使用一张【杀】
+		// （lib.filter.cardUsable 对 updateUsable: "phaseUse" 的牌只在出牌阶段计数，故这里无需再加阶段判断）
+		bahu: {
+			name: "跋扈",
+			trigger: { player: "phaseZhunbeiBegin" },
+			forced: true,
+			content(event, trigger, player) {
+				player.draw();
+			},
+			mod: {
+				cardUsable(card, player, num) {
+					if (card.name == "sha") return num + 1;
+				},
+			},
+		},
+	},
+	ai: { result: { player: 1 } },
+},
+
+// === 怀烈 ===
+xiaobai_huailie: {
+	audio: 2,
+	// 契定技：引擎原生支持（get.is.qidingSkill / get.is.locked + intro.content "qidingSkill"）。
+	// 状态存在 player.storage.xiaobai_huailie，由 player.awakenQidingSkill 置真。
+	// 参照原生 sxrmqishi / sxrmdancui（character/sxrm.js:843 / 1597）
+	qidingSkill(skill, player) {
+		return !player?.storage?.xiaobai_huailie;
+	},
+	locked(skill, player) {
+		return Boolean(player?.storage?.xiaobai_huailie);
+	},
+	// 【杀】的实体牌从结算区 flush 进弃牌堆时派发 cardsDiscardAfter
+	// （useCard content → cardsGotoOrdering → orderingDiscard → game.cardsDiscard，父链上 useCard 可达）
+	trigger: { global: "cardsDiscardAfter" },
+	filter(event, player) {
+		if (!player.isIn()) return false;
+		const useEvent = event.getParent("useCard", true);
+		if (!useEvent || get.name(useEvent.card) != "sha") return false;
+		// 该【杀】的实体牌（转化杀取 useEvent.cards 里的实体牌，不能用牌名判，否则转化杀会被漏掉）
+		const useCards = useEvent.cards?.length ? useEvent.cards : useEvent.card?.cards || [];
+		if (!useCards.some((card) => (event.cards || []).includes(card) && get.position(card, true) == "d")) return false;
+		// 同一张【杀】对同一名怀烈只结算一次
+		if ((useEvent.xiaobai_huailie_resolved || []).includes(player.playerid)) return false;
+		if (!lib.skill.xiaobai_huailie.relevant(useEvent, player)) return false;
+		// 未造成任何伤害（子事件树里没有 num > 0 的 damage；被闪挡掉的才算）
+		let hurt = false;
+		const scan = (evt) => {
+			for (const child of evt.childEvents || []) {
+				if (child.name == "damage" && child.num > 0) hurt = true;
+				scan(child);
+			}
+		};
+		scan(useEvent);
+		if (hurt) return false;
+		// 可行性：有未明置的♥手牌，或还有可执行的代价项（全失效且无♥ → 不触发）
+		if (player.countCards("h", (card) => get.suit(card) == "heart" && !get.is.shownCard(card))) return true;
+		const disabled = player.storage.xiaobai_huailie_disabled || [];
+		if (!disabled.includes("recast") && player.countCards("he") >= 3) return true;
+		if (!disabled.includes("draw")) return true;
+		if (!disabled.includes("obtain") && game.hasPlayer((current) => current.countCards("ej") > 0)) return true;
+		return false;
+	},
+	async cost(event, trigger, player) {
+		const useEvent = trigger.getParent("useCard", true);
+		const shaCards = (event.cards || []).filter((card) => get.position(card, true) == "d");
+		const contracted = Boolean(player.storage.xiaobai_huailie);
+		const hearts = player.getCards("h", (card) => get.suit(card) == "heart" && !get.is.shownCard(card));
+		let heart = null;
+		let choice = null;
+		if (hearts.length) {
+			// 契定前可取消；契定后不可取消（Lua: cancelable = not contracted）
+			const res = await player
+				.chooseCard("h", "怀烈：明置一张♥手牌，然后获得此【杀】", contracted)
+				.set("filterCard", (card) => hearts.includes(card))
+				.forResult();
+			if (res?.cards?.length) heart = res.cards[0];
+			else if (contracted) heart = hearts[0];
+			else {
+				event.result = { bool: false };
+				return;
+			}
+		}
+		if (!heart) {
+			const disabled = player.storage.xiaobai_huailie_disabled || [];
+			const options = [];
+			if (!disabled.includes("recast") && player.countCards("he") >= 3) options.push("recast");
+			if (!disabled.includes("draw")) options.push("draw");
+			if (!disabled.includes("obtain") && game.hasPlayer((current) => current.countCards("ej") > 0)) options.push("obtain");
+			if (!options.length) {
+				event.result = { bool: false };
+				return;
+			}
+			const names = { recast: "重铸三张牌", draw: "摸两张牌", obtain: "获得场上一张牌" };
+			const controls = options.map((key) => names[key]);
+			if (!contracted) controls.push("cancel2");
+			const ctrl = await player
+				.chooseControl(controls)
+				.set("prompt", "怀烈：选择一项，随后尝试明置一张♥手牌并获得此【杀】")
+				.set("ai", () => 0)
+				.forResult();
+			if (!ctrl?.control || ctrl.control == "cancel2") {
+				event.result = { bool: false };
+				return;
+			}
+			choice = options[ctrl.index];
+		}
+		event.result = { bool: true, useEvent, shaCards, heart, choice };
+	},
+	async content(event, trigger, player) {
+		const { useEvent, shaCards, heart, choice } = event.result;
+		useEvent.xiaobai_huailie_resolved ||= [];
+		useEvent.xiaobai_huailie_resolved.push(player.playerid);
+		// 契定：此后明置不可取消、无放弃项，标签变「锁定技」、描述去掉「可以」
+		player.awakenQidingSkill("xiaobai_huailie");
+		let shown = heart;
+		if (shown) {
+			await player.addShownCards([shown], "visible_xiaobai_huailie");
+		} else {
+			if (choice == "recast") {
+				const res = await player.chooseCard({ position: "he", prompt: "怀烈：重铸三张牌", selectCard: 3, forced: true }).forResult();
+				if (res?.cards?.length) await player.recast(res.cards);
+			} else if (choice == "draw") {
+				await player.draw(2);
+			} else if (choice == "obtain") {
+				const tp = await player
+					.chooseTarget("怀烈：选择一名场上有牌的角色", (card, player2, targetx) => targetx.countCards("ej") > 0)
+					.forResult();
+				const targetx = tp?.targets?.[0];
+				if (targetx) await player.gainPlayerCard({ target: targetx, position: "ej", forced: true });
+			}
+			if (!player.isIn()) return;
+			// 代价执行后重试明置♥（此时不可取消）
+			const hearts = player.getCards("h", (card) => get.suit(card) == "heart" && !get.is.shownCard(card));
+			if (hearts.length) {
+				const res = await player
+					.chooseCard("h", "怀烈：明置一张♥手牌", true)
+					.set("filterCard", (card) => hearts.includes(card))
+					.forResult();
+				shown = res?.cards?.[0] || hearts[0];
+				await player.addShownCards([shown], "visible_xiaobai_huailie");
+			}
+			if (!shown) {
+				// 依然不能明置 → 该代价项整局失效 + 失去1点体力
+				(player.storage.xiaobai_huailie_disabled ||= []).push(choice);
+				await player.loseHp(1);
+				return;
+			}
+		}
+		const gainable = shaCards.filter((card) => get.position(card, true) == "d");
+		if (gainable.length && player.isIn()) await player.gain(gainable, "gain2");
+	},
+	// 「指定或途经」：沿座位链（getNext/getPrevious 走活人链）取从使用者到每个目标的**较短弧**，
+	// 刘琨在该弧上即算途经；步数相等时两个方向都算。对齐 huailie.lua:53-81
+	relevant(useEvent, player) {
+		const from = useEvent.player;
+		if (!from || !from.isIn()) return false;
+		const targets = useEvent.targets || [];
+		if (targets.includes(player)) return true;
+		for (const to of targets) {
+			if (to == from || !to.isIn()) continue;
+			let clockwise = false;
+			let counterclockwise = false;
+			let cwSteps = 1;
+			let ccwSteps = 1;
+			let current = from.getNext();
+			while (current && current != from) {
+				if (current == player) clockwise = true;
+				if (current == to) break;
+				current = current.getNext();
+				cwSteps++;
+			}
+			current = from.getPrevious();
+			while (current && current != from) {
+				if (current == player) counterclockwise = true;
+				if (current == to) break;
+				current = current.getPrevious();
+				ccwSteps++;
+			}
+			if ((cwSteps < ccwSteps && clockwise) || (cwSteps > ccwSteps && counterclockwise) || (cwSteps == ccwSteps && (clockwise || counterclockwise))) return true;
+		}
+		return false;
+	},
+	mark: true,
+	intro: { content: "qidingSkill" },
+	ai: { result: { player: 1 } },
+},
+
+
 };

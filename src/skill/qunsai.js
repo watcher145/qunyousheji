@@ -6,6 +6,7 @@ export const skills = {
 // === 咏絮 ===
 	wending_yongxu: {
 		audio: 2,
+		direct:true,
 		trigger: { player: ["useCard", "respond"] },
 		filter(event, player) {
 			if (!Array.isArray(event.respondTo)) {
@@ -75,6 +76,10 @@ export const skills = {
 	},
 
 // === 妙喻 ===
+// 当你需要使用【无懈可击】时，你可以令当前回合角色本回合手牌上限+1或-1，
+// 将若干张牌（至少一张）当【无懈可击】使用，
+// 然后你本回合武将牌上第X个技能失效（X 为以此法使用的牌数；X 大于武将牌技能总数则没有技能因此失效）。
+// ⚠️ 「与手牌上限没有关联」指的是 **X 不再等于手牌上限**，不是取消 ±1 那段。
 	wending_miaoyu: {
 		audio: 2,
 		locked: false,
@@ -84,8 +89,7 @@ export const skills = {
 			if (name !== "wuxie") {
 				return false;
 			}
-			const cur = _status.currentPhase;
-			return wending_miaoyu_canUse(player, cur);
+			return wending_miaoyu_canUse(player, _status.currentPhase);
 		},
 		filter(event, player) {
 			if (event.type !== "wuxie") {
@@ -115,63 +119,54 @@ export const skills = {
 				if (opts.length === 1) {
 					return opts[0];
 				}
+				/** 牌数不再受上限约束，所以按「帮不帮当前回合角色」选：友方留牌多 → +1；敌方留牌少 → -1 */
 				const cur = _status.currentPhase;
-				const L = cur?.getHandcardLimit() ?? 0;
-				const n = player.countCards("hes");
-				return n >= L + 1 ? "手牌上限+1" : "手牌上限-1";
+				return get.attitude(player, cur) >= 0 ? "手牌上限+1" : "手牌上限-1";
 			},
 			prompt(result, player) {
 				return `###妙喻###${get.skillInfoTranslation("wending_miaoyu", player)}`;
 			},
 			backup(result, player) {
-				delete player.storage.wending_miaoyu_pending;
+				delete player.storage.wending_miaoyu_limit;
 				const cur = _status.currentPhase;
 				if (!cur?.isIn()) {
 					return { filterCard: () => false, selectCard: [0, 0] };
 				}
 				const up = result.control === "手牌上限+1";
 				const skName = up ? "wending_miaoyu_up" : "wending_miaoyu_down";
-				/** 须用「调整前上限 L」显式算出 X；addTempSkill 后 getHandcardLimit 未必已变，会误用旧值（如 L=3 选 -1 仍当 3 张） */
-				const L = cur.getHandcardLimit();
-				const X = up ? L + 1 : L - 1;
-				const n = player.countCards("hes");
-				if (X < 1 || n < X) {
-					return { filterCard: () => false, selectCard: [0, 0] };
-				}
-				/** 武将牌上的技能 = 武将初始携带的技能（参考穿屋 olchuanwu 的 getStockSkills） */
-				const skillOrder = player.getStockSkills(true, true);
-				/** precontent 会被 StepCompiler 单独抽出执行，不能引用 backup 闭包里的 X/skillOrder */
-				player.storage.wending_miaoyu_pending = {
-					banX: X,
-					banOrder: skillOrder.slice(),
-					limitSkill: skName,
-				};
+				/** precontent 会被 StepCompiler 单独抽出执行，不能引用 backup 闭包里的 skName */
+				player.storage.wending_miaoyu_limit = skName;
 				return {
 					audio: "wending_miaoyu",
 					sourceSkill: "wending_miaoyu",
 					viewAs: { name: "wuxie", isCard: true },
 					filterCard: true,
 					position: "hes",
-					selectCard: [X, X],
-					prompt: `妙喻：将${get.cnNumber(X)}张牌当【无懈可击】使用`,
+					/** 至少一张、上不封顶（不再与手牌上限挂钩；多张转化参考族吴班 clanzhanding） */
+					selectCard: [1, Infinity],
+					allowChooseAll: true,
+					prompt: "妙喻：将至少一张牌当【无懈可击】使用",
 					check(card) {
 						const tri = _status.event.getTrigger?.();
 						if (tri?.card?.name === "chiling") {
 							return -1;
 						}
-						return 8 - get.value(card);
+						/** 底牌越多、失效的技能序号越大，故对已选张数加惩罚，引导 AI 尽量只用一张 */
+						return 8 - ui.selected.cards.length - get.value(card);
 					},
 					precontent(event, trigger, player) {
-						const d = player.storage.wending_miaoyu_pending;
-						delete player.storage.wending_miaoyu_pending;
-						if (d && typeof d.banX === "number") {
-							const cur = _status.currentPhase;
-							if (cur?.isIn() && d.limitSkill) {
-								cur.addTempSkill(d.limitSkill, { player: "phaseAfter" });
-							}
-							player.storage.wending_miaoyu_ban_x = d.banX;
-							player.storage.wending_miaoyu_ban_order = d.banOrder;
+						const skName = player.storage.wending_miaoyu_limit;
+						delete player.storage.wending_miaoyu_limit;
+						const cur = _status.currentPhase;
+						if (cur?.isIn() && skName) {
+							cur.addTempSkill(skName, { player: "phaseAfter" });
 						}
+						/** ⚠️ restore 必须**独立挂载**，绝不能进主技能 group：
+						 *  当底牌数指到妙喻本身（武将牌上第 2 个技能）时，restore 里的 disableSkill 会禁用妙喻，
+						 *  而 disableSkill 会沿 group 级联禁用子技能（player.js:11251-11254）→ restore 被一起禁掉 →
+						 *  本回合后续的妙喻都不再结算「第X个技能失效」。独立挂载后不受级联影响。
+						 *  （同款：噬契 reset 也不能进 group，见 AGENTS.md「技能失效」章节） */
+						player.addTempSkill("wending_miaoyu_restore");
 						player.logSkill("wending_miaoyu");
 					},
 				};
@@ -187,14 +182,20 @@ export const skills = {
 			},
 			expose: 0.2,
 		},
-		group: ["wending_miaoyu_restore"],
+		/** 不再把 restore 放进 group：禁用妙喻时 disableSkill 会沿 group 级联禁用子技能，
+		 *  restore 会被一起禁掉 → 本回合后续的妙喻都不结算失效。改为在 backup.precontent 里动态挂载 */
 		subSkill: {
 			up: {
 				charlotte: true,
 				onremove: true,
 				mark: true,
+				/** 手牌上限 mark 的通用写法：图标统一用 handcard.png，标题写「是什么技能」，内容写变化量 + 当前上限，
+				 *  并把变化量以**数字**存进 storage 让引擎自动渲染成 markcount 角标
+				 *  （参照原生 chenliuwushi clan.js:7593 / 本文件 threed_xuyi2_handcard；
+				 *    标题不写 intro.name 的话会退回 get.translation(技能id)，显示成 wending_miaoyu_up） */
 				markimage: "image/card/handcard.png",
 				intro: {
+					name: "妙喻",
 					content(storage, player) {
 						return `<li>手牌上限+1<br><li>当前手牌上限：${player.getHandcardLimit()}`;
 					},
@@ -204,6 +205,11 @@ export const skills = {
 						return num + 1;
 					},
 				},
+				/** storage 存成数字 = 给 updateMark 当 markcount 角标用（+1 → 角标「1」）；
+				 *  mod 仍写死 +1，效果不依赖 storage，避免回放/存档里 storage 缺失时手牌上限静默不改 */
+				init(player, skill) {
+					player.storage[skill] = 1;
+				},
 			},
 			down: {
 				charlotte: true,
@@ -211,6 +217,7 @@ export const skills = {
 				mark: true,
 				markimage: "image/card/handcard.png",
 				intro: {
+					name: "妙喻",
 					content(storage, player) {
 						return `<li>手牌上限-1<br><li>当前手牌上限：${player.getHandcardLimit()}`;
 					},
@@ -219,6 +226,10 @@ export const skills = {
 					maxHandcard(player, num) {
 						return num - 1;
 					},
+				},
+				/** storage = -1 → 角标显示「-1」 */
+				init(player, skill) {
+					player.storage[skill] = -1;
 				},
 			},
 			restore: {
@@ -233,11 +244,11 @@ export const skills = {
 					return event.skill === "wending_miaoyu_backup" && event.card?.name === "wuxie";
 				},
 				async content(event, trigger, player) {
-					const banX = player.storage.wending_miaoyu_ban_x;
-					const order = player.storage.wending_miaoyu_ban_order;
-					delete player.storage.wending_miaoyu_ban_x;
-					delete player.storage.wending_miaoyu_ban_order;
-					if (typeof banX !== "number" || banX < 1 || !Array.isArray(order) || banX > order.length) {
+					/** X = 以此法使用的牌数（实体底牌数，复用咏絮的底牌提取）；与手牌上限无关 */
+					const banX = wending_yongxu_baseCards(trigger).length;
+					/** 武将牌上的技能 = 武将初始携带的技能；unowned=true 保留已被禁用的，序号才稳定 */
+					const order = player.getStockSkills(true, true);
+					if (banX < 1 || !Array.isArray(order) || banX > order.length) {
 						return;
 					}
 					const sid = order[banX - 1];
@@ -254,7 +265,10 @@ export const skills = {
 				"skill_id": "wending_miaoyu_restore",
 				sub: true,
 				sourceSkill: "wending_miaoyu",
-				"_priority": 0,
+				/** ⚠️ get.priority 优先读 `_priority`（写了它，`priority` 字段会被无视）。
+				 *  排序是 `b.priority - a.priority`（降序，大的先跑）→ 给 -1 让本技能**最后**结算，
+				 *  保证「用妙喻印无懈 → 先让其它技能（如咏絮）发动 → 全部结算完后 → 第X个技能失效生效」 */
+				"_priority": -1,
 			},
 			banmark: {
 				init(player2, skill) {
@@ -472,7 +486,7 @@ export const skills = {
 				direct: true,
 				filter(event, player) {
 					if (_status.currentPhase !== player) return false;
-					if (event.name === "loseAfter" && event.getParent("loseAsync")?.name) return false;
+					if (event.name === "lose" && event.getParent("loseAsync")?.name) return false;
 					return wending_jidu_discardedShan(event).length > 0;
 				},
 				async content(event, trigger, player) {
@@ -3081,6 +3095,8 @@ threed_xuyi2: {
 			mark: true,
 			markimage: "image/card/handcard.png",
 			intro: {
+				/** 标题必须显式写，否则退回 get.translation("threed_xuyi2_handcard") = 技能 id */
+				name: "序仪",
 				content(num, player) {
 					var str = "<li>手牌上限";
 					if (num >= 0) {
@@ -3141,7 +3157,7 @@ shanhe_yuanzhi: {
 	popup: false,
 	silent: true,
 	filter(event, player) {
-		const cards = event.name == "equipAfter" ? [event.card] : event.cards;
+		const cards = event.name == "equip" ? [event.card] : event.cards;
 		return cards?.some(card => get.subtype(card)?.startsWith("equip"));
 	},
 	async content(event, trigger, player) {

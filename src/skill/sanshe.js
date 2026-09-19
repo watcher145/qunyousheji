@@ -12678,19 +12678,22 @@ ai: {
 			return player.countCards("h") > 2;
 		},
 		async content(event, trigger, player) {
-			// 摸牌阶段改为执行一个弃牌阶段；本回合各弃牌阶段的弃牌计数到 mark，下回合开始时结算
+			// 摸牌阶段改为执行一个弃牌阶段（只做「换阶段」这一件事，
+			// 与下面的「弃牌计数 / 下回合结算」是两条独立的逻辑）
 			trigger.phaseList[trigger.num] = `phaseDiscard|${event.name}`;
-			player.storage.qunyou_jinfa = true;
 			await game.delayx();
 		},
 		mark: true,
 		marktext: "伐",
 		intro: {
 			name2: "伐",
-			content: "mark",
+			markcount: (storage, player) => player.countMark("qunyou_jinfa"),
+			content(storage, player) {
+				const n = player.countMark("qunyou_jinfa");
+				return n > 0 ? `弃牌阶段已弃置 ${n} 张牌，下回合开始时摸 ${2 * n} 张牌` : "尚未在弃牌阶段弃置过牌";
+			},
 		},
 		onremove(player) {
-			delete player.storage.qunyou_jinfa;
 			const n = player.countMark("qunyou_jinfa");
 			if (n > 0) {
 				player.removeMark("qunyou_jinfa", n, false);
@@ -12700,17 +12703,20 @@ ai: {
 		subSkill: {
 			count: {
 				charlotte: true,
-				// 你于弃牌阶段每弃置一张牌计数
-				trigger: { player: "cardsDiscardAfter" },
+				// ⚠️ 弃牌阶段的弃置走 `player.discard()` → `player.lose(cards, ui.discardPile)`，
+				// **不会**触发 cardsDiscard（content.js:4444 用的是 chooseToDiscard）→ 必须监听 loseAfter
+				trigger: { player: "loseAfter" },
 				forced: true,
 				popup: false,
 				silent: true,
 				filter(event, player) {
-					if (player.storage.qunyou_jinfa !== true) return false;
-					return !!event.getParent("phaseDiscard");
+					// 与是否发动矜伐**无关**：你于任意弃牌阶段每弃置一张牌都计数
+					if (event.type != "discard") return false;
+					if (!event.getParent("phaseDiscard")) return false;
+					return (event.cards || []).length > 0;
 				},
 				content(event, trigger, player) {
-					const n = trigger.cards?.length ?? 0;
+					const n = (trigger.cards || []).length;
 					if (n > 0) {
 						player.addMark("qunyou_jinfa", n, false);
 					}
@@ -12720,27 +12726,26 @@ ai: {
 			},
 			settle: {
 				charlotte: true,
-				// 你的下一个回合开始时结算
+				// 你的下一个回合开始时结算（只要有累计弃置就结算）
 				audio: "qunyou_jinfa",
 				trigger: { player: "phaseBegin" },
 				forced: true,
 				filter(event, player) {
-					return player.storage.qunyou_jinfa === true;
+					return player.countMark("qunyou_jinfa") > 0;
 				},
 				async content(event, trigger, player) {
 					const n = player.countMark("qunyou_jinfa");
-					delete player.storage.qunyou_jinfa;
 					if (n > 0) {
 						player.removeMark("qunyou_jinfa", n, false);
 					}
 					if (n <= 0) return;
 					player.logSkill("qunyou_jinfa");
-					game.log(player, "上个回合弃牌阶段共弃置", n, "张牌，摸", 2 * n, "张牌");
+					game.log(player, "上个弃牌阶段共弃置", n, "张牌，摸", 2 * n, "张牌");
 					await player.draw(2 * n);
 					// 若你的体力上限此时不为全场最高，你增加1点体力上限并回复1点体力
 					if (game.hasPlayer((current) => current.maxHp > player.maxHp)) {
 						await player.gainMaxHp();
-						await player.recover();
+						if (player.isIn() && player.isDamaged()) await player.recover();
 					}
 				},
 				sub: true,
@@ -12755,14 +12760,17 @@ ai: {
 		locked: true,
 		forced: true,
 		trigger: { global: ["roundStart", "roundEnd"] },
-		filter(event, player) {
+		// ⚠️ roundStart / roundEnd 都是在 **phase 事件**上派发的（content.js:3283 / 4076），
+		// 所以 event.name 恒为 "phase"，必须用 filter 的第三个参数 name / content 里的 event.triggername
+		filter(event, player, name) {
 			// 结束时只在本轮开始时确实跑过才处理（storage 里存的是 {top}，top 可能为 null）
-			if (event.name === "roundEnd") {
+			if (name === "roundEnd") {
 				return player.storage.qunyou_ranchen != null;
 			}
 			return true;
 		},
 		async content(event, trigger, player) {
+			const name = event.triggername;
 			// 「体力值唯一最高的角色」：并列最高视为不存在
 			const uniqueTop = () => {
 				let top = null,
@@ -12778,7 +12786,7 @@ ai: {
 				return count === 1 ? top : null;
 			};
 			const top = uniqueTop();
-			if (event.name === "roundStart") {
+			if (name === "roundStart") {
 				player.storage.qunyou_ranchen = { top };
 				// 每轮开始时若没有体力值唯一最多的角色 → 你摸两张牌
 				if (!top && player.isIn()) await player.draw(2);
@@ -12868,6 +12876,290 @@ ai: {
 			order: 7.1,
 			result: {
 				player: 1,
+			},
+		},
+	},
+
+// === 摄魂 ===
+	qunyou_shehun: {
+		audio: 2,
+		enable: "phaseUse",
+		usable: 1,
+		filter(event, player) {
+			return game.hasPlayer((target) => target != player && target.hasDiscardableCards(player, "he"));
+		},
+		filterTarget(card, player, target) {
+			return target != player && target.hasDiscardableCards(player, "he");
+		},
+		async content(event, trigger, player) {
+			const target = event.targets[0];
+			// harvested：本次流程中以此法弃置的红色牌（流程结束后由你获得）
+			const harvested = [];
+			while (player.isIn() && target.isIn() && target.hasDiscardableCards(player, "he")) {
+				// 每张【树上开花】都是独立的 useCard 事件：可被无懈可击响应；
+				// 原版结算由 qunyou_shehun_effect 在 kaihuaBegin 时机拦截改写（织乱 threed_zhi_luan 同款模式）；
+				// 被无懈则本次无弃置、无展示（record 保持为空）→ 按「均为黑色」处理，直接结束整个流程
+				const record = { discarded: [], shown: [] };
+				await player.useCard(
+					{ name: "kaihua", storage: { qunyou_shehun: record } },
+					target,
+					false,
+					"qunyou_shehun"
+				);
+				for (const card of record.discarded) {
+					if (get.color(card) == "red" && !harvested.includes(card)) {
+						harvested.push(card);
+					}
+				}
+				// 无懈成功或无牌可弃：本次无弃置且无展示 → 直接结束整个流程（此前已确认的规则）
+				if (!record.discarded.length && !record.shown.length) {
+					break;
+				}
+				// 停止判定：本次弃置的牌全黑，或本次展示的牌全黑 → 结束流程；
+				// 空集合（如目标没有手牌、未发生展示）不算满足，只按实际弃置/展示的牌判断
+				if (
+					(record.discarded.length && record.discarded.every((card) => get.color(card) == "black"))
+					|| (record.shown.length && record.shown.every((card) => get.color(card) == "black"))
+				) {
+					break;
+				}
+			}
+			// 流程结束后，获得所有仍在弃牌堆中的红色牌
+			const gains = harvested.filter((card) => get.position(card, true) == "d");
+			if (gains.length && player.isIn()) {
+				await player.gain(gains, "gain2");
+			}
+		},
+		ai: {
+			order: 7,
+			result: {
+				player: 1,
+				target: -1,
+			},
+		},
+		group: ["qunyou_shehun_effect"],
+		subSkill: {
+			// 拦截子技能：卡牌子事件（名字=牌名，content.js:9436）在 Begin 阶段先派 useCardToBegin（gameEvent.js:216，
+			// 无懈 _wuxie 也挂此时机且 priority 5 先于本技能结算），故此时无懈已结算完毕；
+			// _neutralized/_cancelled 防无懈成功或事件已被取消后误执行
+			effect: {
+				charlotte: true,
+				name: "摄魂",
+				trigger: { player: "useCardToBegin" },
+				forced: true,
+				popup: false,
+				silent: true,
+				filter(event, player) {
+					// 只拦截摄魂流程中带标记的虚拟【树上开花】；牌堆里的真实树上开花原样结算，零影响
+					return event.skill == "qunyou_shehun"
+						&& event.card?.name == "kaihua"
+						&& event.card?.storage?.qunyou_shehun
+						&& !event._neutralized
+						&& !event._cancelled;
+				},
+				async content(event, trigger, player) {
+					// 取消原版【树上开花】结算（目标自己弃牌→摸牌），改按摄魂流程执行
+					trigger.cancel();
+					const target = trigger.targets[0];
+					const record = trigger.card.storage.qunyou_shehun;
+					if (!target?.isIn() || !target.hasDiscardableCards(player, "he")) {
+						return;
+					}
+					// 弃置前快照其装备区：「帐灯」生效期间，从装备区弃出的牌按基本牌（酒）处理，不触发「弃装备多摸一张」
+					const equips = target.getCards("e");
+					const result = await player
+						.discardPlayerCard({
+							target,
+							position: "he",
+							selectButton: [1, 2],
+							forced: true,
+							visible: true,
+							prompt: `树上开花：弃置${get.translation(target)}一至两张牌`,
+						})
+						.forResult();
+					const cards = result?.cards || [];
+					record.discarded = cards.slice(0);
+					record.shown = [];
+					if (!cards.length) {
+						return;
+					}
+					// 展示（弃置后、摸牌前）：目标没有手牌时跳过此步骤
+					if (target.countCards("h") > 0) {
+						const show = target.showHandcards(`树上开花：展示${get.translation(target)}的所有手牌`);
+						await show;
+						record.shown = show.cards || [];
+					}
+					const countEquip = cards.some((card) => equips.includes(card)) && !player.hasSkill("qunyou_zhandeng_active");
+					await target.draw(cards.length + (countEquip ? 1 : 0));
+				},
+			},
+		},
+	},
+
+// === 帐灯 ===
+	qunyou_zhandeng: {
+		audio: 2,
+		trigger: { player: "phaseBegin" },
+		forced: true,
+		// 注意：本 content 为「同步」函数，会被 StepCompiler 解构源码后重编译（只保留 event/trigger/player + lib/game/get/ui/_status），
+		// 因此内部不能引用任何模块级标识符，装备技能的收集逻辑只能就地展开
+		content(event, trigger, player) {
+			// 你的回合内：其他角色装备区的牌均视为基本牌（酒），其装备技能无效
+			for (const current of game.filterPlayer((target) => target != player)) {
+				const list = [];
+				for (const cardx of current.getCards("e")) {
+					const info = get.info(cardx, false);
+					const skills = info && info.skills;
+					if (!Array.isArray(skills)) continue;
+					for (const skill of skills) {
+						// 只禁用确实注册过的技能：disableSkill 内部会读 lib.skill[技能].group（player.js:11251），未注册会抛错
+						if (lib.skill[skill] && !list.includes(skill)) list.push(skill);
+					}
+				}
+				if (list.length) {
+					current.disableSkill("qunyou_zhandeng_effect", list);
+				}
+			}
+			// 标记「帐灯生效中」（供本技能其余子技能与【树上开花】判定）。
+			// 注意：「active」绝不能放进主技能的 group —— 否则 hasSkill 恒为真，
+			// addTempSkill 会直接 return（player.js:11578），临时技变成永久技、onremove 永不触发
+			player.addTempSkill("qunyou_zhandeng_active", "phaseAfter");
+			// 其他角色的装备牌获得【酒】的完整属性：濒死时可当【酒】自救、可完成「使用一张牌」类请求。
+			// 动态挂载到每名其他角色、你的回合结束自动过期（同样绝不放进 group）
+			game.countPlayer((current) => {
+				if (current != player) {
+					current.addTempSkill("qunyou_zhandeng_others", "phaseAfter");
+				}
+			});
+		},
+		group: ["qunyou_zhandeng_newequip", "qunyou_zhandeng_save"],
+		subSkill: {
+			// 仅作为 disableSkill / enableSkill 的标记键使用（enableSkill 的参数必须是「禁用方」技能名，player.js:11263）
+			effect: {
+				charlotte: true,
+				sub: true,
+			},
+			// 帐灯生效中；回合结束移除时解除全部禁用
+			active: {
+				charlotte: true,
+				sub: true,
+				onremove(player) {
+					for (const current of game.filterPlayer()) {
+						current.enableSkill("qunyou_zhandeng_effect");
+					}
+				},
+			},
+			// 生效期间新装备的牌，其装备技能同样无效（equipAfter 触发极频繁，故 forced + popup:false + silent 三件套齐备）
+			newequip: {
+				charlotte: true,
+				sub: true,
+				name: "帐灯",
+				trigger: { global: "equipAfter" },
+				forced: true,
+				popup: false,
+				silent: true,
+				filter(event, player) {
+					return player.hasSkill("qunyou_zhandeng_active") && event.player != player;
+				},
+				// 同主技能：同步 content 需自包含，不可引用模块级标识符
+				content(event, trigger, player) {
+					const list = [];
+					const info = get.info(trigger.card, false);
+					const skills = info && info.skills;
+					if (Array.isArray(skills)) {
+						for (const skill of skills) {
+							if (lib.skill[skill] && !list.includes(skill)) list.push(skill);
+						}
+					}
+					if (list.length) {
+						trigger.player.disableSkill("qunyou_zhandeng_effect", list);
+					}
+				},
+			},
+			// 濒死时，可将装备区的一张牌当【桃】对自己使用
+			save: {
+				charlotte: true,
+				sub: true,
+				name: "帐灯",
+				enable: ["chooseToUse"],
+				position: "e",
+				filter(event, player) {
+					return event.type == "dying" && event.dying == player && player.countCards("e") > 0;
+				},
+				filterCard(card) {
+					return get.position(card) == "e";
+				},
+				selectCard: 1,
+				viewAs: { name: "tao", isCard: true },
+				prompt: "帐灯：将装备区的一张牌当【桃】使用",
+				check(card) {
+					return 15 - get.value(card);
+				},
+				// hiddenCard 必须位于技能顶层：濒死求桃预检 canSave 只读 info.hiddenCard（player.js:2988），写在 ai 内不会被消费
+				hiddenCard(player, name) {
+					return name == "tao" && player.countCards("e") > 0;
+				},
+				ai: {
+					save: true,
+					skillTagFilter(player, tag, arg) {
+						// arg 为濒死角色；本技能只能救自己
+						return tag == "save" && arg == player && player.countCards("e") > 0;
+					},
+					result: {
+						player: 1,
+					},
+				},
+			},
+			// —— 你的回合内，其他角色可将装备区的牌当【酒】使用 ——
+			// 覆盖两类窗口：①濒死求酒（酒 savable 自救恒可、濒死结算 recover 1 且不耗次数，card/extra.js:69/86）；
+			// ②各种「使用一张牌」类请求（filter 用 event.filterCard 探测到【酒】可用即显示）。
+			// 全局转化技模板参照 jsrgpiqi_kanpo（SKILL.md 2.2）；动态挂载，绝不放进 group（temp 互斥陷阱）
+			others: {
+				charlotte: true,
+				name: "帐灯",
+				enable: ["chooseToUse"],
+				position: "e",
+				filter(event, player) {
+					if (!player.countCards("e")) {
+						return false;
+					}
+					if (event.skill == "qunyou_zhandeng_others" || event._skill == "qunyou_zhandeng_others") {
+						// 自身选择流程：跳过 event.filterCard 探测（防 filterCard 包装自递归，知识库#58）
+						return true;
+					}
+					return event.filterCard(get.autoViewAs({ name: "jiu" }, "unsure"), player, event);
+				},
+				filterCard(card) {
+					return get.position(card) == "e";
+				},
+				selectCard: 1,
+				viewAs: { name: "jiu", isCard: true },
+				prompt: "帐灯：将装备区的一张牌当【酒】使用",
+				check(card) {
+					if (_status.event.type == "dying") {
+						return 15;
+					}
+					return 5 - get.value(card);
+				},
+				// 濒死求酒预检三件套：canSave 只扫手牌 + save 标签，装备区印酒必须靠它接通询问（知识库#61）
+				hiddenCard(player, name) {
+					return name == "jiu" && player.countCards("e") > 0;
+				},
+				ai: {
+					save: true,
+					skillTagFilter(player, tag, arg) {
+						// 酒只能自救（savable: dying === player，card/extra.js:70）
+						return tag == "save" && arg == player && player.countCards("e") > 0;
+					},
+					result: {
+						player(player2) {
+							if (_status.event.type == "dying") {
+								return 2;
+							}
+							return 0;
+						},
+					},
+				},
 			},
 		},
 	},

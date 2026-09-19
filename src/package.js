@@ -87,7 +87,7 @@ const characterSortTranslate = {
 const characterSort = {
 	threed: ["threed_dongbai", "threed_heji"],
 	qiufeng: ["qiufeng_zhangqiying", "qiufeng_hushi", "qiufeng_xiahouhui"],
-	xiaobai: ["xiaobai_lizhaoyi", "xiaobai_lite", "xiaobai_suojing", "xiaobai_hufang", "xiaobai_lvzhu", "xiaobai_malun", "xiaobai_zhaoshuang", "xiaobai_shenmu", "xiaobai_gaoding", "xiaobai_liusong", "xiaobai_zhangjian", "xiaobai_shenyi", "xiaobai_baoxun", "xiaobai_chengxi"],
+	xiaobai: ["xiaobai_lizhaoyi", "xiaobai_lite", "xiaobai_suojing", "xiaobai_hufang", "xiaobai_lvzhu", "xiaobai_malun", "xiaobai_zhaoshuang", "xiaobai_shenmu", "xiaobai_gaoding", "xiaobai_liusong", "xiaobai_zhangjian", "xiaobai_shenyi", "xiaobai_baoxun", "xiaobai_chengxi", "xiaobai_xunyue", "xiaobai_feishi", "xiaobai_hanji", "xiaobai_youchu", "xiaobai_lvyi", "xiaobai_fugu", "xiaobai_lisheng", "xiaobai_tianxu", "xiaobai_zhushixing", "xiaobai_xuci", "xiaobai_dinggu", "xiaobai_zhugerong", "xiaobai_zhaoqi", "xiaobai_zhaorao", "xiaobai_heyong", "xiaobai_liuhongx", "xiaobai_liukun"],
 	zishubei: ["zishu_liyan", "zishu_lvju", "zishu_xunyu", "zishu_wangguan","zishu_panshu", "zishu_sunhe", "zishu_zhangjinyun", "zishu_zangba", "zishu_duanjiong", "zishu_shantao", "zishu_maohuanghou", "zishu_guli","zishu_yongkai", "zishu_liangxi"],
 	zhuoming: ["zhuoming_gongsunyuan", "zhuoming_feili_gongsunyuan", "zhuoming_liuyan", "zhuoming_mateng", "zhuoming_fq_mateng", "zhuoming_sc_mateng", "zhuoming_dongzhuo"],
 	qunyou_chenjunxieshi: ["wending_clan_xiedaoyun", "wending_clan_xiean", "wending_clan_xiexuan", "wending_clan_xielingyun", "wending_clan_xieshi"],
