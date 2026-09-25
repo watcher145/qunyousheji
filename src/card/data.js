@@ -213,4 +213,10 @@ export const cardData = {
 		subtype: "equip3",
 		distance: { globalFrom: -1 },
 	},
+	// 悬鱼的宝物（置入宝物栏的实体化载体）
+	xiaobai_xuanyubao: {
+		fullskin: true,
+		type: "equip",
+		subtype: "equip5",
+	},
 };

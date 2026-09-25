@@ -1,6 +1,7 @@
 import { getPackage } from "./src/package.js";
 import { precontent } from "./src/precontent.js";
 import { setupCharacterReplace } from "./src/character/replace.js";
+import { setupIdentityYe } from "./src/skill/identityYe.js";
 
 export const type = "extension";
 
@@ -11,6 +12,7 @@ export default function () {
 		connect: false,
 		arenaReady() {
 			setupCharacterReplace();
+			setupIdentityYe();
 		},
 		content(config, pack) {},
 		prepare() {},

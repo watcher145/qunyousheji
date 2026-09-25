@@ -28,7 +28,8 @@ export const characterTranslate = {
 	wending_clan_xieshi: "族谢石",
 	wending_clan_xieshi_prefix: "族",
 	qunyou_sunjiao: "孙皎",
-	qunyou_luxun: "陆逊",
+	qunyou_v_luxun: "威陆逊",
+	qunyou_v_luxun_prefix: "威",
 	qunyou_caozhi: "曹植",
 	qunyou_wanglang: "王朗",
 	qunyou_cbp_zhaoyun: "长坂坡赵云",
@@ -41,7 +42,8 @@ export const characterTranslate = {
 	qunyou_meng_liufeng_prefix: "梦",
 	qunyou_caoshuang: "曹爽",
 	qunyou_hanshiwuhu: "韩氏五虎",
-	qunyou_zhonghui: "钟会",
+	qunyou_sb_zhonghui: "谋钟会",
+	qunyou_sb_zhonghui_prefix: "谋",
 	qunyou_yang_wang: "羊徽瑜&王元姬",
 	qunyou_caoxiancaohua: "曹宪&曹华",
 	qunyou_xx_sunce: "西夏孙策",
@@ -304,6 +306,9 @@ export const characterTranslate = {
 	xiaobai_lisheng: "小白李胜",
 	xiaobai_lisheng_prefix: "小白",
 
+	xiaobai_lisheng: "小白李胜",
+	xiaobai_lisheng_prefix: "小白",
+
 	xiaobai_tianxu: "小白田续",
 	xiaobai_tianxu_prefix: "小白",
 
@@ -334,5 +339,161 @@ export const characterTranslate = {
 	xiaobai_liukun: "小白刘琨",
 	xiaobai_liukun_prefix: "小白",
 
-	qunyou_mo_wangyun: "魔王允",
+	xiaobai_liuying: "小白柳隐",
+	xiaobai_liuying_prefix: "小白",
+
+	xiaobai_liuji: "小白刘基",
+	xiaobai_liuji_prefix: "小白",
+
+	xiaobai_liumin: "小白刘敏",
+	xiaobai_liumin_prefix: "小白",
+
+	xiaobai_lifeng: "小白李丰",
+	xiaobai_lifeng_prefix: "小白",
+
+	xiaobai_luyu: "小白卢毓",
+	xiaobai_luyu_prefix: "小白",
+
+	xiaobai_weidan: "小白韦诞",
+	xiaobai_weidan_prefix: "小白",
+
+	xiaobai_yangyong: "小白杨琰",
+	xiaobai_yangyong_prefix: "小白",
+
+	xiaobai_dengfuren: "小白邓夫人",
+	xiaobai_dengfuren_prefix: "小白",
+
+	xiaobai_louxuan: "小白楼玄",
+	xiaobai_louxuan_prefix: "小白",
+
+	xiaobai_maohuanghou: "小白毛皇后",
+	xiaobai_maohuanghou_prefix: "小白",
+
+	xiaobai_wangsi: "小白王嗣",
+	xiaobai_wangsi_prefix: "小白",
+
+	xiaobai_sunshao: "小白孙韶",
+	xiaobai_sunshao_prefix: "小白",
+
+	xiaobai_baochu: "小白鲍出",
+	xiaobai_baochu_prefix: "小白",
+
+	xiaobai_huzhi: "小白胡质",
+	xiaobai_huzhi_prefix: "小白",
+
+	xiaobai_wangbi: "小白王必",
+	xiaobai_wangbi_prefix: "小白",
+
+	xiaobai_xumu: "小白徐母",
+	xiaobai_xumu_prefix: "小白",
+
+	xiaobai_huzong: "小白胡综",
+	xiaobai_huzong_prefix: "小白",
+
+	xiaobai_zhaozi: "小白赵咨",
+	xiaobai_zhaozi_prefix: "小白",
+
+	xiaobai_huangwan: "小白黄琬",
+	xiaobai_huangwan_prefix: "小白",
+
+	xiaobai_gaixun: "小白盖勋",
+	xiaobai_gaixun_prefix: "小白",
+
+	xiaobai_fuxuan: "小白傅玄",
+	xiaobai_fuxuan_prefix: "小白",
+
+	xiaobai_simayue: "小白司马越",
+	xiaobai_simayue_prefix: "小白",
+
+	xiaobai_wangbimawen: "小白王弼",
+	xiaobai_wangbimawen_prefix: "小白",
+
+	xiaobai_weiji: "小白卫觊",
+	xiaobai_weiji_prefix: "小白",
+
+	xiaobai_fanjian: "小白樊建",
+	xiaobai_fanjian_prefix: "小白",
+
+	xiaobai_hezhi: "小白何祗",
+	xiaobai_hezhi_prefix: "小白",
+
+	xiaobai_lujix: "小白陆玑",
+	xiaobai_lujix_prefix: "小白",
+
+	xiaobai_doumiao: "小白窦妙",
+	xiaobai_doumiao_prefix: "小白",
+
+	xiaobai_hexiu: "小白何休",
+	xiaobai_hexiu_prefix: "小白",
+
+	xiaobai_huangfugui: "小白皇甫规",
+	xiaobai_huangfugui_prefix: "小白",
+
+	xiaobai_yangxu: "小白羊续",
+	xiaobai_yangxu_prefix: "小白",
+
+	xiaobai_shichong: "小白石崇",
+	xiaobai_shichong_prefix: "小白",
+
+	xiaobai_nieyou: "小白聂友",
+	xiaobai_nieyou_prefix: "小白",
+
+	xiaobai_xueying: "小白薛莹",
+	xiaobai_xueying_prefix: "小白",
+
+	xiaobai_douwu: "小白窦武",
+	xiaobai_douwu_prefix: "小白",
+
+	xiaobai_liying: "小白李膺",
+	xiaobai_liying_prefix: "小白",
+
+	xiaobai_wangxiu: "小白王脩",
+	xiaobai_wangxiu_prefix: "小白",
+
+	xiaobai_leguang: "小白乐广",
+	xiaobai_leguang_prefix: "小白",
+
+	xiaobai_peikai: "小白裴楷",
+	xiaobai_peikai_prefix: "小白",
+
+	xiaobai_peiwei: "小白裴頠",
+	xiaobai_peiwei_prefix: "小白",
+
+	xiaobai_zhangfang: "小白张方",
+	xiaobai_zhangfang_prefix: "小白",
+
+	xiaobai_guopu: "小白郭璞",
+	xiaobai_guopu_prefix: "小白",
+
+	xiaobai_simayou: "小白司马攸",
+	xiaobai_simayou_prefix: "小白",
+
+	xiaobai_simajun: "小白司马骏",
+	xiaobai_simajun_prefix: "小白",
+
+	xiaobai_wangjunx: "小白王浚",
+	xiaobai_wangjunx_prefix: "小白",
+
+	xiaobai_heqiao: "小白和峤",
+	xiaobai_heqiao_prefix: "小白",	qunyou_mo_wangyun: "魔王允",
+
+	xiaobai_jishao: "小白嵇绍",
+	xiaobai_jishao_prefix: "小白",
+
+	xiaobai_zuosi: "小白左思",
+	xiaobai_zuosi_prefix: "小白",	xiaobai_xunkai: "小白荀恺",
+
+	xiaobai_zhaoyu: "小白赵妪",
+	xiaobai_zhaoyu_prefix: "小白",	xiaobai_xunkai_prefix: "小白",	qunyou_mo_wangyun_prefix: "魔",
+
+	xiaobai_zhangyu: "小白张裕",
+	xiaobai_zhangyu_prefix: "小白",
+
+	xiaobai_xiyingxi: "小学习英习",
+	xiaobai_xiyingxi_prefix: "小白",	xiaobai_luoshang: "小白罗尚",
+	xiaobai_luoshang_prefix: "小白",
+	qunyou_luxun: "陆逊",
+
+	qunyou_zhonghui: "群友钟会",
+	qunyou_zhonghui_prefix: "群友",
 };

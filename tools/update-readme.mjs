@@ -59,6 +59,10 @@ function parseAllCharacterIds(dataSrc) {
 
 // --- Parse ---
 const characterSort = parseObjText(parseObj(pkgSrc, 'characterSort'));
+// 小白杯已升级为**独立武将包**（precontent 里 game.import 注册），不再出现在 characterSort，
+// 但它的 8 个「届」小包仍要进索引，故单独解析 xiaobaiSort。
+const xiaobaiSort = parseObjText(parseObj(pkgSrc, 'xiaobaiSort'));
+const xiaobaiIdSet = new Set(Object.values(xiaobaiSort).flat());
 const sortTranslate = parseObjStringValues(parseObj(pkgSrc, 'characterSortTranslate'));
 
 const introSrc = read('character/intro.js');
@@ -87,6 +91,7 @@ const packagedIds = new Set();
 for (const [pkg, ids] of Object.entries(characterSort)) {
   for (const id of ids) packagedIds.add(id);
 }
+for (const id of xiaobaiIdSet) packagedIds.add(id);
 
 // 特殊包：这两个包的角色不加后缀
 const specialPkgs = new Set(['qunyou_yongdong', 'qunyou_gaijin']);
@@ -114,7 +119,7 @@ for (const id of allIds) {
   if (packagedIds.has(id)) {
     // 找出角色所属的包
     let charPkg = null;
-    for (const [pkg, ids] of Object.entries(characterSort)) {
+    for (const [pkg, ids] of Object.entries({ ...characterSort, ...xiaobaiSort })) {
       if (ids.includes(id)) {
         charPkg = pkg;
         break;
@@ -190,6 +195,7 @@ const pkgOrder = Object.keys(characterSort).filter(
 );
 
 // Build package sections (first block)
+// 普通包（characterSort）：每个包一个 ### 标题
 const pkgSections = [];
 for (const pkg of pkgOrder) {
   const ids = packages[pkg];
@@ -208,6 +214,25 @@ for (const pkg of pkgOrder) {
   }
   pkgSections.push(`### ${pkgName}\n${lines.join('\n')}`);
 }
+
+// 小白杯是**独立大包**（xiaobaiSort 里的 8 个「届」是它的小包）：
+// 大包用 ### 写「小白杯」，每个小包用 #### 写届名，小包下面列设计者。
+const xiaobaiOrder = Object.keys(xiaobaiSort);
+if (xiaobaiOrder.length > 0) {
+  const subSections = [];
+  for (const pkg of xiaobaiOrder) {
+    const ids = xiaobaiSort[pkg];
+    if (!ids || ids.length === 0) continue;
+    const subName = sortTranslate[pkg] || pkg;
+    subSections.push(`#### ${subName}\n${makeMergedLinesWithSuffix(ids).join('\n')}`);
+  }
+  if (subSections.length > 0) {
+    // 大包名固定为「小白杯」（与 package.js 里 getXiaobaiPack 的 name / precontent 注册名一致），
+    // 不用 sortTranslate.xiaobai —— 那个键在 pkgPrefixMap 里是「小白」（前缀用），容易取错。
+    pkgSections.push(`### 小白杯\n\n${subSections.join('\n\n')}`);
+  }
+}
+
 sections.push(pkgSections.join('\n\n'));
 
 // Non-package sections

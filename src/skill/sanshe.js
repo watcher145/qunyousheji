@@ -1,4 +1,5 @@
 import { lib, game, get, ui, _status } from "noname";
+import { qunyouYeGain } from "./identityYe.js";
 import {
 	qunyou_adjustHandTo, qunyou_adjustHpTo, qunyou_aoyue_execute,
 	qunyou_cangxiao_notBySkill, qunyou_cardNameLength,
@@ -236,6 +237,19 @@ const qunyou_jike_change = async (player, newDel) => {
 };
 
 // 散设 — 其余 qunyou_* 技能
+// 犷勇②用：你使用的「上张有目标的牌」的所有目标（跳过已离场者；排除当前正在使用的这张）
+function qunyouKuangyongLastTargets(player, current) {
+	const history = player.getHistory("useCard") || [];
+	for (let i = history.length - 1; i >= 0; i--) {
+		const evt = history[i];
+		if (evt == current) continue;
+		const targets = (evt.targets || []).filter((target) => target.isIn());
+		if (targets.length) return targets;
+	}
+	return [];
+}
+lib.qunyouKuangyongLastTargets = qunyouKuangyongLastTargets;
+
 export const skills = {
 // === 审时 ===
 	qunyou_shenshi: {
@@ -12440,20 +12454,50 @@ ai: {
 						true,
 						(card, p, target) => target != p
 					)
-					.set("ai", (target) => get.attitude(player, target))
+					.set("ai", (target) => {
+						// 卜算对象：优先队友（好感越高越优先，手牌少的队友略加权）；
+						// 没有队友时才退而选敌人，且选威胁最小的（手牌越少越不构成威胁）
+						const p = get.player();
+						const att = get.attitude(p, target);
+						const hands = target.countCards("h");
+						if (att > 0) return 100 + att - hands * 0.01;
+						return att - hands * 0.01;
+					})
 					.forResult();
 				console.log("[淇禳-dongzhu] 选目标结果:", targetResult?.bool, "目标数:", targetResult?.targets?.length);
 				if (!targetResult?.bool || !targetResult.targets?.length) return;
 				const target = targetResult.targets[0];
+				// 卜算者是自己人还是敌人：决定"他该怎么摆牌"与"你该摸哪一侧"
+				const friendly = target === player || get.attitude(player, target) > 0;
+				console.log("[淇禳-dongzhu] 卜算者:", get.translation(target), "| 队友:", friendly);
 				player.logSkill("qunyou_qirang", target);
 				game.log(player, "视为使用了一张【洞烛先机】");
-				// 该角色卜算2
-				await target.chooseToGuanxing(2).set("prompt", `洞烛先机：${get.translation(target)}卜算2`);
+				// 该角色卜算2：摆牌 AI 按敌我区分（引擎默认 AI 是按"当前回合角色"的牌价值留顶，对敌友一视同仁）
+				//   队友 → 把对你价值高的牌留在牌堆顶，你从顶摸即可拿到
+				//   敌人 → 把对你价值高的牌沉到牌堆底（烂牌留顶），你改从底摸把好牌捞回来
+				await target
+					.chooseToGuanxing(2)
+					.set("prompt", `洞烛先机：${get.translation(target)}卜算2`)
+					.set("processAI", (list) => {
+						const cards = list[0][1].slice();
+						// 按"对淇禳持有者的价值"降序
+						cards.sort((a, b) => get.value(b, player) - get.value(a, player));
+						const top = [];
+						while (cards.length && get.value(cards[0], player) > 6) {
+							top.push(cards.shift());
+						}
+						if (friendly) {
+							// 队友：好牌留顶
+							return [top, cards];
+						}
+						// 敌人：好牌（top）沉底，剩下的烂牌留顶
+						return [cards, top];
+					});
 				// 你从选择的牌堆一侧摸两张牌（摸牌追踪器自动标记该侧为已获得）
 				const drawResult = await player
 					.chooseControl("牌堆顶", "牌堆底")
 					.set("prompt", "淇禳：你从牌堆的哪一侧摸牌？")
-					.set("ai", () => "牌堆顶")
+					.set("ai", () => (friendly ? "牌堆顶" : "牌堆底"))
 					.forResult();
 				if (drawResult?.control == "牌堆底") {
 					await player.draw({ num: 2, bottom: true });
@@ -12612,6 +12656,20 @@ ai: {
 			if (!player.countCards("h")) return false;
 			return game.hasPlayer((current) => current != player && current.countCards("h") > 0);
 		},
+		check(event, player) {
+			// AI 只在"有合算目标"时发动（人类玩家照常被询问）：
+			//   队友 → 稳赚（赢者摸两张牌、输者被拉平，己方净增手牌）
+			//   敌人 → 只有手牌不比你少 2 张以上才合算：
+			//     比你多 → 你拼赢、赢者弃两张牌把对方拉下来
+			//     只少 1 张 → 对方拼赢摸两张牌，你被拉平到"对方手牌+1"，仍是净赚
+			//     少 2 张以上 → 你被拉低且对方净增，明确亏，不发动
+			const pH = player.countCards("h");
+			return game.hasPlayer((current) => {
+				if (current === player || current.countCards("h") <= 0) return false;
+				if (get.attitude(player, current) > 0) return true;
+				return current.countCards("h") >= pH - 1;
+			});
+		},
 		async content(event, trigger, player) {
 			// 展示手牌
 			const hands = player.getCards("h");
@@ -12621,15 +12679,43 @@ ai: {
 				.chooseTarget("术作：与一名其他角色拼点", (card, p, target) => target != p && target.countCards("h") > 0)
 				.set("ai", (target) => {
 					const p = get.player();
-					if (get.attitude(p, target) > 0) return -1;
-					return 1 + (p.countCards("h") > target.countCards("h") ? 1 : 0);
+					const att = get.attitude(p, target);
+					const gap = Math.abs(p.countCards("h") - target.countCards("h"));
+					// 队友：手牌差越大，输者被拉平到赢者手牌数时的净收益越大 → 越优先
+					if (att > 0) return 10 + att + gap * 0.1;
+					// 敌人：手牌比你多时你才是"手牌少的一方"（你拼赢、赢者弃牌把对方拉低）
+					if (target.countCards("h") > p.countCards("h")) return 5 + gap * 0.1 - att * 0.1;
+					// 其余敌人：收益一般，垫底但仍有分（避免 AI 直接取消拼点，白展示一次手牌）
+					return 0.1 + gap * 0.01;
 				})
 				.forResult();
 			if (!targetResult?.bool || !targetResult.targets?.length) return;
 			const target = targetResult.targets[0];
 			player.logSkill("qunyou_shuzuo", target);
+			const friendly = get.attitude(player, target) > 0;
+			// 谁该赢：队友 → 让手牌多的一方拼赢（输者少牌，被拉平后净赚）；
+			//         敌人 → 让手牌少的一方拼赢（输者多牌，被拉平后净亏）
+			const wantPlayerWin = friendly
+				? player.countCards("h") >= target.countCards("h")
+				: player.countCards("h") <= target.countCards("h");
+			// 拼点 AI：想赢的一方出"刚好能赢对方最小牌"的最小牌（少亏牌），想输的一方出最小的牌
+			const minNumber = (current) => {
+				const cards = current.getCards("h");
+				return cards.length ? Math.min(...cards.map((card) => get.number(card))) : 0;
+			};
+			const pMin = minNumber(player);
+			const tMin = minNumber(target);
+			const compareAi = (card) => {
+				const owner = get.owner(card) || get.player();
+				const isPlayer = owner === player;
+				const num = get.number(card);
+				if (isPlayer === wantPlayerWin) {
+					return num > (isPlayer ? tMin : pMin) ? 1000 - num : num;
+				}
+				return -num;
+			};
 			// 拼点
-			const compare = await player.chooseToCompare(target).forResult();
+			const compare = await player.chooseToCompare(target, compareAi).forResult();
 			if (!compare) return;
 			// 没有赢家（平局）：无事发生
 			if (compare.tie) {
@@ -12641,14 +12727,14 @@ ai: {
 			// 赢者摸两张牌或弃两张牌（可弃的牌不足两张时不提供弃牌项）
 			const canDiscard = winner.countCards("he", (card) => lib.filter.cardDiscardable(card, winner, "qunyou_shuzuo")) >= 2;
 			const controls = canDiscard ? ["摸两张牌", "弃两张牌"] : ["摸两张牌"];
+			// 由"输者"决定选哪项（输者的手牌数才是被改写的那一方）：
+			//   输者是自己人 → 摸牌（把目标手牌数抬高，输者补齐时多拿）
+			//   输者是敌人   → 弃牌（把目标手牌数压低，把敌人拉下来）
+			const loserFriendly = loser === player || get.attitude(player, loser) > 0;
 			const choiceResult = await winner
 				.chooseControl(controls)
 				.set("prompt", "术作：你赢得了拼点")
-				.set("ai", () => {
-					const w = get.player();
-					if (canDiscard && w.countCards("h") > w.getHandcardLimit()) return "弃两张牌";
-					return "摸两张牌";
-				})
+				.set("ai", () => (loserFriendly || !canDiscard ? "摸两张牌" : "弃两张牌"))
 				.forResult();
 			if (choiceResult.control == "弃两张牌") {
 				await winner.chooseToDiscard(2, "he", true).forResult();
@@ -13161,6 +13247,598 @@ ai: {
 					},
 				},
 			},
+		},
+	},
+
+	// ==================== 犷勇：转换技，改此牌目标并夺取原目标各一张牌 ====================
+	qunyou_kuangyong: {
+		audio: 2,
+		mark: true,
+		zhuanhuanji: true,
+		marktext: "☯",
+		// 时机用 useCardToTarget（成为目标时）——TRIGGER_REFERENCE 明确「改 card 用这个」；
+		// 耽意用的 useCardToPlayered 已在目标结算阶段，改不动目标了。
+		trigger: { player: "useCardToTarget" },
+		filter(event, player) {
+			// 每个目标都会派发一次，只在首个目标时询问一次
+			if (!event.isFirstTarget || !player.isIn()) return false;
+			// ② 状态需要有「上张有目标的牌」可指，否则该项无从执行
+			if (player.storage.qunyou_kuangyong && !lib.qunyouKuangyongLastTargets(player, event.getParent("useCard")).length) return false;
+			return true;
+		},
+		async cost(event, trigger, player) {
+			const state = Boolean(player.storage.qunyou_kuangyong);
+			const use = trigger.getParent("useCard");
+			const to = state ? lib.qunyouKuangyongLastTargets(player, use) : [player];
+			const names = to.map((target) => get.translation(target)).join("、");
+			const res = await player
+				.chooseBool(`犷勇：是否将此牌目标改为${names}？`)
+				.set("ai", () => true)
+				.forResult();
+			event.result = res?.bool ? { bool: true, cost_data: { targets: to } } : { bool: false };
+		},
+		async content(event, trigger, player) {
+			const use = trigger.getParent("useCard");
+			// 原目标（改之前），用来「各获得一张牌」
+			const origin = (use?.targets || trigger.targets || []).slice(0);
+			const to = event.cost_data.targets || [];
+			if (use) use.targets = to.slice(0);
+			// 获得原目标的各一张牌（由你选）
+			for (const target of origin) {
+				if (!player.isIn()) break;
+				if (!target.isIn() || !target.countCards("he")) continue;
+				await player.gainPlayerCard(target, "he", true);
+			}
+			// 转换状态并刷新 mark
+			player.storage.qunyou_kuangyong = !Boolean(player.storage.qunyou_kuangyong);
+			player.updateMarks();
+		},
+		intro: {
+			// 转换技惯例文本：按 storage 显示当前状态那条；②状态额外列出「上张有目标的牌」的目标
+			content(storage, player) {
+				const head = storage
+					? "转换技，当你使用牌指定目标时，你可以将此牌目标改为你使用的上张有目标的牌的所有目标，以获得原目标的各一张牌。"
+					: "转换技，当你使用牌指定目标时，你可以将此牌目标改为你，以获得原目标的各一张牌。";
+				if (!storage) return head;
+				const list = lib.qunyouKuangyongLastTargets(player, null);
+				const text = list.length ? list.map((target) => get.translation(target)).join("、") : "暂无";
+				return `${head}<br>你使用的上张有目标的牌的目标：${text}`;
+			},
+		},
+		ai: { result: { player: 1 } },
+	},
+
+	// ==================== 筹幄：手牌数=体力值时二选一 ====================
+	qunyou_chouwo: {
+		audio: 2,
+		trigger: { player: ["loseAfter", "gainAfter", "changeHpAfter"] },
+		filter(event, player) {
+			// 变化后两项数值相等才询问；hp>0 顺带排除濒死中弹询问
+			if (player.countCards("h") != player.hp || player.hp <= 0) return false;
+			if (event.name == "changeHp") return event.changedHp != 0;
+			// gain：getg 不受 getlx 影响；lose：直读 event.hs（分类字段无条件挂载，不受 getlx 影响）
+			if (event.name == "gain") return Boolean(event.getg?.(player)?.length);
+			return Boolean(event.hs?.length);
+		},
+		async content(event, trigger, player) {
+			// 小按钮式选择：**不要带 choiceList** —— 带的话引擎会渲染成"大选择栏"（知识库 #43：
+			// 花色等小选项用 chooseControl 小按钮，参考原生 collab.js:2251 / jsrg.js:2563 的写法）。
+			// 选项直接写中文，result.control 就是该中文串。
+			// ⚠️ 未受伤时「回复1点体力」不可选（recover 无效）→ 该选项直接不显示。
+			const choices = ["摸两张牌"];
+			if (player.isDamaged()) choices.push("回复1点体力");
+			// ⚠️ 取消按钮要自己带上：引擎只在「有 choiceList」时才自动 push "cancel2"（content.js:7443），
+			//    去掉 choiceList 改小按钮后，必须手动把 "cancel2" 放进 controls 里才保留取消。
+			choices.push("cancel2");
+			const result = await player
+				.chooseControl(choices)
+				.set("prompt", "筹幄：选择一项")
+				.set("ai", () => {
+					const current = get.player();
+					if (current.isDamaged() && current.hp <= 2) return "回复1点体力";
+					return "摸两张牌";
+				})
+				.forResult();
+			// 取消（cancel2）与原逻辑一致：走 else 分支 = 摸两张牌
+			if (result.control == "回复1点体力") {
+				await player.recover(1);
+			} else {
+				await player.draw(2);
+			}
+		},
+		ai: { result: { player: 1 } },
+	},
+
+	// ==================== 度势：成为锦囊目标后 扣置/取回 武将牌上的牌 ====================
+	qunyou_dushi: {
+		audio: 2,
+		trigger: { target: "useCardToTargeted" },
+		mark: true,
+		marktext: "势",
+		intro: { content: "expansion", markcount: "expansion" },
+		filter(event, player) {
+			// 锦囊判断必须 get.type2（含延时锦囊，get.type 对延时返回 "delay"）
+			if (get.type2(event.card) != "trick") return false;
+			return player.countCards("h") > 0 || player.getExpansions("qunyou_dushi").length > 0;
+		},
+		async content(event, trigger, player) {
+			const expansions = player.getExpansions(event.name);
+			const hasHand = player.countCards("h") > 0;
+			const hasExp = expansions.length > 0;
+			let control;
+			if (hasHand && hasExp) {
+				const result = await player
+					.chooseControl(["put", "get", "cancel2"])
+					.set("prompt", "度势：选择一项")
+					.set("choiceList", ["将任意张手牌扣置于武将牌上", "获得武将牌上任意张牌"])
+					.set("ai", () => "get")
+					.forResult();
+				if (result.control == "cancel2") return;
+				control = result.control;
+			} else {
+				control = hasHand ? "put" : "get";
+			}
+			if (control == "get") {
+				const result = await player
+					.chooseButton(["度势：获得武将牌上任意张牌", expansions], true)
+					.set("selectButton", [1, expansions.length])
+					.set("ai", (button) => get.value(button.link))
+					.forResult();
+				if (!result?.bool || !result.links?.length) return;
+				await player.gain(result.links, "gain2");
+				// 拿回手牌后清掉 gaintag，牌面不残留技能标记
+				result.links.forEach((card) => card.gaintag.remove(event.name));
+			} else {
+				const result = await player
+					.chooseCard("h", [1, player.countCards("h")], true)
+					.set("prompt", "度势：将任意张手牌扣置于武将牌上")
+					.set("ai", (card) => 6 - get.value(card))
+					.forResult();
+				if (!result?.cards?.length) return;
+				const next = player.addToExpansion(result.cards, "gain2");
+				next.gaintag.add(event.name);
+				await next;
+			}
+		},
+		ai: { result: { player: 1 } },
+	},
+	// ===== 野望/珠庭/魚淵/驅炎 =====
+	// 依赖下方搬运的 qunyou_ 国战标记系统（原版在 mode/guozhan，身份局不会加载，
+	// 故以 qunyou_ 前缀复制；规则技由〖野望〗发动时 addSkill 给持有者——
+	// 扩展技能不走 game.importSkill，"_"前缀不会自动全局挂载）。
+	// ⚠️ 记录/持续子技能一律独立 addSkill 挂载、绝不进 group：
+	// awakenSkill 会沿 group 级联禁用（player.js:11251），进 group 觉醒后即停摆。
+
+	// —— 标记本体（intro 供 addMark 显示悬浮说明；先驱含效果 content）——
+	qunyou_xianqu_mark: {
+		intro: { content: "◇出牌阶段，你可以弃置此标记，然后将手牌摸至四张并观看一名其他角色的一张武将牌。" },
+		async content(event, trigger, player) {
+			player.removeMark(player.hasMark("qunyou_xianqu_mark") ? "qunyou_xianqu_mark" : "qunyou_yexinjia_mark", 1);
+			await player.drawTo(4);
+			if (
+				game.hasPlayer(current => {
+					return current != player && current.isUnseen(2);
+				})
+			) {
+				let result = await player
+					.chooseTarget("是否观看一名其他角色的一张暗置武将牌？", (card, player, target) => {
+						return target != player && target.isUnseen(2);
+					})
+					.set("ai", target => {
+						const player = get.player();
+						if (target.isUnseen()) {
+							const next = player.getNext();
+							if (target != next) {
+								return 10;
+							}
+							return 9;
+						}
+						return -get.attitude(player, target);
+					})
+					.forResult();
+				if (result?.bool && result?.targets?.length) {
+					const [target] = result.targets;
+					const controls = [];
+					if (target.isUnseen(0)) {
+						controls.push("主将");
+					}
+					if (target.isUnseen(1)) {
+						controls.push("副将");
+					}
+					if (!controls.length) {
+						return;
+					}
+					player.line(target, "green");
+					result = controls.length == 1 ? { control: controls[0] } : await player.chooseControl(controls).forResult();
+					if (!result?.control) {
+						return;
+					}
+					await player.viewCharacter(target, result.control == "主将" ? 0 : 1);
+				} else {
+					player.removeSkill("qunyou_xianqu_mark");
+				}
+			}
+		},
+	},
+	qunyou_zhulianbihe_mark: {
+		intro: { content: "◇出牌阶段，你可以弃置此标记，然后摸两张牌。<br>◇你可以将此标记当做【桃】使用。" },
+	},
+	qunyou_yinyang_mark: {
+		intro: { content: "◇出牌阶段，你可以弃置此标记，然后摸一张牌。<br>◇弃牌阶段，你可以弃置此标记，然后本回合手牌上限+2。" },
+	},
+	qunyou_yexinjia_mark: {
+		intro: {
+			content: "◇你可以弃置此标记，并发动【先驱】标记或【珠联璧合】标记或【阴阳鱼】标记的效果。",
+		},
+	},
+	// —— 标记效果规则技（出牌阶段统一入口 + 当桃 + 弃牌阶段上限+2）——
+	qunyou_guozhan_marks: {
+		ruleSkill: true,
+		enable: "phaseUse",
+		filter(event, player) {
+			return ["qunyou_yexinjia", "qunyou_xianqu", "qunyou_yinyang", "qunyou_zhulianbihe"].some(mark => player.hasMark(`${mark}_mark`));
+		},
+		chooseButton: {
+			dialog(event, player) {
+				return ui.create.dialog("###标记###弃置一枚对应的标记，发动其对应的效果");
+			},
+			chooseControl(event, player) {
+				const list = [],
+					bool = player.hasMark("qunyou_yexinjia_mark");
+				if (bool || player.hasMark("qunyou_xianqu_mark")) {
+					list.push("先驱");
+				}
+				if (bool || player.hasMark("qunyou_zhulianbihe_mark")) {
+					list.push("珠联(摸牌)");
+					if (event.filterCard({ name: "tao", isCard: true }, player, event)) {
+						list.push("珠联(桃)");
+					}
+				}
+				if (bool || player.hasMark("qunyou_yinyang_mark")) {
+					list.push("阴阳鱼");
+				}
+				list.push("cancel2");
+				return list;
+			},
+			check() {
+				const player = get.player(),
+					bool = player.hasMark("qunyou_yexinjia_mark"),
+					evt = get.event().getParent();
+				if ((bool || player.hasMark("qunyou_xianqu_mark")) && !player.hasSkillTag("keepXianqu", false, null, true) && 4 - player.countCards("h") > 1) {
+					return "先驱";
+				}
+				if (bool || player.hasMark("qunyou_zhulianbihe_mark")) {
+					if (evt.filterCard({ name: "tao", isCard: true }, player, evt) && get.effect_use(player, { name: "tao" }, player) > 0) {
+						return "珠联(桃)";
+					}
+					if (
+						player.getHandcardLimit() - player.countCards("h") > 1 &&
+						!game.hasPlayer(function (current) {
+							return current != player && current.isFriendOf(player) && current.hp + current.countCards("h", "shan") <= 2;
+						})
+					) {
+						return "珠联(摸牌)";
+					}
+				}
+				if (player.hasMark("qunyou_yinyang_mark") && player.getHandcardLimit() - player.countCards("h") > 0) {
+					return "阴阳鱼";
+				}
+				return "cancel2";
+			},
+			backup(result, player) {
+				switch (result.control) {
+					case "珠联(桃)":
+						return get.copy(lib.skill.qunyou_zhulianbihe_tao);
+					case "珠联(摸牌)":
+						return {
+							async content(event, trigger, player) {
+								await player.draw(2);
+								player.removeMark(player.hasMark("qunyou_zhulianbihe_mark") ? "qunyou_zhulianbihe_mark" : "qunyou_yexinjia_mark", 1);
+							},
+						};
+					case "阴阳鱼":
+						return {
+							async content(event, trigger, player) {
+								await player.draw();
+								player.removeMark(player.hasMark("qunyou_yinyang_mark") ? "qunyou_yinyang_mark" : "qunyou_yexinjia_mark", 1);
+							},
+						};
+					case "先驱":
+						return { content: lib.skill.qunyou_xianqu_mark.content };
+				}
+			},
+		},
+		ai: {
+			order: 1,
+			result: { player: 1 },
+		},
+	},
+	qunyou_zhulianbihe_tao: {
+		ruleSkill: true,
+		enable: "chooseToUse",
+		viewAsFilter(player) {
+			return ["qunyou_yexinjia_mark", "qunyou_zhulianbihe_mark"].some(mark => player.hasMark(mark));
+		},
+		viewAs: {
+			name: "tao",
+			isCard: true,
+		},
+		filterCard: () => false,
+		selectCard: -1,
+		async precontent(event, trigger, player) {
+			player.removeMark(player.hasMark("qunyou_zhulianbihe_mark") ? "qunyou_zhulianbihe_mark" : "qunyou_yexinjia_mark", 1);
+		},
+	},
+	qunyou_yinyang_mark_add: {
+		ruleSkill: true,
+		trigger: { player: "phaseDiscardBegin" },
+		filter(event, player) {
+			return ["qunyou_yexinjia_mark", "qunyou_yinyang_mark"].some(mark => player.hasMark(mark)) && player.needsToDiscard();
+		},
+		prompt(event, player) {
+			return `是否弃置一枚【${player.hasMark("qunyou_yinyang_mark") ? "阴阳鱼" : "野心家"}】标记，使本回合的手牌上限+2？`;
+		},
+		async content(event, trigger, player) {
+			player.addTempSkill("qunyou_yinyang_add", "phaseAfter");
+			player.removeMark(player.hasMark("qunyou_yinyang_mark") ? "qunyou_yinyang_mark" : "qunyou_yexinjia_mark", 1);
+		},
+	},
+	qunyou_yinyang_add: {
+		charlotte: true,
+		mod: {
+			maxHandcard(player, num) {
+				return num + 2;
+			},
+		},
+	},
+	// —— 野望（锁定技）——
+	qunyou_yewang: {
+		audio: 2,
+		locked: true,
+		forced: true,
+		trigger: { global: "gameStart" },
+		async content(event, trigger, player) {
+			player.addMark("qunyou_xianqu_mark", 1);
+			player.addMark("qunyou_zhulianbihe_mark", 1);
+			player.addMark("qunyou_yinyang_mark", 1);
+			player.addMark("qunyou_yexinjia_mark", 1);
+			// 标记效果规则技 + 记录子技能：独立挂载（不进 group，见文件头说明）
+			player.addSkill(["qunyou_guozhan_marks", "qunyou_zhulianbihe_tao", "qunyou_yinyang_mark_add", "qunyou_yewang_log", "qunyou_yewang_die"]);
+		},
+		group: ["qunyou_yewang_change"],
+		subSkill: {
+			log: {
+				name: "野望",
+				charlotte: true,
+				trigger: { player: ["removeMark", "gainAfter"] },
+				forced: true,
+				popup: false,
+				silent: true,
+				filter(event, player) {
+					if (event.name == "removeMark") {
+						const ok = ["qunyou_xianqu_mark", "qunyou_zhulianbihe_mark", "qunyou_yinyang_mark", "qunyou_yexinjia_mark"].includes(event.markName);
+						console.log("[野望log-filter] removeMark 到达, markName:", event.markName, "→ 记录:", ok);
+						return ok;
+					}
+					console.log("[野望log-filter] gainAfter 到达, animate:", event.animate, "cards数:", event.cards?.length);
+					return event.name == "gain";
+				},
+				content(event, trigger, player) {
+					const log = (player.storage.qunyou_yewang_marklog ??= []);
+					// 阶段级标识：沿事件父链找最近的 phase 系宿主（phaseDraw/phaseUse/phaseJieshu…）。
+					// ⚠️ game.phaseNumber 是回合号——同一回合内摸牌阶段与出牌阶段相同，不能当阶段用
+					let cur = _status.event, stage = "";
+					for (let i = 0; i < 12 && cur; i++) {
+						if (cur.name && cur.name.indexOf("phase") == 0) {
+							stage = cur.name;
+							break;
+						}
+						cur = cur.parent;
+					}
+					if (trigger.name == "removeMark") {
+						log.push({ kind: "mark", mark: trigger.markName, round: game.roundNumber, phase: game.phaseNumber, stage });
+					} else {
+						log.push({ kind: trigger.animate == "draw" ? "draw" : "gain", round: game.roundNumber, phase: game.phaseNumber, stage });
+					}
+					console.log("[野望log-content] 已记录:", JSON.stringify(log[log.length - 1]), "| log总长:", log.length);
+				},
+			},
+			die: {
+				name: "野望",
+				charlotte: true,
+				trigger: { global: "dieAfter" },
+				forced: true,
+				popup: false,
+				silent: true,
+				content(event, trigger, player) {
+					player.storage.qunyou_yewang_dieround = game.roundNumber;
+				},
+			},
+			change: {
+				name: "野望",
+				charlotte: true,
+				trigger: { player: "removeMark" },
+				forced: true,
+				popup: false,
+				silent: true,
+				filter(event, player) {
+					if (event.markName != "qunyou_yexinjia_mark" || player.identity == "ye") {
+						return false;
+					}
+					// removeMark 触发时 storage 已扣减完毕，此处四种标记应全部归零
+					return (
+						!player.countMark("qunyou_xianqu_mark") &&
+						!player.countMark("qunyou_zhulianbihe_mark") &&
+						!player.countMark("qunyou_yinyang_mark") &&
+						!player.countMark("qunyou_yexinjia_mark")
+					);
+				},
+				async content(event, trigger, player) {
+					// 亮出原身份
+					if (!player.identityShown) {
+						player.setIdentity();
+						player.identityShown = true;
+						player.node.identity.classList.remove("guessing");
+						game.log(player, "的身份是", `#g${get.translation(`${player.identity}2`) || get.translation(player.identity)}`);
+					}
+					// 变更为野心家（qunyouYeGain 内部会挂〖跋扈〗〖飞扬〗并打日志）
+					qunyouYeGain(player);
+					// 变身后的野心家身份保持公开
+					player.identityShown = true;
+					player.setIdentity();
+					player.node.identity.classList.remove("guessing");
+				},
+			},
+		},
+	},
+	// —— 珠庭（觉醒技）——
+	qunyou_zhuting: {
+		audio: 2,
+		juexingji: true,
+		skillAnimation: true,
+		animationColor: "water",
+		trigger: { global: "roundEnd" },
+		forced: true,
+		filter(event, player) {
+			if (player.storage.qunyou_zhuting) {
+				return false;
+			}
+			// 本轮使用过【珠联璧合】标记
+			const log = player.storage.qunyou_yewang_marklog || [];
+			if (!log.some(item => item.kind == "mark" && item.mark == "qunyou_zhulianbihe_mark" && item.round == game.roundNumber)) {
+				return false;
+			}
+			// 本轮有角色死亡
+			return player.storage.qunyou_yewang_dieround == game.roundNumber;
+		},
+		async content(event, trigger, player) {
+			player.awakenSkill(event.name);
+			player.addSkill("qunyou_zhuting_extra");
+		},
+	},
+	qunyou_zhuting_extra: {
+		name: "珠庭",
+		charlotte: true,
+		audio: "qunyou_zhuting",
+		// 觉醒后的常驻效果以 mark 可视化：图标字"庭"，悬浮文本=常驻效果描述
+		mark: true,
+		marktext: "庭",
+		intro: { name: "珠庭", content: "此后有角色死亡的轮次结束时，你执行一个额外回合。" },
+		trigger: { global: "roundEnd" },
+		forced: true,
+		filter(event, player) {
+			return player.isIn() && player.storage.qunyou_yewang_dieround == game.roundNumber;
+		},
+		async content(event, trigger, player) {
+			player.insertPhase("qunyou_zhuting_extra");
+		},
+	},
+	// —— 魚淵（觉醒技）——
+	qunyou_yuyuan: {
+		audio: 2,
+		juexingji: true,
+		skillAnimation: true,
+		animationColor: "soil",
+		trigger: { player: "phaseEnd" },
+		forced: true,
+		filter(event, player) {
+			if (player.storage.qunyou_yuyuan) {
+				return false;
+			}
+			// 本回合使用过【阴阳鱼】标记
+			const log = player.storage.qunyou_yewang_marklog || [];
+			if (!log.some(item => item.kind == "mark" && item.mark == "qunyou_yinyang_mark" && item.phase == game.phaseNumber)) {
+				return false;
+			}
+			// 本回合场上有牌被弃置（discard/discardMultiple 的 lose/cardsDiscard 三条路径）
+			return game.getGlobalHistory("everything").some(
+				evt => evt.name == "discard" || evt.name == "cardsDiscard" || (evt.name == "lose" && evt.type == "discard")
+			);
+		},
+		async content(event, trigger, player) {
+			player.awakenSkill(event.name);
+			player.addSkill("qunyou_yuyuan_extra");
+		},
+	},
+	qunyou_yuyuan_extra: {
+		name: "魚淵",
+		charlotte: true,
+		audio: "qunyou_yuyuan",
+		// 觉醒后的常驻效果以 mark 可视化：图标字"渊"，悬浮文本=常驻效果描述
+		mark: true,
+		marktext: "渊",
+		intro: { name: "魚淵", content: "此后你有牌被弃置的回合结束时，你移动场上的一张牌。" },
+		trigger: { player: "phaseEnd" },
+		forced: true,
+		filter(event, player) {
+			if (!player.isIn()) {
+				return false;
+			}
+			// 你有牌被弃置（本回合；getHistory("lose") 天然是回合级）
+			return player.getHistory("lose").some(evt => evt.type == "discard");
+		},
+		async content(event, trigger, player) {
+			await player.moveCard(true).forResult();
+		},
+	},
+	// —— 驅炎（觉醒技）——
+	qunyou_quyan: {
+		audio: 2,
+		juexingji: true,
+		skillAnimation: true,
+		animationColor: "fire",
+		trigger: { player: "phaseUseAfter" },
+		forced: true,
+		filter(event, player) {
+			if (player.storage.qunyou_quyan) {
+				return false;
+			}
+			const log = player.storage.qunyou_yewang_marklog || [];
+			// 只看本回合【出牌阶段内】的记录：摸牌阶段的 draw 记录 stage 是 phaseDraw，不算"本阶段摸牌"
+			const inStage = log.filter(item => item.phase == game.phaseNumber && item.stage == "phaseUse");
+			const usedXianqu = inStage.some(item => item.kind == "mark" && item.mark == "qunyou_xianqu_mark");
+			const drawHits = inStage.filter(item => item.kind == "draw");
+			const noDraw = !drawHits.length;
+			console.log(
+				"[驅炎-filter]",
+				"本回合出牌阶段内记录:", JSON.stringify(inStage),
+				"| 用过先驱:", usedXianqu,
+				"| 干扰的摸牌记录:", JSON.stringify(drawHits),
+				"→ 觉醒:", usedXianqu && noDraw
+			);
+			return usedXianqu && noDraw;
+		},
+		async content(event, trigger, player) {
+			player.awakenSkill(event.name);
+			player.addSkill("qunyou_quyan_extra");
+		},
+	},
+	qunyou_quyan_extra: {
+		name: "驅炎",
+		charlotte: true,
+		audio: "qunyou_quyan",
+		// 觉醒后的常驻效果以 mark 可视化：图标字"炎"，悬浮文本=常驻效果描述
+		mark: true,
+		marktext: "炎",
+		intro: { name: "驅炎", content: "此后你获得过牌的出牌阶段结束时，你分配1点火焰伤害。" },
+		trigger: { player: "phaseUseAfter" },
+		forced: true,
+		filter(event, player) {
+			if (!player.isIn()) {
+				return false;
+			}
+			// 你本出牌阶段获得过牌（限定 stage=phaseUse，摸牌阶段的获得不算）
+			const log = player.storage.qunyou_yewang_marklog || [];
+			return log.some(item => (item.kind == "gain" || item.kind == "draw") && item.phase == game.phaseNumber && item.stage == "phaseUse");
+		},
+		async content(event, trigger, player) {
+			const result = await player
+				.chooseTarget("驅炎：分配1点火焰伤害给一名角色", () => true, true)
+				.set("ai", target => get.damageEffect(target, player, player, "fire"))
+				.forResult();
+			if (result?.bool && result?.targets?.length) {
+				await result.targets[0].damage(player, 1, "fire");
+			}
 		},
 	},
 }

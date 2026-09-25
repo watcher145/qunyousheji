@@ -68,6 +68,77 @@ async function clanshuze_effect(player) {
 	}
 }
 
+// 柱鼎：各持有者的技能"能通过武将牌上的技能使用什么类别的牌"。
+// 注意：柱鼎 filter 里用的是 player.hasSkill(event.skill)，只认**持有者自己**的技能
+// （已用模拟器验证：别人用技能打出牌时，只有那个人自己的柱鼎发动），所以只需统计持有者本人。
+// 若之后改动/新增琅琊诸葛氏的技能，需同步维护此表。
+const clanZhudingSkillTypes = {
+	yachai_jiangming: ["basic", "trick"], // 将明：使用牌堆翻出的非装备牌
+	yachai_yanling: ["trick"], // 崖灵：接管一张锦囊的使用权
+	yachai_xiaoqiang: ["trick"], // 效戕：视为使用【决斗】
+	yachai_xiumu: ["basic"], // 修睦：转化为【桃】/【酒】使用
+	yachai_qiyi: ["basic", "trick"], // 岐嶷：以对方手牌转化响应（杀/闪/桃/酒/无懈）
+	yachai_chengshi: ["basic"], // 逞师：使用【杀】
+	yachai_jinshi: ["equip"], // 浸势：使用获得的装备牌
+	yachai_liuliu: ["basic", "equip"], // 流罹：视为使用基本牌 / 使用坐骑牌
+};
+
+/**
+ * 柱鼎：按"自己各技能能使用的牌类别"计分取最高；平手按 basic > trick > equip
+ * @param {import("noname").Player} player 柱鼎持有者
+ * @returns {"basic"|"trick"|"equip"}
+ */
+function clanZhudingBestType(player) {
+	const order = ["basic", "trick", "equip"];
+	const score = { basic: 0, trick: 0, equip: 0 };
+	for (const skill of player.getSkills(null, false, false)) {
+		const types = clanZhudingSkillTypes[skill];
+		if (types) {
+			for (const type of types) score[type]++;
+		}
+	}
+	let best = order[0];
+	for (const type of order) {
+		if (score[type] > score[best]) best = type;
+	}
+	return best;
+}
+
+// 族冠：诸葛均一次性失去多张牌后，可令一名同族角色（含自己）使用其中一张。
+// 那几张牌已经在弃牌堆里，"令其使用"等于白嫖一次用牌、本身没有额外代价，
+// 所以 AI 的判据是"存在某个同族角色用其中某张牌能带来正收益"，而不是"有没有队友"。
+/** 族冠：本次失去的、且已进入弃牌堆的牌 */
+function clanZuguanCards(event, player) {
+	return (event.getl(player)?.cards2 || []).filter((card) => get.position(card, true) === "d");
+}
+
+/**
+ * 族冠：把 card 交给 target 使用，对 player 一方的收益
+ * （target 自己用出去的价值 × player 对 target 的态度符号；自己用则直接取正）
+ */
+function clanZuguanCardValue(player, target, card) {
+	// 引擎在 chooseUseTarget 里先校验 cardEnabled，这里提前对齐，
+	// 避免 AI 选中一张根本用不出的牌、随后静默失败（表现为"发动了却没出牌"）
+	if (!lib.filter.cardEnabled(card, target)) return 0;
+	const value = target.getUseValue(card);
+	if (value <= 0) return 0;
+	if (target === player) return value;
+	const attitude = get.attitude(player, target);
+	if (attitude > 0) return value;
+	if (attitude < 0) return -value;
+	return 0;
+}
+
+/** 族冠：target 使用其中最优一张牌能拿到的收益 */
+function clanZuguanBestGain(player, target, cards) {
+	let best = 0;
+	for (const card of cards) {
+		const value = clanZuguanCardValue(player, target, card);
+		if (value > best) best = value;
+	}
+	return best;
+}
+
 // 宗族技 — clan*
 export const skills = {
 // === 沦佚 ===
@@ -246,7 +317,7 @@ clanzhuding: {
 			async content(event, trigger, player) {
 				const result = await player.chooseControl("basic", "trick", "equip")
 					.set("prompt", "柱鼎：选择一种牌的类别")
-					.set("ai", () => "basic")
+					.set("ai", (trigger2, chooser) => clanZhudingBestType(chooser))
 					.forResult();
 				player.storage.clanzhuding_type = result.control;
 			},
@@ -271,23 +342,28 @@ clanzhuding: {
 			);
 		},
 		check(event, player) {
-			return game.hasPlayer(t => t.hasClan("琅琊诸葛氏") && t !== player && get.attitude(player, t) > 0);
+			const cards = clanZuguanCards(event, player);
+			if (!cards.length) return false;
+			return game.hasPlayer(
+				(target) => target.hasClan("琅琊诸葛氏") && clanZuguanBestGain(player, target, cards) > 0
+			);
 		},
 		async content(event, trigger, player) {
-			const cards = trigger.getl(player).cards2
-				.filter(c => get.position(c, true) === "d");
-			const tr = await player.chooseTarget(
-				get.prompt("clanzuguan"), (c, f, t) => t.hasClan("琅琊诸葛氏")
-			).set("ai", (target) => get.attitude(player, target) > 0 ? 1 : 0).forResult();
+			const cards = clanZuguanCards(trigger, player);
+			if (!cards.length) return;
+			const tr = await player
+				.chooseTarget(get.prompt("clanzuguan"), (c, f, t) => t.hasClan("琅琊诸葛氏"))
+				.set("ai", (target) => clanZuguanBestGain(player, target, cards))
+				.forResult();
 			if (!tr.bool) return;
 			const target = tr.targets[0];
-			const usable = cards.filter(c => target.hasUseTarget(c));
+			const usable = cards.filter((card) => clanZuguanCardValue(player, target, card) > 0);
 			if (!usable.length) return;
-			const cr = await target.chooseButton(
-				["族冠：选择使用其中一张牌", usable]
-			).set("filterButton", b => _status.event.player.hasUseTarget(b.link))
-			.set("ai", (button) => target.getUseValue(button.link))
-			.forResult();
+			const cr = await target
+				.chooseButton(["族冠：选择使用其中一张牌", usable])
+				.set("filterButton", (button) => clanZuguanCardValue(player, target, button.link) > 0)
+				.set("ai", (button) => clanZuguanCardValue(player, target, button.link))
+				.forResult();
 			if (!cr.bool) return;
 			target.$gain2(cr.links[0], false);
 			await game.delayx();

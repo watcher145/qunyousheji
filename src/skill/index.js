@@ -3,5 +3,6 @@ import { skills as clan } from "./clan.js";
 import { skills as qunsai } from "./qunsai.js";
 import { skills as sanshe } from "./sanshe.js";
 import { skills as xiaobai } from "./xiaobai.js";
+import { skills as identityYe } from "./identityYe.js";
 
-export const skills = { ...yachai, ...clan, ...qunsai, ...sanshe, ...xiaobai };
+export const skills = { ...yachai, ...clan, ...qunsai, ...sanshe, ...xiaobai, ...identityYe };

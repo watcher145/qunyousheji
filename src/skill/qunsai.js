@@ -5804,7 +5804,8 @@ zhuoming_shuocheng: {
 				.set("prompt", `朔骋：请弃置${get.translation(target)}${get.cnNumber(num)}张牌`)
 				.set("ai", get.buttonValue)
 				.forResult();
-			const cards = result.cards || [];
+			// ⚠️ choosePlayerCard 是基于 chooseButton 的弹窗，结果在 .links（不是 .cards！）
+			const cards = result.cards || result.links || [];
 			if (!cards.length) return;
 			await player.discard(cards);
 			const shas = cards.filter((card) => get.name(card) == "sha");

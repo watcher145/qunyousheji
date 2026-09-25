@@ -9,6 +9,7 @@ export const qunyouTranslate = {
 	qunyou_shenshi_info:
 			"你成为基本牌或普通锦囊牌的目标时，你可以用三张牌交换一名角色区域或本回合弃牌堆的一张牌，若为前者，抉择：1.令你与其中的手牌较少者摸一张牌并明置；2.添加或减少其为此牌目标。若双方手牌数相同，只能选第二项。",
 	visible_qunyou_shenshi: "审时",
+	visible_qunyou_hanguo: "明置",
 	qunyou_jianjiang: "荐降",
 	qunyou_jianjiang_info:
 			"你获得过牌的回合结束时，若当前回合角色手牌数全场最少且其有明置手牌，你可以分配其一张明置手牌。持有此牌的角色使用牌无法指定手牌数全场最少的角色为目标，直到失去此牌。",
@@ -278,7 +279,7 @@ export const qunyouTranslate = {
 	qunyou_zhengjue_info: "锁定技，你的手牌均视为【杀】。你造成伤害时，失去此技能。",
 	qunyou_mangzhan: "莽战",
 	qunyou_mangzhan_info:
-			"锁定技，每当你需响应牌时，若你能响应，你必须响应之；每回合你第X次需响应但未响应牌后，你摸X张牌（X为你的体力值）。",
+			"锁定技，除求桃外，每当你需响应牌时，若你能响应，你必须响应之；每回合你第X次需响应但未响应牌后，你摸X张牌（X为你的体力值）。",
 	qunyou_fenzhe: "分辙",
 	"qunyou_fenzhe_info":
 			"此技能的发动时机可通过效果移动（当前发动时机见技能标记）。你可以令此技能的发动时机后移任意个阶段（选择0则不移动，至多至本回合结束阶段开始时）并令你的手牌上限减少至0，视为使用等量张【调虎离山】；然后你本回合可对游戏外（移出游戏）的角色使用牌。",
@@ -406,4 +407,48 @@ export const qunyouTranslate = {
 	qunyou_zhandeng: "帐灯",
 	qunyou_zhandeng_info:
 			"你的回合内，其他角色的装备牌均视为【酒】（装备牌的技能无效）；你濒死时，你的装备牌可当做【桃】使用。",
+	qunyou_kuangyong: "犷勇",
+	qunyou_kuangyong_info:
+			"转换技，当你使用牌指定目标时，你可以将此牌目标改为①你②你使用的上张有目标的牌的所有目标，以获得原目标的各一张牌。",
+	qunyou_chouwo: "筹幄",
+	qunyou_chouwo_info:
+			"当你的手牌数或体力值变化时，若两项数值相等，你可选择一项：1.摸两张牌；2.回复1点体力。",
+	qunyou_dushi: "度势",
+	qunyou_dushi_info:
+			"当你成为锦囊牌的目标后，你可以将任意张手牌扣置于武将牌上，或获得武将牌上任意张牌。",
+	qunyou_yebahu: "跋扈",
+	qunyou_yebahu_info:
+			"锁定技，准备阶段开始时，你摸一张牌。出牌阶段，你出【杀】次数+1。（野心家身份技能）",
+	qunyou_yefeiyang: "飞扬",
+	qunyou_yefeiyang_info:
+			"判定阶段开始时，若你的判定区有牌，则你可以弃置两张牌，然后弃置你判定区的所有牌。（野心家身份技能）",
+	qunyou_ye_init: "野心家",
+	qunyou_fugai_tag: "覆盖",
+	qunyou_yewang: "野望",
+	qunyou_yewang_info:
+			"锁定技，游戏开始时，你获得四种国战标记；若你失去的最后一枚标记为【野心家】，你亮出身份并变更为野心家。",
+	qunyou_zhuting: "珠庭",
+	qunyou_zhuting_info:
+			"觉醒技，你使用【珠联璧合】但仍有角色死亡的轮次结束时，你于此后有角色死亡的轮次结束时执行一个额外回合。",
+	qunyou_yuyuan: "魚淵",
+	qunyou_yuyuan_info:
+			"觉醒技，你使用【阴阳鱼】但仍有牌被弃置的回合结束时，你于此后你有牌被弃置的回合结束时移动场上的一张牌。",
+	qunyou_quyan: "驅炎",
+	qunyou_quyan_info:
+			"觉醒技，你使用【先驱】但未摸过牌的出牌阶段结束时，你于此后你获得过牌的出牌阶段结束时分配1点火焰伤害。",
+	qunyou_zhuting_extra: "珠庭",
+	qunyou_zhuting_extra_bg: "庭",
+	qunyou_yuyuan_extra: "魚淵",
+	qunyou_yuyuan_extra_bg: "渊",
+	qunyou_quyan_extra: "驅炎",
+	qunyou_quyan_extra_bg: "炎",
+	// 国战标记不是技能，只有名字（悬浮说明走技能定义里的 intro，不写 _info）
+	qunyou_guozhan_marks: "标记",
+	qunyou_guozhan_marks_backup: "标记",
+	qunyou_xianqu_mark: "先驱",
+	qunyou_zhulianbihe_mark: "珠联璧合",
+	qunyou_yinyang_mark: "阴阳鱼",
+	qunyou_yexinjia_mark: "野心家",
+	qunyou_zhulianbihe_tao: "珠联",
+	qunyou_yinyang_mark_add: "阴阳鱼",
 };

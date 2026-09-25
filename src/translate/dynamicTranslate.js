@@ -243,6 +243,31 @@ qunyou_qiongji(player) {
 			"依然不能明置♥牌，你失去1点体力且不能再如此做。"
 		);
 	},
-	};
+	xiaobai_yinhan(player) {
+		const color = player?.storage?.xiaobai_yinhan_color;
+		if (color == "black") {
+			return "锁定技，<font color=\"#E0DB2F\">若最后进入弃牌堆的是黑色牌，你以明置替代使用，以交给替代打出；</font>反之，你以暗置替代使用，以重铸替代弃置。";
+		}
+		if (color == "red") {
+			return "锁定技，若最后进入弃牌堆的是黑色牌，你以明置替代使用，以交给替代打出；<font color=\"#E0DB2F\">反之，你以暗置替代使用，以重铸替代弃置。</font>";
+		}
+		return "锁定技，若最后进入弃牌堆的是黑色牌，你以明置替代使用，以交给替代打出；反之，你以暗置替代使用，以重铸替代弃置。";
+	},
+	// 耽名：描述里的「4」是动态数值（摸牌后可选择令其 -1，直至本轮结束），需要随 storage 变化实时显示
+	xiaobai_danming(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		const value = 4 - (player?.storage?.xiaobai_danming_reduce || 0);
+		return base.replace("调整至4", `调整至${blue(value)}`);
+	},
+	// 进替：描述里「依次：…」那五项的顺序是动态的（每轮发动后「摸牌至四张」会与最后执行的项交换），
+	// 需要按 storage.xiaobai_jinti_order 实时重排
+	xiaobai_jinti(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		const order = player?.storage?.xiaobai_jinti_order || 1;
+		const seq = [];
+		for (let i = 1; i <= 5; i++) seq.push(i == order ? blue("摸牌至四张") : "使用一张牌");
+		return base.replace(/依次：[^。]*。/, `依次：${seq.join("，")}。`);
+	},
+};
 
 export default dynamicTranslates;

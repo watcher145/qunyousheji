@@ -16,7 +16,7 @@ export const characterTitle = {
 	qunyou_liukun: "时穷节乃见",
 	qunyou_simayi: "独水孤清",
 	qunyou_sunjiao: "夏口门使",
-	qunyou_luxun: "渊谋谦略",
+	qunyou_v_luxun: "渊谋谦略",
 	qunyou_caozhi: "酒虎诗龙",
 	qunyou_haopu: "慰壑把晖",
 	qunyou_chen_zhaoyun: "坐收渔利",
@@ -29,7 +29,7 @@ export const characterTitle = {
 	qunyou_meng_liufeng: "翔枝成凤",
 	qunyou_caoshuang: "托孤傲臣",
 	qunyou_hanshiwuhu: "屡败屡战",
-	qunyou_zhonghui: "暂定",
+	qunyou_sb_zhonghui: "暂定",
 	qunyou_yang_wang: "贤婉俭德",
 	qunyou_caoxiancaohua: "锦瑟良缘",
 	qunyou_mo_jiangwei: "赴焱窮奇",
@@ -190,6 +190,8 @@ export const characterTitle = {
 
 	xiaobai_lisheng: "虚才雅智",
 
+	xiaobai_lisheng: "虚才雅智",
+
 	xiaobai_tianxu: "锋回戮转",
 
 	xiaobai_zhushixing: "西行求法",
@@ -210,5 +212,107 @@ export const characterTitle = {
 
 	xiaobai_liukun: "志枭逆虏",
 
-	qunyou_mo_wangyun: "易摄承陈",
+	xiaobai_liuying: "孤原皲木",
+
+	xiaobai_liuji: "完珙以琼",
+
+	xiaobai_liumin: "缜承渊虑",
+
+	xiaobai_lifeng: "蓬蒿易易",
+
+	xiaobai_luyu: "啄影哺弼",
+
+	xiaobai_weidan: "笔走凌云",
+
+	xiaobai_yangyong: "惜相疲行",
+
+	xiaobai_dengfuren: "绮蕊点绛",
+
+	xiaobai_louxuan: "松栽倒壑",
+
+	xiaobai_maohuanghou: "华落沉渊",
+
+	xiaobai_wangsi: "北固山盟",
+
+	xiaobai_sunshao: "革营益进",
+
+	xiaobai_baochu: "奋袂攘臂",
+
+	xiaobai_huzhi: "素业贞粹",
+
+	xiaobai_wangbi: "披棘良吏",
+
+	xiaobai_xumu: "母任之刚",
+
+	xiaobai_huzong: "华藻绕邦",
+
+	xiaobai_zhaozi: "吴魏契约",
+
+	xiaobai_huangwan: "汉阙啼鹃",
+
+	xiaobai_gaixun: "寒柏饮雪",
+
+	xiaobai_fuxuan: "鹑觚立世",
+
+	xiaobai_simayue: "逆浪汹汹",
+
+	xiaobai_wangbimawen: "天人之间",
+
+	xiaobai_weiji: "相王之式",
+
+	xiaobai_fanjian: "烬鼎铭鉴",
+
+	xiaobai_hezhi: "梦桑量海",
+
+	xiaobai_lujix: "诗圃诠生",
+
+	xiaobai_doumiao: "恚凤悬庭",
+
+	xiaobai_hexiu: "持世陈论",
+
+	xiaobai_huangfugui: "雪钺鉴清",
+
+	xiaobai_yangxu: "鱼心可呈",
+
+	xiaobai_shichong: "金谷一炬",
+
+	xiaobai_nieyou: "牂牁何系",
+
+	xiaobai_xueying: "盘石难还",
+
+	xiaobai_douwu: "都亭孤忠",
+
+	xiaobai_liying: "天下模楷",
+
+	xiaobai_wangxiu: "",
+
+	xiaobai_leguang: "神姿朗彻",
+
+	xiaobai_peikai: "郎月入怀",
+
+	xiaobai_peiwei: "成言林薮",
+
+	xiaobai_zhangfang: "凶徒劫命",
+
+	xiaobai_guopu: "囊云界水",
+
+	xiaobai_simayou: "芝兰当道",
+
+	xiaobai_simajun: "扶风定远",
+
+	xiaobai_wangjunx: "恶稔毒痡",
+
+	xiaobai_heqiao: "千丈之松",
+
+	xiaobai_jishao: "内举心膂",
+
+	xiaobai_zuosi: "赋倾洛纸",	xiaobai_xunkai: "荀门失玉",	xiaobai_wangjunx: "恶稔毒痡",	qunyou_mo_wangyun: "易摄承陈",
+
+	xiaobai_zhaoyu: "踅驳高秋",
+
+	xiaobai_zhangyu: "天祸降人",	xiaobai_luoshang: "贪蚌绞涡",
+
+	xiaobai_xiyingxi: "贵而能贫",	qunyou_luxun: "儒才",
+
+	qunyou_zhonghui: "独锋剑阴",
 };

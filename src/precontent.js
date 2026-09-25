@@ -1,5 +1,6 @@
 import { lib, game, get, _status } from "noname";
 import dynamicTranslates from "./translate/dynamicTranslate.js";
+import { getXiaobaiPack } from "./package.js";
 
 /**
  * 扩展加载时执行：可在此注册 lib.namePrefix、合并 lib.dynamicTranslate 等
@@ -222,6 +223,48 @@ export function precontent() {
 		id: "rule_shiwuSkill",
 		info: "奋武技的使用次数为本轮你造成和受到的伤害值+1，至多为5。",
 	});
+
+	// ==================== 覆盖（rule_fugai）====================
+	// 概念气泡：技能描述内用 ${get.poptip("rule_fugai")} 引用
+	lib.poptip.add({
+		name: "覆盖",
+		id: "rule_fugai",
+		info: '当一名角色使用非虚拟的基本牌或普通锦囊牌指定目标后，在它生效前，拥有覆盖类技能的角色可将一张基本牌或普通锦囊牌放置于此牌之上，称为"覆盖"。被覆盖牌的使用者改为对原目标使用覆盖牌（对该牌的所有目标生效），覆盖牌结算后进弃牌堆；若覆盖牌无法对目标生效，则令被覆盖牌无效。',
+	});
+	// 全局结算替换机制。结算结构参照乐诸葛果「乘烟」dcchengyan（记录挂在牌上 + useCardToBegin 时 setContent），
+	// 注册方式参照十周年UI（precontent 里 Object.assign(lib.skill) + game.addGlobalSkill：precontent 执行时
+	// package 里的技能尚未合并进 lib.skill，addGlobalSkill 查不到会静默返回 false）。
+	// 没有技能发动覆盖时，牌对象的 qunyou_fugai 记录不存在 → 本技能 filter 恒假 → 牌完全按原版结算。
+	if (!lib.skill.global.includes("qunyou_fugai_replace")) {
+		Object.assign(lib.skill, {
+			qunyou_fugai_replace: {
+				charlotte: true,
+				trigger: { global: "useCardToBegin" },
+				forced: true,
+				popup: false,
+				silent: true,
+				firstDo: true,
+				filter(event) {
+					return Boolean(event.card?.storage?.qunyou_fugai);
+				},
+				async content(event, trigger, player) {
+					const record = trigger.card.storage.qunyou_fugai;
+					const cover = record.card;
+					// 覆盖牌无法对目标生效（如【闪】无 filterTarget、【桃】对满血目标）→ 被覆盖牌对该目标无效。
+					// 只判"允许"不判距离（targetEnabled），与乘烟一致：覆盖后不重查距离
+					if (!lib.filter.targetEnabled(cover, trigger.player, trigger.target)) {
+						game.log(trigger.card, "被覆盖，对", trigger.target, "无效");
+						trigger.cancel();
+						return;
+					}
+					// 改为按覆盖牌的牌名结算（乘烟同款：只换结算 content，不改 event.card——
+					// 无懈可否、伤害 tag 仍按原牌判断）
+					trigger.setContent(lib.card[cover.name].content);
+				},
+			},
+		});
+		game.addGlobalSkill("qunyou_fugai_replace");
+	}
 	/* 分辙全局补丁暂时停用（含修复），排查卡死
 	// 分辙：令持有 qunyou_fenzhe_wai 的角色本回合可对游戏外（移出游戏）的角色使用牌。
 	// 引擎在目标过滤（lib.filter.targetEnabledx/2/3、targetEnabled）与结算口（content.js:9400/9790）
@@ -299,4 +342,9 @@ export function precontent() {
 	}
 	// 若武将译名需前缀着色，与奇臣传一致在此注册，例如：
 	// lib.namePrefix.set("群", { color: "#90caf9" });
+
+	// 小白杯：注册为一个**独立的武将包（大包）**，包内按 FreeKill 的「届」分小包。
+	// 大包必须走 game.import("character", 包对象)（与活动武将扩展的 11 个包同样写法），
+	// 只在主包的 characterSort 里加顶层键是无效的——顶层键必须对应一个真实存在的武将包。
+	game.import("character", getXiaobaiPack());
 }

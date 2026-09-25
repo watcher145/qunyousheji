@@ -2754,3 +2754,37 @@ export function qunyou_chengshi_restore(player) {
 		}
 	}
 }
+
+// ==================== 覆盖：通用询问（概念规则见 precontent 的 rule_fugai） ====================
+// 让 player 从手牌选一张基本牌或普通锦囊牌，覆盖到正在结算的实体牌上。
+// trigger 为 useCardToPlayered 通知子事件；引用技能应监听 global: "useCardToPlayered"
+// 并用 event.isFirstTarget 限一次，content 里调用本函数。
+// 返回 true = 覆盖完成；之后每个目标的结算替换由全局技能 qunyou_fugai_replace 自动执行。
+export async function qunyouFugaiAsk(player, skill, trigger) {
+	const card = trigger.card;
+	// 已被覆盖的牌不可再被覆盖
+	if (card.storage?.qunyou_fugai) {
+		return false;
+	}
+	const result = await player
+		.chooseCard("h", "覆盖：将一张基本牌或普通锦囊牌放置于【" + get.translation(card) + "】之上")
+		.set("filterCard", (cardx) => get.type(cardx) == "basic" || get.type(cardx) == "trick")
+		.set("ai", (cardx) => 6 - get.value(cardx))
+		.forResult();
+	if (!result?.bool || !result.cards?.length) {
+		return false;
+	}
+	const cover = result.cards[0];
+	// 覆盖记录挂在被覆盖牌对象上：结算替换段（qunyou_fugai_replace）据此识别，牌离场记录自然消失
+	card.storage.qunyou_fugai = { card: cover, skill: skill };
+	cover.addGaintag("qunyou_fugai_tag");
+	game.log(player, "将", cover, "放置于", card, "之上");
+	// 覆盖牌进处理区：挂 relatedEvent 到 useCard 主事件，牌随整张牌结算结束自动进弃牌堆（等同打出）
+	const useEvent = trigger.getParent((evt) => evt.name == "useCard");
+	const next = player.lose([cover], ui.ordering);
+	if (useEvent?.name == "useCard") {
+		next.set("relatedEvent", useEvent);
+	}
+	await next;
+	return true;
+}

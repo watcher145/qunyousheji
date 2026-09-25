@@ -15,7 +15,7 @@ export const characterIntro = {
 	qunyou_sp_wenyang: "设计：昆世<br>评价：贴吧来的设计，如何让出牌带给你成就感？",
 	qunyou_liukun: "设计：欢愉与希望<br>“何意百炼刚，化为绕指柔。”",
 	qunyou_sunjiao: "设计：杰劼夫长(贴吧）<br>评价：很好玩的发育将，前提是你要能发育起来",
-	qunyou_luxun: "来源：BV1Rv7S65EAy<br>评价：牌好能永动而且阴",
+	qunyou_v_luxun: "来源：BV1Rv7S65EAy<br>评价：牌好能永动而且阴（不要吐槽为什么加威，因为还有另一个陆逊）",
 	qunyou_caozhi: "设计：钟林<br>评价：阴",
 	qunyou_simayi: "设计：迟眠饱（B站）<br>，来自BV1vk5G6AERQ。评价：挺看运气的，强度阳顶天",
 	qunyou_haopu: "设计：yyuan<br>评价：很好的设计，但你必须要清楚什么时候拼输才行",
@@ -29,7 +29,7 @@ export const characterIntro = {
 	qunyou_meng_liufeng: "设计：未知。<br>评价：拿一点体力上限换两张决斗。额，不好衡量，背景故事写的不错，但我没贴过来",
 	qunyou_caoshuang: "设计：嘻˘꒳˘羲<br>评价：我也不知道有没有bug",
 	qunyou_hanshiwuhu: "设计：佐世保之时雨 && 欢愉与希望（补设）<br>评价：加了个二技能，对于摸牌白还是要有补牌的手段的",
-	qunyou_zhonghui: "设计：熏鱼不爱果子。修改：欢愉与希望<br>评价：我也不知道我改的好不好，总之比原版强了。",
+	qunyou_sb_zhonghui: "设计：熏鱼不爱果子。修改：欢愉与希望<br>评价：我也不知道我改的好不好，总之比原版强了。",
 	qunyou_yang_wang: "设计：西夏笠谷。<br>评价：有操作有强度",
 	qunyou_caoxiancaohua: "设计：西夏笠谷。<br>评价：有操作有强度",
 	qunyou_xx_sunce:"设计：西夏笠谷。<br>评价：",
@@ -191,6 +191,8 @@ export const characterIntro = {
 
 	xiaobai_lisheng: "设计：胖即是胖",
 
+	xiaobai_lisheng: "设计：胖即是胖",
+
 	xiaobai_tianxu: "设计：超绝天",
 
 	xiaobai_zhushixing: "设计：虎鲸",
@@ -211,5 +213,107 @@ export const characterIntro = {
 
 	xiaobai_liukun: "设计：劉星壹閃",
 
-	qunyou_mo_wangyun: "设计：砖<br>修改：欢愉与希望<br>修改点：原技能描述不明，改为“体力值唯一最大的角色”，轮次开始和结束特定条件能补牌",
+	xiaobai_liuying: "设计：zzcclll朱苦力",
+
+	xiaobai_liuji: "设计：廷玉",
+
+	xiaobai_liumin: "设计：王秀丽",
+
+	xiaobai_lifeng: "设计：小叶子",
+
+	xiaobai_luyu: "设计：胖宝宝",
+
+	xiaobai_weidan: "设计：易大剧",
+
+	xiaobai_yangyong: "设计：小叶子",
+
+	xiaobai_dengfuren: "设计：食马者",
+
+	xiaobai_louxuan: "设计：胖宝宝",
+
+	xiaobai_maohuanghou: "设计：末页",
+
+	xiaobai_wangsi: "设计：cyc",
+
+	xiaobai_sunshao: "设计：柠檬",
+
+	xiaobai_baochu: "设计：小叶子",
+
+	xiaobai_huzhi: "设计：胖即是胖",
+
+	xiaobai_wangbi: "设计：复仇滚木",
+
+	xiaobai_xumu: "设计：狐狸",
+
+	xiaobai_huzong: "设计：屑",
+
+	xiaobai_zhaozi: "设计：忆雨",
+
+	xiaobai_huangwan: "设计：忘e233",
+
+	xiaobai_gaixun: "设计：Sachiko",
+
+	xiaobai_fuxuan: "设计：静谦",
+
+	xiaobai_simayue: "设计：小叶子",
+
+	xiaobai_wangbimawen: "设计：复仇滚木",
+
+	xiaobai_weiji: "设计：一只白板",
+
+	xiaobai_fanjian: "设计：铝",
+
+	xiaobai_hezhi: "设计：屑",
+
+	xiaobai_lujix: "设计：劉星壹閃",
+
+	xiaobai_doumiao: "设计：小叶子",
+
+	xiaobai_hexiu: "设计：超绝天",
+
+	xiaobai_huangfugui: "设计：左小白",
+
+	xiaobai_yangxu: "设计：胖即是胖",
+
+	xiaobai_shichong: "设计：我来天地正秋风",
+
+	xiaobai_nieyou: "设计：换家德没有马",
+
+	xiaobai_xueying: "设计：雨幕江南",
+
+	xiaobai_douwu: "设计：大祭司",
+
+	xiaobai_liying: "设计：胖即是胖",
+
+	xiaobai_wangxiu: "设计：夜已央",
+
+	xiaobai_leguang: "设计：换家德没有马",
+
+	xiaobai_peikai: "设计：sachiko",
+
+	xiaobai_peiwei: "设计：天行",
+
+	xiaobai_zhangfang: "设计：静谦",
+
+	xiaobai_guopu: "设计：Why Do We Fall",
+
+	xiaobai_simayou: "设计：Miss",
+
+	xiaobai_simajun: "设计：虎鲸",
+
+	xiaobai_wangjunx: "设计：吴太祖大皇帝",
+
+	xiaobai_heqiao: "设计：可余雪",
+
+	xiaobai_jishao: "设计：以火修功",
+
+	xiaobai_zuosi: "设计：暗夜决彻",	xiaobai_xunkai: "设计：左小白",	xiaobai_wangjunx: "设计：吴太祖大皇帝",	qunyou_mo_wangyun: "设计：砖<br>修改：欢愉与希望<br>修改点：原技能描述不明，改为“体力值唯一最大的角色”，轮次开始和结束特定条件能补牌",
+
+	xiaobai_zhaoyu: "设计：柠檬",
+
+	xiaobai_zhangyu: "设计：Mushi",	xiaobai_luoshang: "设计：虎鲸",
+
+	xiaobai_xiyingxi: "设计：胖即是胖",	qunyou_luxun: "来源：BV1KHYX6yErH",
+
+	qunyou_zhonghui: "设计：朱苦力",
 };

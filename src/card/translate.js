@@ -8,4 +8,6 @@ export const cardTranslate = {
 	xiaobai_dabai_info: "此牌可当作其对应的「小白杯」武将技能描述中的一张基本牌或普通锦囊牌使用。此牌进入弃牌堆后销毁。",
 	zhuoming_fangma: "防御马",
 	zhuoming_jinma: "进攻马",
+	xiaobai_xuanyubao: "悬鱼宝物",
+	xiaobai_xuanyubao_info: "〖悬鱼〗置入宝物栏的牌。",
 };
