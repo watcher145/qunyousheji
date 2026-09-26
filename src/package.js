@@ -145,8 +145,8 @@ const characterSortTranslate = {
 };
 
 const characterSort = {
-	qunyou_sanshe: ["qunyou_zoushi", "qunyou_wenyang", "qunyou_shibao", "qunyou_sunxiu", "qunyou_zhaoyun", "qunyou_sunshao", "qunyou_caocao", "qunyou_sp_wenyang", "qunyou_liukun", "qunyou_simayi", "qunyou_sunjiao", "qunyou_v_luxun", "qunyou_caozhi", "qunyou_haopu", "qunyou_chen_zhaoyun", "qunyou_cbp_zhaoyun", "qunyou_sb_zhugeliang", "qunyou_liumo", "qunyou_meng_liufeng", "qunyou_caoshuang", "qunyou_hanshiwuhu", "qunyou_sb_zhonghui", "qunyou_mo_jiangwei", "qunyou_sb_guohuai", "qunyou_clan_diaochan", "qunyou_wu_zhangfei", "qunyou_v_guanyu", "qunyou_zhangyan", "qunyou_lvyi", "qunyou_zhouyu", "qunyou_wangyun", "qunyou_guojia", "qunyou_zhaoshuang", "qunyou_guanyu", "qunyou_dongzhuo", "qunyou_clan_zhugejun", "qunyou_taishici", "qunyou_sunce", "qunyou_guotu", "qunyou_liuchen", "qunyou_masu", "qunyou_zhongjin", "qunyou_feiyi", "qunyou_clan_xunzhuan", "qunyou_clan_wangrong", "qunyou_clan_yuantanshang", "qunyou_clan_yuanshao", "qunyou_yangqun", "qunyou_clan_yuanshu", "qunyou_clan_jiangwei", "qunyou_clan_diaochan2", "qunyou_taokan", "qunyou_clan_kongyu", "qunyou_clan_yuankui", "qunyou_jiananfeng", "qunyou_sunhao", "qunyou_clan_wangjun", "qunyou_zhugeguo", "qunyou_mo_wangyun", "qunyou_luxun", "qunyou_zhonghui"],
-	threed: ["threed_dongbai", "threed_heji"],
+	qunyou_sanshe: ["qunyou_zoushi", "qunyou_wenyang", "qunyou_shibao", "qunyou_sunxiu", "qunyou_zhaoyun", "qunyou_sunshao", "qunyou_caocao", "qunyou_sp_wenyang", "qunyou_liukun", "qunyou_simayi", "qunyou_sunjiao", "qunyou_v_luxun", "qunyou_caozhi", "qunyou_haopu", "qunyou_chen_zhaoyun", "qunyou_cbp_zhaoyun", "qunyou_sb_zhugeliang", "qunyou_liumo", "qunyou_meng_liufeng", "qunyou_caoshuang", "qunyou_hanshiwuhu", "qunyou_sb_zhonghui", "qunyou_mo_jiangwei", "qunyou_sb_guohuai", "qunyou_clan_diaochan", "qunyou_wu_zhangfei", "qunyou_v_guanyu", "qunyou_zhangyan", "qunyou_lvyi", "qunyou_zhouyu", "qunyou_wangyun", "qunyou_guojia", "qunyou_zhaoshuang", "qunyou_guanyu", "qunyou_dongzhuo", "qunyou_clan_zhugejun", "qunyou_taishici", "qunyou_sunce", "qunyou_guotu", "qunyou_liuchen", "qunyou_masu", "qunyou_zhongjin", "qunyou_feiyi", "qunyou_clan_xunzhuan", "qunyou_clan_wangrong", "qunyou_clan_yuantanshang", "qunyou_clan_yuanshao", "qunyou_yangqun", "qunyou_clan_yuanshu", "qunyou_clan_jiangwei", "qunyou_clan_diaochan2", "qunyou_taokan", "qunyou_clan_kongyu", "qunyou_clan_yuankui", "qunyou_jiananfeng", "qunyou_sunhao", "qunyou_clan_wangjun", "qunyou_zhugeguo", "qunyou_mo_wangyun", "qunyou_luxun", "qunyou_zhonghui", "qunyou_sunziliufang", "qunyou_zhangfei"],
+	threed: ["threed_dongbai", "threed_heji", "threed_qianzhao"],
 	qiufeng: ["qiufeng_zhangqiying", "qiufeng_hushi", "qiufeng_xiahouhui"],
 	zishubei: ["zishu_liyan", "zishu_lvju", "zishu_xunyu", "zishu_wangguan","zishu_panshu", "zishu_sunhe", "zishu_zhangjinyun", "zishu_zangba", "zishu_duanjiong", "zishu_shantao", "zishu_maohuanghou", "zishu_guli","zishu_yongkai", "zishu_liangxi"],
 	zhuoming: ["zhuoming_gongsunyuan", "zhuoming_feili_gongsunyuan", "zhuoming_liuyan", "zhuoming_mateng", "zhuoming_fq_mateng", "zhuoming_sc_mateng", "zhuoming_dongzhuo"],
@@ -160,7 +160,7 @@ const characterSort = {
 	qunyou_gaijin: ["qunyou_jiangwei","qunyou_pengyue"],
 	qunyou_yongdong: ["qunyou_wanglang"],
 	xuandie_design: ["xuandie_xunguan", "xuandie_lvzhi", "xuandie_wenjun", "xuandie_zuti"],
-	maomi_dayuan: ["maokuo_caobuxing", "maokuo_jiangwei", "maokuo_nuqi_jiangwei", "maokuo_pengyang", "maokuo_wangwang"],
+	maomi_dayuan: ["maokuo_caobuxing", "maokuo_jiangwei", "maokuo_nuqi_jiangwei", "maokuo_pengyang", "maokuo_wangwang", "maokuo_zhangte"],
 };
 
 // 小白杯：独立成大包，内部按 FreeKill 的「届」分小包
@@ -171,8 +171,10 @@ const xiaobaiSort = {
 	xiaobai_thirteen: ["xiaobai_shenmu", "xiaobai_gaoding", "xiaobai_feishi", "xiaobai_tianxu", "xiaobai_heyong", "xiaobai_huzhi", "xiaobai_wangbi", "xiaobai_xumu", "xiaobai_huzong", "xiaobai_zhaozi", "xiaobai_huangwan", "xiaobai_gaixun", "xiaobai_fuxuan", "xiaobai_simayue"],
 	xiaobai_fourteen: ["xiaobai_hufang", "xiaobai_lvzhu", "xiaobai_zhangjian", "xiaobai_youchu", "xiaobai_lvyi", "xiaobai_wangbimawen", "xiaobai_weiji", "xiaobai_fanjian", "xiaobai_hezhi", "xiaobai_lujix", "xiaobai_doumiao", "xiaobai_hexiu", "xiaobai_huangfugui", "xiaobai_yangxu", "xiaobai_shichong"],
 	xiaobai_fifteen: ["xiaobai_baoxun", "xiaobai_chengxi", "xiaobai_xunyue", "xiaobai_hanji", "xiaobai_zhaorao", "xiaobai_nieyou", "xiaobai_xueying", "xiaobai_douwu", "xiaobai_liying", "xiaobai_wangxiu", "xiaobai_leguang", "xiaobai_peikai", "xiaobai_peiwei", "xiaobai_zhangfang", "xiaobai_guopu"],
-	xiaobai_sixteen: ["xiaobai_lite", "xiaobai_suojing", "xiaobai_liukun", "xiaobai_liusong", "xiaobai_jishao", "xiaobai_zuosi", "xiaobai_simayou", "xiaobai_simajun", "xiaobai_wangjunx", "xiaobai_heqiao", "xiaobai_xunkai", "xiaobai_luoshang"],
-	xiaobai_sgs48: ["xiaobai_zhugerong", "xiaobai_zhaoyu", "xiaobai_zhangyu", "xiaobai_xiyingxi"],
+	// ⚠️ 双面武将的**背面 id 也要收录**（如 xiaobai_yangxianrong 的 _hidden 面）：
+	//    xiaobaiIdSet 只认这里的 id，漏掉背面 → 背面会残留在主包（verify-xiaobai-pack 会报「残留小白杯角色」）。
+	xiaobai_sixteen: ["xiaobai_lite", "xiaobai_suojing", "xiaobai_liukun", "xiaobai_liusong", "xiaobai_jishao", "xiaobai_zuosi", "xiaobai_simayou", "xiaobai_simajun", "xiaobai_wangjunx", "xiaobai_heqiao", "xiaobai_xunkai", "xiaobai_luoshang", "xiaobai_yangxianrong", "xiaobai_yangxianrong_hidden"],
+	xiaobai_sgs48: ["xiaobai_zhugerong", "xiaobai_zhaoyu", "xiaobai_zhangyu", "xiaobai_xiyingxi", "xiaobai_cuifu", "xiaobai_hushi", "xiaobai_jiyan"],
 };
 
 const xiaobaiIdSet = new Set(Object.values(xiaobaiSort).flat());

@@ -74,6 +74,14 @@ const characterTranslate = parseObjStringValues(translateSrc);
 const dataSrc = read('character/data.js');
 const allIds = parseAllCharacterIds(dataSrc);
 
+// 双面武将的**背面**与正面是同一个角色，README 索引只列一次 —— 否则会出现
+// 「小白羊献容、小白羊献容」这种重复行。
+// ⚠️ 不能把 dualSideCharacter 的**值**全收进来：正面也会指向背面（互为双面），
+//    那样会把正反两面一起排除。按约定只排除 `_hidden` 背面 id。
+const dualBackIds = new Set();
+for (const m of dataSrc.matchAll(/\b(\w*_hidden)\s*:/g)) dualBackIds.add(m[1]);
+const listableIds = (ids) => ids.filter((id) => !dualBackIds.has(id));
+
 // --- Extract designer/source name ---
 function extractDesigner(id) {
   const intro = characterIntro[id] || '';
@@ -105,6 +113,8 @@ const collectedDesigner = [];
 const collectedSource = [];
 
 for (const id of allIds) {
+  // 双面武将背面与正面同属一个角色，索引只列正面一次
+  if (dualBackIds.has(id)) continue;
   const intro = characterIntro[id] || '';
   const designer = extractDesigner(id);
   const isBV = /^BV\d/.test(designer);
@@ -221,7 +231,7 @@ const xiaobaiOrder = Object.keys(xiaobaiSort);
 if (xiaobaiOrder.length > 0) {
   const subSections = [];
   for (const pkg of xiaobaiOrder) {
-    const ids = xiaobaiSort[pkg];
+    const ids = listableIds(xiaobaiSort[pkg]);
     if (!ids || ids.length === 0) continue;
     const subName = sortTranslate[pkg] || pkg;
     subSections.push(`#### ${subName}\n${makeMergedLinesWithSuffix(ids).join('\n')}`);

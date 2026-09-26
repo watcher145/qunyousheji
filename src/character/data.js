@@ -774,6 +774,14 @@ export const characterData = {
 		hujia: 0,
 		skills: ["threed_xuyi1","threed_xuyi2"],
 	},
+	threed_qianzhao:{
+		sex: "male",
+		group: "wei",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["threed_yuanzhen","threed_zhiyong"],
+	},
 	shanhe_jiangwei:{
 		sex: "male",
 		group: "shu",
@@ -1375,6 +1383,54 @@ export const characterData = {
 		skills: ["xiaobai_xingzu", "xiaobai_bowen"],
 	},
 
+	xiaobai_cuifu: {
+		sex: "female",
+		group: "wei",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_nichang", "xiaobai_diaodie"],
+	},
+
+	xiaobai_hushi: {
+		sex: "female",
+		group: "shu",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_huoyan", "xiaobai_yanzai"],
+	},
+
+	xiaobai_jiyan: {
+		sex: "male",
+		group: "wu",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_gaiju", "xiaobai_suli"],
+	},
+
+	xiaobai_yangxianrong: {
+		sex: "female",
+		group: "jin",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["xiaobai_tucun", "xiaobai_xingluan", "dualside"],
+		dualSideCharacter: "xiaobai_yangxianrong_hidden",
+	},
+
+	xiaobai_yangxianrong_hidden: {
+		sex: "female",
+		group: "jin",
+		hp: 1,
+		maxHp: 1,
+		hujia: 0,
+		skills: ["xiaobai_tucun", "xiaobai_xingluan", "dualside"],
+		dualSideCharacter: "xiaobai_yangxianrong",
+		isUnseen: true,
+	},
+
 	xiaobai_zhaoqi: {
 		sex: "male",
 		group: "qun",
@@ -1924,5 +1980,32 @@ export const characterData = {
 		hujia: 0,
 		clans: ["颍川钟氏"],
 		skills: ["qunyou_yewang", "qunyou_zhuting", "qunyou_yuyuan", "qunyou_quyan"],
+	},
+
+	maokuo_zhangte: {
+		sex: "male",
+		group: "wei",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["maokuo_shidi"],
+	},
+
+	qunyou_sunziliufang: {
+		sex: "male",
+		group: "wei",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["qunyou_zhigong", "qunyou_fuan"],
+	},
+
+	qunyou_zhangfei: {
+		sex: "male",
+		group: "shu",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["qunyou_hedan", "qunyou_weishi"],
 	},
 };

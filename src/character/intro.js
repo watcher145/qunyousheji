@@ -90,6 +90,7 @@ export const characterIntro = {
 	qunyou_masu:"设计：小白大白小黑大嘿",
 	threed_dongbai: "设计：白驹<br>修改：欢愉与希望<br>修改点：去掉了崩坏的条件限制",
 	threed_heji: "设计：柠檬<br>评价：",
+	threed_qianzhao: "设计：林已<br>修改：欢愉与希望<br>修改点：两处改动点：一个触发时机增加“成为与你距离不为1的其他角色使用牌的唯一目标后”，另一处是选项1改为“你弃置其一张牌。<br>评价：很有简洁之美的设计，但是强度有点落后”",
 	shanhe_jiangwei: "设计：o.O<br>评价：",
 	shanhe_wangyi: "设计：颜渊&江雪<br>评价：有意思的设计，回合开始时必须要给敌人加鸠，否则自己就会一直获得鸠标记，但是血还是太少了，我加了一上限",
 	xiaobai_lite: "设计：why do we fall<br>说明：群相册里的李特忽略了一个边界问题，如果一个阶段内多次触发了括澜的否则分支，该阶段结束时视为使用多张兵临城下吗，其实区别不大，兵临城下是要把牌放回去的，有时候用了多张也不见得收益很高",
@@ -202,6 +203,16 @@ export const characterIntro = {
 	xiaobai_dinggu: "设计：qqqqq",
 
 	xiaobai_zhugerong: "设计：七哀",
+
+	xiaobai_cuifu: "设计：左小白",
+
+	xiaobai_hushi: "设计：虎鲸",
+
+	xiaobai_jiyan: "设计：大祭司",
+
+	xiaobai_yangxianrong: "设计：winkid",
+
+	xiaobai_yangxianrong_hidden: "设计：winkid",
 
 	xiaobai_zhaoqi: "设计：扬林",
 
@@ -316,4 +327,10 @@ export const characterIntro = {
 	xiaobai_xiyingxi: "设计：胖即是胖",	qunyou_luxun: "来源：BV1KHYX6yErH",
 
 	qunyou_zhonghui: "设计：朱苦力",
+
+	maokuo_zhangte: "设计：陈木",
+
+	qunyou_sunziliufang: "设计：左小白",
+
+	qunyou_zhangfei: "设计：一声叶落",
 };

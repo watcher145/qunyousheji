@@ -88,6 +88,7 @@ export const characterTitle = {
 	qunyou_masu:"兵法在胸",
 	threed_dongbai:"渭浊阳关",
 	threed_heji:"亭盖荧宫",
+	threed_qianzhao:"凛正戍远塞",
 	shanhe_jiangwei:"宫锁透甲",
 	shanhe_wangyi:"璟玉秋霜",
 	xiaobai_lite:"六郡行王",
@@ -202,6 +203,16 @@ export const characterTitle = {
 
 	xiaobai_zhugerong: "崖岸之露",
 
+	xiaobai_cuifu: "绫蝶枝折",
+
+	xiaobai_hushi: "暗月炎花",
+
+	xiaobai_jiyan: "青竹折干",
+
+	xiaobai_yangxianrong: "居辱疑荣",
+
+	xiaobai_yangxianrong_hidden: "居辱疑荣",
+
 	xiaobai_zhaoqi: "苦无时命",
 
 	xiaobai_zhaorao: "独步天下",
@@ -315,4 +326,10 @@ export const characterTitle = {
 	xiaobai_xiyingxi: "贵而能贫",	qunyou_luxun: "儒才",
 
 	qunyou_zhonghui: "独锋剑阴",
+
+	maokuo_zhangte: "斯城永固",
+
+	qunyou_sunziliufang: "织纵朝纲",
+
+	qunyou_zhangfei: "当阳不让",
 };

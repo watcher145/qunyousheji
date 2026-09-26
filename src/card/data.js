@@ -203,6 +203,14 @@ export const cardData = {
 		type: "trick",
 		destroy: "discardPile",
 	},
+	// 踏塞用的「无名虚拟坐骑」——纯显示载体，不是实体牌。
+	// 它们**不进牌堆**（故无 list 条目）、**不可被获取/使用**，永远不会真正装备，
+	// 所以这里的 `distance` 是文档性质：真正的距离效果由 lib.skill.zhuoming_tasai.mod
+	// 提供（get.distance 只读真实装备牌，不读 player.extraEquip）。
+	//
+	// 显示名由技能的 `mod.cardname` 改写成引擎内置的坐骑栏名（防御马 / 攻击马），
+	// 所以这里叫什么名字**无所谓**，只为内部区分两张载体牌。subtype 必须都是 equip3
+	// （坐骑栏栏位号），否则引擎会把牌画到别的槽位去。
 	zhuoming_fangma: {
 		type: "equip",
 		subtype: "equip3",

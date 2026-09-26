@@ -156,6 +156,8 @@ export const characterTranslate = {
 	threed_dongbai_prefix: "3D",
 	threed_heji: "3D何姬",
 	threed_heji_prefix: "3D",
+	threed_qianzhao: "3D牵招",
+	threed_qianzhao_prefix: "3D",
 	shanhe_jiangwei: "晦姜维",
 	shanhe_jiangwei_prefix: "晦",
 	shanhe_wangyi: "弦王异",
@@ -324,6 +326,21 @@ export const characterTranslate = {
 	xiaobai_zhugerong: "小白诸葛融",
 	xiaobai_zhugerong_prefix: "小白",
 
+	xiaobai_cuifu: "小白崔芣",
+	xiaobai_cuifu_prefix: "小白",
+
+	xiaobai_hushi: "小白胡氏",
+	xiaobai_hushi_prefix: "小白",
+
+	xiaobai_jiyan: "小白暨艳",
+	xiaobai_jiyan_prefix: "小白",
+
+	xiaobai_yangxianrong: "小白羊献容",
+	xiaobai_yangxianrong_prefix: "小白",
+
+	xiaobai_yangxianrong_hidden: "小白羊献容",
+	xiaobai_yangxianrong_hidden_prefix: "小白",
+
 	xiaobai_zhaoqi: "小白赵岐",
 	xiaobai_zhaoqi_prefix: "小白",
 
@@ -489,11 +506,21 @@ export const characterTranslate = {
 	xiaobai_zhangyu: "小白张裕",
 	xiaobai_zhangyu_prefix: "小白",
 
-	xiaobai_xiyingxi: "小学习英习",
-	xiaobai_xiyingxi_prefix: "小白",	xiaobai_luoshang: "小白罗尚",
+	xiaobai_xiyingxi: "小白习英习",
+	xiaobai_xiyingxi_prefix: "小白",	
+	xiaobai_luoshang: "小白罗尚",
 	xiaobai_luoshang_prefix: "小白",
 	qunyou_luxun: "陆逊",
 
 	qunyou_zhonghui: "群友钟会",
 	qunyou_zhonghui_prefix: "群友",
+
+	maokuo_zhangte: "猫咪张特",
+	maokuo_zhangte_prefix: "猫咪",
+
+	qunyou_sunziliufang: "群友孙资&刘放",
+	qunyou_sunziliufang_prefix: "群友",
+
+	qunyou_zhangfei: "群友张飞",
+	qunyou_zhangfei_prefix: "群友",
 };

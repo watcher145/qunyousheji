@@ -1358,6 +1358,83 @@ export function qunyou_gushe_targets(player) {
 	return game.filterPlayer((target) => target !== player && target.isIn() && player.canCompare(target));
 }
 
+// ==================== 威势：拼点结果归一化 ====================
+// 把三种拼点形态（单目标 chooseToCompare / 多目标 chooseToCompareMultiple /
+// 共同拼点 chooseToCompareMeanwhile）统一成"参与者 + 拼点牌 + 点数"的列表。
+// 返回 [{ player, card, num }]，索引 0 恒为发起者（event.player）。
+// ⚠️ 共同拼点也是**比点数**（不是比牌数），这里统一取各自的拼点牌点数。
+// ⚠️ 牌没有 isIn()（那是玩家的方法）——判牌"还在不在"一律用 get.position(card, true)。
+export function qunyou_weishi_entries(event) {
+	if (!event || !event.player) {
+		return [];
+	}
+	const player = event.player;
+	const result = event.result || {};
+	const entries = [];
+	const push = (current, card, num) => {
+		if (!current || !card) {
+			return;
+		}
+		// 点数优先取事件结算出的值；拿不到再回退到 get.number(card, current)
+		const value = typeof num === "number" ? num : get.number(card, current);
+		// 共同拼点会以数组形式暂存 num1/num2，这里剥掉数组外壳
+		entries.push({ player: current, card, num: Array.isArray(value) ? value[0] : value });
+	};
+	if (event.compareMeanwhile || (Array.isArray(event.targets) && event.targets.length > 1)) {
+		// 多对手：result.num1 为数组（发起者每次的值相同，取 [0]）、result.num2 逐对手
+		const cards = result.targets || event.cardlist || [];
+		push(player, result.player || event.card1, Array.isArray(result.num1) ? result.num1[0] : result.num1);
+		(event.targets || []).forEach((target, index) => {
+			push(target, cards[index], Array.isArray(result.num2) ? result.num2[index] : undefined);
+		});
+		return entries;
+	}
+	// 单目标拼点
+	push(player, result.player || event.card1, result.num1);
+	push(event.target, result.target || event.card2, result.num2);
+	return entries;
+}
+
+// 威势：给对手挂"本回合拼点牌视为【影】"或"手牌均视为【影】"的临时技能。
+// big=true 为 10 倍档（手牌级，更强），否则为 2 倍档（拼点牌级）。
+// 已有更强档时不降级；已挂同档时跳过（返回 false）。
+//
+// ⚠️ 过期时机必须用 { global: "phaseAnyEnd" }（= 任意角色的任意阶段结束时）：
+//    { player: "phaseEnd" } 只在**该角色自己的回合**结束时过期（gameEvent.ts:596
+//    有 `role !== "global" && player !== event[role]` 的判定），而威势挂的是**对手**，
+//    对手的回合还在后面 —— 那样 mark 会一直留到对手的下一个回合，等于"没消失"。
+//    relatedTrigger.phaseAny 展开为 lib.phaseName，故 phaseAnyEnd 覆盖六个阶段。
+//
+// ⚠️ 同一时刻只让一个子技能存活（升档时先摘旧的）：
+//    两个子技能的 onremove 都会把 level 归零，若并存则会互相踩。而"改 num"的义务
+//    已由 hand 档自己的 mod.cardnumber 承担，compare 不必留着兜底。
+export function qunyou_weishi_mark(target, big) {
+	const want = big ? 2 : 1;
+	const storage = qunyou_weishi_storage(target);
+	if (storage.level >= want) {
+		return false;
+	}
+	const skill = big ? "qunyou_weishi_hand" : "qunyou_weishi_compare";
+	// ⚠️ 顺序要紧：removeSkill 会触发子技能的 onremove（它负责把 level 归零），
+	// 所以必须先删旧档、再写新档，否则刚写的 level 会被 onremove 清掉。
+	target.removeSkill("qunyou_weishi_compare");
+	target.removeSkill("qunyou_weishi_hand");
+	storage.level = want;
+	if (!target.hasSkill(skill)) {
+		target.addTempSkill(skill, { global: "phaseAnyEnd" });
+	}
+	target.markSkill(skill);
+	return true;
+}
+
+// 威势：某角色本回合的威势等级记录（挂在该角色自己身上）
+export function qunyou_weishi_storage(target) {
+	if (!target.storage.qunyou_weishi_level) {
+		target.storage.qunyou_weishi_level = { level: 0 };
+	}
+	return target.storage.qunyou_weishi_level;
+}
+
 export function qunyou_gushe_getTopCard() {
 	const card = ui.cardPile.firstChild;
 	return get.itemtype(card) === "card" ? card : null;
@@ -2456,108 +2533,178 @@ export async function jinluSwapUI(player) {
 }
 
 /**
- * 暮心核心流程：发动者与目标们依次展示一张未标记手牌；无法展示的角色选择选项。
- * 供暮心本体（出牌阶段）与苍霄（受伤时）复用。
- * @param {Player} player 发动者
- * @param {Player[]} targets 已选目标（其他角色）
+ * 「暮心」记录牌的载体：**直接存在 `player.storage.qunyou_muxin`（牌数组）**。
+ * 这样引擎能自动处理两件事（get/index.js:4833 / player.js:4706）：
+ *   ① `intro.content: "cards"` → `storageintro` 走 `dialog.addAuto(content)` 渲染牌面；
+ *   ② `updateMark` 的 `Array.isArray(storage)` 分支 → 标记角标自动显示记录张数。
+ * @param {Player} player 暮心拥有者
+ * @returns {Card[]}
  */
-export async function qunyou_muxin_run(player, targets) {
+export function qunyou_muxin_record(player) {
+	if (!Array.isArray(player.storage.qunyou_muxin)) player.storage.qunyou_muxin = [];
+	return player.storage.qunyou_muxin;
+}
+
+/**
+ * 取「暮心」记录数（记录牌张数）。
+ * @param {Player} player 暮心拥有者
+ */
+export function qunyou_muxin_recordCount(player) {
+	return qunyou_muxin_record(player).length;
+}
+
+/**
+ * 「暮心」核心流程：拥有者与至多有手牌的其他角色各展示一张手牌并记录，
+ * 然后所有参与者同时选择一项。
+ * - 选项一：令暮心拥有者失去1点体力上限，选择者获得「争行」
+ * - 选项二：令暮心拥有者视为使用一张【决斗】，选择者获得「辩义」
+ * - 选项三：令暮心拥有者受到1点无来源伤害，选择者获得「伏对」
+ * 供「暮心」本体（游戏开始时）与「苍霄」（受伤时）复用。
+ * @param {Player} player 暮心拥有者（曹操）
+ * @param {Player[]} [chosen] 预选好的其他角色；不传则在本函数内询问
+ */
+export async function qunyou_muxin_run(player, chosen) {
+	const record = qunyou_muxin_record(player);
 	const mark = "qunyou_muxin_mark";
-	const turnCards = (player.storage.qunyou_muxin_turn_cards = player.storage.qunyou_muxin_turn_cards || []);
-	// 发动者展示一张未标记手牌（其展示的牌同样被打标记）
-	const selfCands = player.getCards("h", (c) => !c.hasGaintag(mark));
-	console.log("[暮心] 发动者未标记手牌数:", selfCands.length);
-	if (!selfCands.length) return;
-	const selfResult = await player
-		.chooseCard("暮心：展示一张手牌", "h", true, (c) => !c.hasGaintag(mark))
-		.set("ai", (card) => 6 - get.value(card, get.player()))
-		.forResult();
-	if (!selfResult?.bool || !selfResult.cards?.length) return;
-	const selfCard = selfResult.cards[0];
-	selfCard.addGaintag(mark);
-	console.log("[暮心] 发动者展示牌", get.name(selfCard), "gaintag:", selfCard.gaintag?.join(","));
-	turnCards.push(selfCard);
-	await player.showCards([selfCard], `${get.translation(player)}发动了【暮心】`);
 
-	const shownTargets = [];
-	for (const target of targets.sortBySeat()) {
-		if (!target.isIn()) continue;
-		const cands = target.getCards("h", (c) => !c.hasGaintag(mark));
-		console.log("[暮心] " + target.name + " 未标记手牌数:", cands.length, "手牌总数:", target.countCards("h"));
-		if (!cands.length) {
-			console.log("[暮心] " + target.name + " 无法展示，进入选项分支");
-			// 无法展示牌 → 该角色选择一项
-			const res = await target
-				.chooseControl("选项一", "选项二", "选项三")
-				.set("prompt", `暮心：${get.translation(player)}无法展示牌，请选择一项`)
-				.set("choiceList", [
-					`令其依次对本次展示牌的其他角色造成1点伤害（共${get.cnNumber(shownTargets.length)}名）`,
-					`令其获得你所有以此法展示过的牌并受到1点无来源伤害`,
-					`令其回复1点体力`,
-				])
-				.set("ai", () => {
-					const attacker = player;
-					const att = get.attitude(target, attacker);
-					if (att > 0) {
-						if (attacker.isDamaged()) return "选项三";
-						return "选项一";
-					}
-					let v1 = 0;
-					for (const st of shownTargets) v1 += get.attitude(attacker, st) <= 0 ? 1 : -1;
-					const markCards = target.getCards("hej", (c) => c.hasGaintag(mark));
-					const v2 = markCards.reduce((sum, c) => sum + get.value(c, attacker), 0) - 2;
-					const v3 = attacker.isDamaged() ? 1 : 0;
-					const min = Math.min(v1, v2, v3);
-					if (min === v3) return "选项三";
-					if (min === v2) return "选项二";
-					return "选项一";
-				})
-				.forResult();
-			console.log("[暮心] " + target.name + " 选择了:", res?.control);
-			if (res?.control === "选项一") {
-				target.popup("选项一");
-				player.chat("大军既下，尔等敢不低头？");
-				for (const st of shownTargets) {
-					if (st.isIn()) await st.damage(player);
-				}
-				player.addTempSkill("qunyou_muxin_disabled", "phaseAfter");
-			} else if (res?.control === "选项二") {
-				target.popup("选项二");
-				player.chat("负孤一伤，换尔掌中之物，值了。");
-				const markCards = target.getCards("hej", (c) => c.hasGaintag(mark));
-				if (markCards.length) await player.gain(markCards, target, "giveAuto");
-				await player.damage("nosource");
-				player.addTempSkill("qunyou_muxin_disabled", "phaseAfter");
-			} else if (res?.control === "选项三") {
-				target.popup("选项三");
-				player.chat("身暮不老，折而不倒，且容孤再战。");
-				await player.recover();
-			}
-			continue;
-		}
-		const result = await target
-			.chooseCard("暮心：展示一张手牌", "h", true, (c) => !c.hasGaintag(mark))
-			.set("ai", (card) => 6 - get.value(card, target))
+	// 1. 选择至多X名有手牌的其他角色（X = 体力值）
+	const X = Math.max(1, player.getHp());
+	let targets = chosen;
+	if (!targets) {
+		if (!game.hasPlayer((t) => t !== player && t.countCards("h") > 0)) return;
+		const res = await player
+			.chooseTarget(`暮心：选择至多${get.cnNumber(X)}名有手牌的其他角色`, [1, X], (card, p, t) => t !== p && t.countCards("h") > 0)
+			.set("ai", (target) => (get.attitude(player, target) > 0 ? 2 : 1))
 			.forResult();
-		if (result?.bool && result.cards?.length) {
-			const card = result.cards[0];
-			card.addGaintag(mark);
-			console.log("[暮心] " + target.name + " 展示牌", get.name(card), "gaintag:", card.gaintag?.join(","));
-			turnCards.push(card);
-			await target.showCards([card], `${get.translation(target)}因【暮心】展示了手牌`);
-			shownTargets.push(target);
-		}
+		if (!res?.bool || !res.targets?.length) return;
+		targets = res.targets;
+	}
+	targets = targets.filter((t) => t.isIn() && t.countCards("h") > 0).sortBySeat();
+	if (!targets.length) return;
+
+	// 2. 拥有人自己 + 各目标各展示一张手牌，一并记录
+	const participants = [player, ...targets].filter((t) => t.isIn());
+	const shown = [];
+	for (const t of participants) {
+		const cands = t.getCards("h", (c) => !c.hasGaintag(mark));
+		if (!cands.length) continue;
+		const pick = await t
+			.chooseCard("暮心：展示并记录一张手牌", "h", true, (c) => !c.hasGaintag(mark))
+			.set("ai", (card) => 6 - get.value(card, t))
+			.forResult();
+		if (!pick?.bool || !pick.cards?.length) continue;
+		const card = pick.cards[0];
+		card.addGaintag(mark);
+		record.add(card);
+		shown.push({ player: t, card });
+	}
+	if (!shown.length) return;
+	for (const { player: t, card } of shown) {
+		await t.showCards([card], `${get.translation(t)}发动了【暮心】，展示并记录一张牌`);
+		player.markSkill("qunyou_muxin");
 	}
 
-	player.storage.qunyou_muxin_turn_count = (player.storage.qunyou_muxin_turn_count || 0) + 1;
-	if (player.storage.qunyou_muxin_turn_count >= 3) {
-		const gainCards = turnCards.filter((c) => {
-			const owner = get.owner(c);
-			return owner && owner !== player && get.itemtype(c) === "card";
-		});
-		if (gainCards.length) await player.gain(gainCards, "gain2");
-		player.addTempSkill("qunyou_muxin_disabled", "phaseAfter");
+	// 3. 所有参与者同时选择（依次询问、选择完统一结算）
+	const choices = [];
+	for (const t of participants) {
+		const res = await t
+			.chooseControl("选项一", "选项二", "选项三")
+			.set("prompt", `暮心：${get.translation(player)}发动了暮心，请选择一项`)
+			.set("choiceList", [
+				`令${get.translation(player)}失去1点体力上限，然后你获得技能「争行」`,
+				`令${get.translation(player)}视为使用一张【决斗】，然后你获得技能「辩义」`,
+				`令${get.translation(player)}受到1点无来源伤害，然后你获得技能「伏对」`,
+			])
+			.set("ai", () => {
+				const att = get.attitude(t, player);
+				if (att > 0) return "选项三";
+				return "选项一";
+			})
+			.forResult();
+		choices.push({ player: t, control: res?.control || "选项一" });
 	}
+
+	// 4. 统一结算
+	for (const { player: t, control } of choices) {
+		if (!t.isIn()) continue;
+		if (control === "选项一") {
+			t.popup("选项一");
+			await player.loseMaxHp();
+			t.addSkillLog("qunyou_zhengxing");
+		} else if (control === "选项二") {
+			t.popup("选项二");
+			await player.chooseUseTarget({ name: "juedou", isCard: true }, true, false);
+			t.addSkillLog("qunyou_bianyi");
+		} else {
+			t.popup("选项三");
+			await player.damage("nosource");
+			t.addSkillLog("qunyou_fudui");
+		}
+	}
+}
+
+/**
+ * 「伏对」判定成功后：从暮心记录中选一张牌视为使用，并从记录中删去该牌。
+ * @param {Player} player 技能发动者
+ * @param {Player} [owner] 暮心拥有者；不传则自动查找
+ * @returns {boolean} 是否成功使用了记录牌
+ */
+export async function qunyou_fudui_useRecord(player, owner) {
+	if (!owner) owner = qunyou_muxin_owner();
+	if (!owner) return false;
+	const record = qunyou_muxin_record(owner);
+	const usable = record.filter((c) => get.itemtype(c) === "card");
+	if (!usable.length) return false;
+	// 去重牌名后给按钮选择（同名牌取其一）
+	const seen = new Set();
+	const list = [];
+	for (const c of usable) {
+		const name = get.name(c);
+		const nature = get.nature(c);
+		const key = name + (nature || "");
+		if (seen.has(key)) continue;
+		seen.add(key);
+		list.push([get.type(name), "", name, nature]);
+	}
+	if (!list.length) return false;
+	const pick = await player
+		.chooseButton(["伏对：视为使用一张「暮心」记录的牌", [list, "vcard"]], true)
+		.set("ai", (button) => get.player().getUseValue({ name: button.link[2], nature: button.link[3] }))
+		.forResult();
+	const name = pick?.links?.[0]?.[2];
+	const nature = pick?.links?.[0]?.[3];
+	if (!name) return false;
+	// 删去记录中最先出现的一张同名牌
+	const idx = record.findIndex((c) => get.name(c) === name && (get.nature(c) || "") === (nature || ""));
+	if (idx >= 0) {
+		const used = record.splice(idx, 1)[0];
+		used.removeGaintag("qunyou_muxin_mark");
+		owner.markSkill("qunyou_muxin");
+	}
+	const ok = await player.chooseUseTarget({ name, nature, isCard: true }, false, false);
+	return !!ok?.bool;
+}
+
+/**
+ * 取「暮心」拥有者（场上持有 qunyou_muxin 技能的角色）。
+ * @returns {Player|undefined}
+ */
+export function qunyou_muxin_owner() {
+	return game.filterPlayer((p) => p.hasSkill("qunyou_muxin"))[0];
+}
+
+/**
+ * 「苍霄」失去技能时的响应：视为使用一种「暮心」牌。
+ * @param {Player} player 失去技能的角色
+ */
+export async function qunyou_cangxiao_lostSkillHandle(player) {
+	const owner = qunyou_muxin_owner();
+	const record = owner ? qunyou_muxin_record(owner) : null;
+	if (!record || !record.some((c) => get.itemtype(c) === "card")) return;
+	const bool = await player.chooseBool("苍霄：你失去了技能，是否视为使用一种「暮心」牌？").set("ai", () => true).forResult();
+	if (!bool?.bool) return;
+	player.logSkill("qunyou_cangxiao");
+	await qunyou_fudui_useRecord(player, owner);
 }
 
 /**

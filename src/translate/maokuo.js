@@ -41,4 +41,8 @@ export const maokuoTranslate = {
 	maokuo_xiangxie_tao: "相携",
 	maokuo_xiangxie_wuxie: "相携",
 	maokuo_xiangxie_get: "相携",
+	maokuo_shidi: "示敌",
+	maokuo_shidi_info:
+			"你的手牌上限+X；结束阶段，你至少明置一张手牌，然后摸X张牌（X为你明置手牌的花色数）。若你有明置牌，你于回合外仅可使用明置牌，回合内仅可使用非明置牌。",
+	visible_maokuo_shidi: "示敌",
 };
