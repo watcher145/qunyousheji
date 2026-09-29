@@ -191,8 +191,6 @@ export const characterTitle = {
 
 	xiaobai_lisheng: "虚才雅智",
 
-	xiaobai_lisheng: "虚才雅智",
-
 	xiaobai_tianxu: "锋回戮转",
 
 	xiaobai_zhushixing: "西行求法",
@@ -211,7 +209,9 @@ export const characterTitle = {
 
 	xiaobai_yangxianrong: "居辱疑荣",
 
-	xiaobai_yangxianrong_hidden: "居辱疑荣",
+	xiaobai_jiangziwen: "骨清为神",
+
+	xiaobai_jiangziwen_dead: "秦广王",
 
 	xiaobai_zhaoqi: "苦无时命",
 
@@ -317,7 +317,7 @@ export const characterTitle = {
 
 	xiaobai_jishao: "内举心膂",
 
-	xiaobai_zuosi: "赋倾洛纸",	xiaobai_xunkai: "荀门失玉",	xiaobai_wangjunx: "恶稔毒痡",	qunyou_mo_wangyun: "易摄承陈",
+	xiaobai_zuosi: "赋倾洛纸",	xiaobai_xunkai: "荀门失玉",	qunyou_mo_wangyun: "易摄承陈",
 
 	xiaobai_zhaoyu: "踅驳高秋",
 
@@ -332,4 +332,8 @@ export const characterTitle = {
 	qunyou_sunziliufang: "织纵朝纲",
 
 	qunyou_zhangfei: "当阳不让",
+
+	qunyou_sp_menghuo: "蛮王",
+
+	qunyou_zhangliang: "人公将军",
 };

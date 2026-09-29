@@ -671,7 +671,7 @@ yachai_jieren: {
 		const hasEnemy = event.targets && event.targets.some(t => get.attitude(player, t) < 0);
 		if (hasEnemy) return true;
 		if (player.countCards("h") >= player.getHandcardLimit()) return false;
-		const defense = player.countCards("h", c => c.name === "jink" || c.name === "tao" || get.subtype(c) === "armor");
+		const defense = player.countCards("h", c => c.name === "shan" || c.name === "tao" || get.subtype(c) === "armor");
 		return player.getHandcardLimit() >= 3 || (player.getHandcardLimit() === 2 && defense === 0);
 	},
 	async content(event, trigger, player) {

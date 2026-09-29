@@ -192,8 +192,6 @@ export const characterIntro = {
 
 	xiaobai_lisheng: "设计：胖即是胖",
 
-	xiaobai_lisheng: "设计：胖即是胖",
-
 	xiaobai_tianxu: "设计：超绝天",
 
 	xiaobai_zhushixing: "设计：虎鲸",
@@ -204,7 +202,7 @@ export const characterIntro = {
 
 	xiaobai_zhugerong: "设计：七哀",
 
-	xiaobai_cuifu: "设计：左小白",
+	xiaobai_cuifu: "设计：左小白<br>修改：欢愉与希望<br>修改点：将“本轮已声明”的逻辑去掉，取消掉每种基本牌各一次的限制<br>评价：本来就不好印，其实加这个限制也无所谓，那你问我，空城无限印基本牌怎么办，我认为这是强度的一部分，可以通过二技能的删花色来使一技能废除，如果二技能不删花色又必须拿牌，就无法空城印牌，这倒是和历史上崔令仪的处境相似",
 
 	xiaobai_hushi: "设计：虎鲸",
 
@@ -212,7 +210,9 @@ export const characterIntro = {
 
 	xiaobai_yangxianrong: "设计：winkid",
 
-	xiaobai_yangxianrong_hidden: "设计：winkid",
+	xiaobai_jiangziwen: "设计：汤圆",
+
+	xiaobai_jiangziwen_dead: "设计：汤圆",
 
 	xiaobai_zhaoqi: "设计：扬林",
 
@@ -284,7 +284,7 @@ export const characterIntro = {
 
 	xiaobai_huangfugui: "设计：左小白",
 
-	xiaobai_yangxu: "设计：胖即是胖",
+	xiaobai_yangxu: "设计：胖即是胖<br>修改：欢愉与希望<br>修改点：添加了悬鱼宝物的技能<br>评价：额，宝物没有效果有点可惜，于是写了个联动的装备技能",
 
 	xiaobai_shichong: "设计：我来天地正秋风",
 
@@ -318,9 +318,11 @@ export const characterIntro = {
 
 	xiaobai_jishao: "设计：以火修功",
 
-	xiaobai_zuosi: "设计：暗夜决彻",	xiaobai_xunkai: "设计：左小白",	xiaobai_wangjunx: "设计：吴太祖大皇帝",	qunyou_mo_wangyun: "设计：砖<br>修改：欢愉与希望<br>修改点：原技能描述不明，改为“体力值唯一最大的角色”，轮次开始和结束特定条件能补牌",
+	xiaobai_zuosi: "设计：暗夜决彻",	
+	xiaobai_xunkai: "设计：左小白",	
+	qunyou_mo_wangyun: "设计：砖<br>修改：欢愉与希望<br>修改点：原技能描述不明，改为“体力值唯一最大的角色”，轮次开始和结束特定条件能补牌",
 
-	xiaobai_zhaoyu: "设计：柠檬",
+	xiaobai_zhaoyu: "设计：柠檬<br>修改：欢愉与希望<br>修改点：威旅取消“本回合结束”效果消失的限制，麾号若两项不能执行则可以摸两张牌。",
 
 	xiaobai_zhangyu: "设计：Mushi",	xiaobai_luoshang: "设计：虎鲸",
 
@@ -333,4 +335,8 @@ export const characterIntro = {
 	qunyou_sunziliufang: "设计：左小白",
 
 	qunyou_zhangfei: "设计：一声叶落",
+
+	qunyou_sp_menghuo: "设计：未知（保存了图片，聊天记录翻不到了，原作者看到说一声）",
+
+	qunyou_zhangliang: "设计：炮灰灰君<br>修改：欢愉与希望<br>修改点：加了界版本的鬼道，因为添加了牌堆导致黑桃2到9出现的频率增加，因此特别修改",
 };

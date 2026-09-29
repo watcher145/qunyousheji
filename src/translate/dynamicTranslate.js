@@ -5,6 +5,8 @@ import { qunyou_jike_del, qunyou_jike_texts, qunyouPhaseNames } from "../skill/s
 const blue = (text) => `<span class="bluetext">${text}</span>`;
 const red = (text) => `<span style="color:#f04a4a">${text}</span>`;
 const phaseName = (id) => blue(get.translation(id).replace("阶段", ""));
+// 花色 → 显示符号：复用 skill/xiaobai.js 导出的 lib.xiaobaiNichangSuitChar，避免两处各写一份花色表而漂移
+const nichangSuitChar = (suit) => lib.xiaobaiNichangSuitChar?.(suit) || suit || "";
 
 const dynamicTranslates = {
 	// 妙喻：① 显示当前回合角色的手牌上限（±1 的对象）② 按序号列出「武将牌上的技能」，玩家才知道第 X 张会失效
@@ -54,6 +56,38 @@ const dynamicTranslates = {
 			.replace("若与你上使用牌点数递减", blue("若与你上使用牌点数递减"))
 			.replace("则弃置所有手牌摸1张牌", blue("则弃置所有手牌摸1张牌"))
 			.replace("并减1点体力上限", blue("并减1点体力上限"));
+	},
+	// 绩陂：转换技——描述里把**当前态**那一项标蓝（原生 clandongxu 同款；
+	// ☯ 标记与浮窗另由 skill 里的 mark/intro 负责，这里只管技能描述文本的高亮）
+	qunyou_jipo(player, skill) {
+		const info = lib.translate[`${skill}_info`] || "";
+		const i1 = info.indexOf("①");
+		const i2 = info.indexOf("②");
+		if (i1 < 0 || i2 < 0 || i2 < i1) return info;
+		// 尾注「（X为②的发动次数）」不参与高亮
+		const tailIdx = info.indexOf("（", i2);
+		const head = info.slice(0, i1);
+		const yang = info.slice(i1, i2);
+		const yin = info.slice(i2, tailIdx > i2 ? tailIdx : undefined);
+		const tail = tailIdx > i2 ? info.slice(tailIdx) : "";
+		// storage：false → 态①（重铸触发）；true → 态②（印桃）
+		const onSecond = player?.storage?.qunyou_jipo === true;
+		return head + (onSecond ? yang : blue(yang)) + (onSecond ? blue(yin) : yin) + tail;
+	},
+	// 挟民：连招技描述里把**当前连招条件**逐条高亮（初始【杀】，每完成一次连招+1）
+	qunyou_xiemin(player, skill) {
+		const info = lib.translate[`${skill}_info`] || "";
+		const cond = player?.storage?.qunyou_xiemin_condition || ["sha"];
+		const list = cond.map((id) => `【${get.translation(id)}】`).join(" + ");
+		// 只替换第一个括号区间：连招技（【杀】）
+		return info.replace(/（[^（）]*）/, () => `（${blue(list)}）`);
+	},
+	// 势众：把「限X次」的 X 换成蓝色数字（X=挟民连招条件数，至少1，与 usable 口径一致）
+	qunyou_shizhong(player, skill) {
+		const info = lib.translate[`${skill}_info`] || "";
+		const cond = player?.storage?.qunyou_xiemin_condition || [];
+		const num = Math.max(1, cond.length);
+		return info.replace("限X次", `限${blue(num)}次`);
 	},
 	zishu_mitu(player, skill) {
 		const left = player?.storage?.zishu_mitu_left;
@@ -267,6 +301,39 @@ qunyou_qiongji(player) {
 		const seq = [];
 		for (let i = 1; i <= 5; i++) seq.push(i == order ? blue("摸牌至四张") : "使用一张牌");
 		return base.replace(/依次：[^。]*。/, `依次：${seq.join("，")}。`);
+	},
+	// 霓裳：描述里的花色顺序（①♥②♠③♣④♦）是动态的——随「转换（每次重铸后队头轮转）」与
+	// 「凋蝶删去转换项」实时变化，需按 storage.xiaobai_nichang 只列出仍存在的花色；
+	// 被删去的花色其「对应项」从描述里一并消失，序号 ①②③④ 按当前队列顺序重排（与标记 / intro 一致）；
+	// 队头（= 当前转换项）标蓝，与恣逸 / 言祸 / 逐梦飞离等转换技惯例一致
+	// ⚠️ replace 的锚点必须与 translate/xiaobai.js 的 xiaobai_nichang_info 逐字一致，
+	//    否则替换会静默失效（自检 test/debug-nichang.mjs 守这个锚点）
+	xiaobai_nichang(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		const queue = player?.storage?.xiaobai_nichang;
+		if (!Array.isArray(queue)) {
+			return base; // 尚未初始化（未获得技能）→ 回退到静态描述
+		}
+		const labels = ["①", "②", "③", "④"];
+		const list = queue
+			.map((suit, index) => {
+				const text = `${labels[index] || ""}${nichangSuitChar(suit)}`;
+				// 队头 = 当前转换项 → 标蓝
+				return index === 0 ? blue(text) : text;
+			})
+			.join("");
+		const clause = list ? `重铸你区域内的一张${list}牌` : "重铸你区域内的一张牌（花色顺序已删空）";
+		return base.replace("重铸你区域内的一张①♥②♠③♣④♦牌", clause);
+	},
+	// 司酆：蒋子文死亡后仍可发动（司酆死后模式），「你」改为「一号位」——按 player.dead 切换措辞
+	xiaobai_sifeng(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		if (!player?.dead) {
+			return base;
+		}
+		return (
+			"你曾登场过的额定回合开始前，你可以令当前回合角色选择一项：1.交给「一号位」一张牌；2.「一号位」对其发动对应的〖显灾〗效果。若其已死亡，你令一名角色执行此额定回合；若你已死亡，你依然可以发动此技能。"
+		);
 	},
 };
 

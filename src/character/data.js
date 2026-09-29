@@ -1326,15 +1326,6 @@ export const characterData = {
 		hp: 3,
 		maxHp: 3,
 		hujia: 0,
-		skills: ["xiaobai_tanxu", "xiaobai_danglian"],
-	},
-
-	xiaobai_lisheng: {
-		sex: "male",
-		group: "wei",
-		hp: 3,
-		maxHp: 3,
-		hujia: 0,
 		skills: ["xiaobai_danglian", "xiaobai_tanxu"],
 	},
 
@@ -1416,18 +1407,27 @@ export const characterData = {
 		hp: 3,
 		maxHp: 3,
 		hujia: 0,
-		skills: ["xiaobai_tucun", "xiaobai_xingluan", "dualside"],
-		dualSideCharacter: "xiaobai_yangxianrong_hidden",
+		skills: ["xiaobai_tucun", "xiaobai_xingluan"],
+		hasHiddenSkill: true,
 	},
 
-	xiaobai_yangxianrong_hidden: {
-		sex: "female",
-		group: "jin",
-		hp: 1,
-		maxHp: 1,
+	xiaobai_jiangziwen: {
+		sex: "male",
+		group: "wu",
+		hp: 2,
+		maxHp: 4,
 		hujia: 0,
-		skills: ["xiaobai_tucun", "xiaobai_xingluan", "dualside"],
-		dualSideCharacter: "xiaobai_yangxianrong",
+		skills: ["xiaobai_xianzai", "xiaobai_sifeng"],
+		hasHiddenSkill: true,
+	},
+
+	xiaobai_jiangziwen_dead: {
+		sex: "male",
+		group: "shen",
+		hp: 2,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["xiaobai_xianzai", "xiaobai_sifeng"],
 		isUnseen: true,
 	},
 
@@ -2007,5 +2007,23 @@ export const characterData = {
 		maxHp: 4,
 		hujia: 0,
 		skills: ["qunyou_hedan", "qunyou_weishi"],
+	},
+
+	qunyou_sp_menghuo: {
+		sex: "male",
+		group: "qun",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["qunyou_zhanwei2", "qunyou_manfu", "qunyou_wanghao"],
+	},
+
+	qunyou_zhangliang: {
+		sex: "male",
+		group: "qun",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["qunyou_xiemin", "qunyou_shizhong", "xinguidao"],
 	},
 };

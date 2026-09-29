@@ -226,5 +226,9 @@ export const cardData = {
 		fullskin: true,
 		type: "equip",
 		subtype: "equip5",
+		skills: ["xiaobai_xuanyubao_skill"],
+		cardPrompt(card) {
+			return "当你失去牌后，你可以选择从牌堆顶或底进行一次判定，若判定牌颜色与此牌的颜色相同，你获得此判定牌。";
+		},
 	},
 };

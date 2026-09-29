@@ -253,6 +253,53 @@ function qunyouKuangyongLastTargets(player, current) {
 }
 lib.qunyouKuangyongLastTargets = qunyouKuangyongLastTargets;
 
+// 戰危：X = 本回合进入弃牌堆、且当前仍在弃牌堆的【杀】数量
+// 原生写法 get.discarded().filterInD("d")（对齐「金烬」olsbjinjin onlyOL/skill.js:3386、
+// 「圆融」dcyuanrong、本包「织宫」qunyou_zhigong）—— 已被拿走的不算，同一张牌只算一次。
+function qunyou_zhanwei2_shaCount() {
+	return get
+		.discarded()
+		.filter((card) => get.itemtype(card) === "card" && get.name(card, false) === "sha")
+		.filterInD("d").length;
+}
+
+// 蠻服：本次事件中"不因使用而置入弃牌堆"的牌（任意角色）
+function qunyou_manfu_discardCards(event) {
+	if (!event) return [];
+	// 使用牌路径：cardsDiscard → orderingDiscard → useCard；打出走 respond，不算"使用"
+	if (event.name === "cardsDiscard") {
+		const evt = event.getParent();
+		if (evt && evt.name === "orderingDiscard") {
+			const src = evt.relatedEvent || evt.getParent();
+			if (src && src.name === "useCard") return [];
+		}
+	}
+	const cards = event.name === "cardsDiscard" || typeof event.getd !== "function" ? event.cards || [] : event.getd();
+	return (cards || []).filter((card) => card && get.itemtype(card) === "card" && get.position(card, true) === "d");
+}
+
+// 蠻服：本次进弃牌堆的牌中、本回合尚未因此技能获得过的花色
+function qunyou_manfu_availableSuits(player, cards) {
+	const used = player.storage.qunyou_manfu_used || [];
+	const suits = [];
+	for (const card of cards) {
+		const suit = get.suit(card, false);
+		if (!lib.suit.includes(suit) || used.includes(suit) || suits.includes(suit)) continue;
+		suits.push(suit);
+	}
+	return suits;
+}
+
+// 王號：与你距离为1、且有【杀】可交的群势力其他角色
+function qunyou_wanghao_targets(player) {
+	return game.filterPlayer((current) => {
+		if (current === player || !current.isIn()) return false;
+		if (current.group !== "qun") return false;
+		if (player.distanceTo(current) !== 1) return false;
+		return current.countCards("h", (card) => get.name(card, current) === "sha") > 0;
+	});
+}
+
 export const skills = {
 // === 审时 ===
 	qunyou_shenshi: {
@@ -14380,7 +14427,7 @@ ai: {
 	},
 	// === 威势 ===
 	// 你参与拼点后，若你的拼点牌点数 ≥ 某对手的两倍，本回合该对手的拼点牌视为【影】；
-	// 若 ≥ 十倍，本回合该对手的手牌均视为【影】。（【影】= 黑桃A的 basic 牌，见 character/jsrg.js）
+	// 若 ≥ 五倍，本回合该对手的手牌均视为【影】。（【影】= 黑桃A的 basic 牌，见 character/jsrg.js）
 	// ⚠️ 比的是点数（共同拼点同样是比点数）；"视为【影】"参考"争绝"的 mod.cardname 手法。
 	qunyou_weishi: {
 		audio: 2,
@@ -14405,7 +14452,7 @@ ai: {
 				if (!(mine.num > 0) || !(entry.num > 0)) {
 					continue;
 				}
-				const big = mine.num >= entry.num * 10;
+				const big = mine.num >= entry.num * 5;
 				const small = mine.num >= entry.num * 2;
 				if (!small) {
 					continue;
@@ -14461,7 +14508,7 @@ ai: {
 					}
 				},
 			},
-			// 10 倍档：本回合该角色的手牌均视为【影】——即所有手牌都是黑桃 A，
+			// 5 倍档：本回合该角色的手牌均视为【影】——即所有手牌都是黑桃 A，
 			// 拼点时自然按 A(=1) 计算，同时牌名也按【影】认。
 			// ⚠️ cardname 只管"牌名"（get.name 的 mod 键），点数由 cardnumber 管
 			//    （get.number → checkMod(..., "cardnumber")，get/index.js:3529）。
@@ -14485,6 +14532,349 @@ ai: {
 					cardnumber(card, player) {
 						return 1;
 					},
+				},
+			},
+		},
+	},
+
+// === 戰危 ===
+// 你可以将手牌数调整至X，视为使用或打出无次数限制的【杀】，若你因此摸牌，此技能本回合失效
+// （X为本回合进入弃牌堆的【杀】数量，至多为5）。
+// 虚拟印牌（不消耗实体牌）：参考原生「穷途」olqiongtu 的 filterCard:()=>false + selectCard:0 + precontent；
+// 无次数限制参考原生「先著」olxianzhu 的 mod.cardUsable → Infinity + addCount=false。
+	qunyou_zhanwei2: {
+		audio: 2,
+		locked: false,
+		enable: ["chooseToUse", "chooseToRespond"],
+		viewAs: { name: "sha", isCard: true, storage: { qunyou_zhanwei2: true } },
+		filterCard: () => false,
+		selectCard: 0,
+		log: false,
+		filter(event, player) {
+			if (player.hasSkill("qunyou_zhanwei2_disabled")) return false;
+			// 手牌数已等于 X（调整无变化）时不能发动
+			const x = Math.min(qunyou_zhanwei2_shaCount(), 5);
+			return player.countCards("h") !== x;
+		},
+		// ⚠️ 必须 async：precontent 会被 StepCompiler 编译，只有 async 才保留模块作用域闭包
+		async precontent(event, trigger, player) {
+			player.logSkill("qunyou_zhanwei2");
+			const x = Math.min(qunyou_zhanwei2_shaCount(), 5);
+			const before = player.countCards("h");
+			await qunyou_adjustHandTo(player, x);
+			// 因调整而摸牌 → 本回合此技能失效
+			if (player.isIn() && player.countCards("h") > before) {
+				player.addTempSkill("qunyou_zhanwei2_disabled", "phaseAfter");
+			}
+			// 不计入出杀次数（useResult 读 chooseToUse 事件的 addCount）
+			event.getParent().addCount = false;
+		},
+		mod: {
+			cardUsable(card) {
+				if (card.storage && card.storage.qunyou_zhanwei2) {
+					return Infinity;
+				}
+			},
+		},
+		ai: {
+			respondSha: true,
+			skillTagFilter(player, tag, arg) {
+				if (player.hasSkill("qunyou_zhanwei2_disabled")) return false;
+				return tag === "respondSha";
+			},
+			hiddenCard(player, name) {
+				return name === "sha" && !player.hasSkill("qunyou_zhanwei2_disabled");
+			},
+		},
+		subSkill: {
+			disabled: {
+				charlotte: true,
+				sub: true,
+			},
+		},
+	},
+
+// === 蠻服 ===
+// 锁定技，回合内每种花色限一次，有角色的牌不因使用置入弃牌堆后，你获得其中一种花色的牌，
+// 若为红桃，你回复1点体力。
+// 入口参考原生「宽济」twkuanji / 「沦佚」clanlunyi；"不因使用"判定参考原生「诱言」youyan。
+	qunyou_manfu: {
+		audio: 2,
+		locked: true,
+		forced: true,
+		trigger: { global: ["loseAfter", "cardsDiscardAfter"] },
+		filter(event, player) {
+			// 回合内：仅当前回合角色为你时才发动
+			if (_status.currentPhase !== player) return false;
+			const cards = qunyou_manfu_discardCards(event);
+			if (!cards.length) return false;
+			return qunyou_manfu_availableSuits(player, cards).length > 0;
+		},
+		async content(event, trigger, player) {
+			const cards = qunyou_manfu_discardCards(trigger);
+			const suits = qunyou_manfu_availableSuits(player, cards);
+			if (!suits.length) return;
+			const groups = {};
+			for (const card of cards) {
+				const suit = get.suit(card, false);
+				if (!suits.includes(suit)) continue;
+				(groups[suit] = groups[suit] || []).push(card);
+			}
+			let suit = suits[0];
+			if (suits.length > 1) {
+				const result = await player
+					.chooseControl(suits)
+					.set("prompt", "蠻服：选择获得其中一种花色的牌")
+					.set("ai", () => {
+						const { player: me, suits: list, groups: map } = get.event();
+						if (me.isDamaged() && map.heart) return "heart";
+						return list.slice().sort((a, b) => map[b].length - map[a].length)[0];
+					})
+					.set("suits", suits)
+					.set("groups", groups)
+					.forResult();
+				if (result.control && suits.includes(result.control)) suit = result.control;
+			}
+			const gain = groups[suit] || [];
+			if (!gain.length) return;
+			player.storage.qunyou_manfu_used = (player.storage.qunyou_manfu_used || []).concat([suit]);
+			await player.gain(gain, "gain2");
+			if (player.isIn() && suit === "heart") {
+				await player.recover(1);
+			}
+		},
+		group: ["qunyou_manfu_reset"],
+		subSkill: {
+			// "本回合"清空：每回合开始时重置已用花色
+			reset: {
+				charlotte: true,
+				trigger: { global: "phaseBeginStart" },
+				forced: true,
+				popup: false,
+				silent: true,
+				content(event, trigger, player) {
+					delete player.storage.qunyou_manfu_used;
+				},
+			},
+		},
+	},
+
+// === 王號 ===
+// 主公技，当你每回合首次因弃置失去牌后，距离为1的群势力角色可以各交给你一张【杀】。
+// 主公技参考原生「聚敛」oljulian；"各交给"参考原生「受嘱」twshouzhu 的逐个 chooseToGive。
+	qunyou_wanghao: {
+		audio: 2,
+		zhuSkill: true,
+		locked: false,
+		forced: true,
+		trigger: { player: "discardAfter" },
+		filter(event, player) {
+			if (player.storage.qunyou_wanghao_used) return false;
+			return qunyou_wanghao_targets(player).length > 0;
+		},
+		async content(event, trigger, player) {
+			player.storage.qunyou_wanghao_used = true;
+			const targets = qunyou_wanghao_targets(player);
+			for (const target of targets) {
+				if (!player.isIn() || !target.isIn()) continue;
+				await target
+					.chooseToGive({
+						target: player,
+						position: "h",
+						selectCard: [1, 1],
+						filterCard: (card) => get.name(card, target) === "sha",
+						prompt: `${get.translation(player)}对你发动了【王號】，是否交给其一张【杀】？`,
+						ai: (card) => (get.attitude(target, player) > 0 ? 6 - get.value(card, target) : 0),
+					})
+					.forResult();
+			}
+		},
+		group: ["qunyou_wanghao_reset"],
+		subSkill: {
+			// "每回合首次"清空：每回合开始时重置
+			reset: {
+				charlotte: true,
+				trigger: { global: "phaseBeginStart" },
+				forced: true,
+				popup: false,
+				silent: true,
+				content(event, trigger, player) {
+					delete player.storage.qunyou_wanghao_used;
+				},
+			},
+		},
+	},
+
+	// === 挟民 ===
+	// 连招技（【杀】）：进度推进/条件扩展参照原生连招技聚澜 xiaobai_julan（useCard1 + condition/progress storage + mark 子技能）。
+	// 完成连招后的「你可以…」在 content 内 chooseBool 询问（forced 技能不弹"是否发动"，content 内询问即唯一入口，取消即不发动）。
+	// 「获得目标角色一张牌」= he 区（知识库：获得XX一张牌 → position "he" + hasGainableCards 预检）。
+	qunyou_xiemin: {
+		audio: 2,
+		comboSkill: true,
+		locked: false,
+		init(player, skill) {
+			if (!player.storage.qunyou_xiemin_condition) {
+				player.storage.qunyou_xiemin_condition = ["sha"];
+			}
+			player.addSkill(`${skill}_mark`);
+		},
+		onremove(player, skill) {
+			player.removeSkill(`${skill}_mark`);
+			delete player.storage.qunyou_xiemin_condition;
+			delete player.storage.qunyou_xiemin_progress;
+		},
+		trigger: { player: "useCard1" },
+		forced: true,
+		popup: false,
+		silent: true,
+		filter(event, player) {
+			const cond = player.storage.qunyou_xiemin_condition;
+			if (!cond?.length) return false;
+			return (player.storage.qunyou_xiemin_progress || 0) < cond.length;
+		},
+		async content(event, trigger, player) {
+			const cond = player.storage.qunyou_xiemin_condition || ["sha"];
+			const progress = player.storage.qunyou_xiemin_progress || 0;
+			if (get.name(trigger.card) !== cond[progress]) {
+				// 与当前条件不符：清空进度（聚澜同款）
+				if (progress > 0) {
+					player.storage.qunyou_xiemin_progress = 0;
+					player.markSkill("qunyou_xiemin_mark");
+				}
+				return;
+			}
+			const next = progress + 1;
+			player.storage.qunyou_xiemin_progress = next;
+			if (next < cond.length) {
+				player.markSkill("qunyou_xiemin_mark");
+				return;
+			}
+			// 连招完成：先清空进度，再询问是否将【杀】加入连招条件（并获得那张【杀】第一个目标的一张牌）
+			player.storage.qunyou_xiemin_progress = 0;
+			player.markSkill("qunyou_xiemin_mark");
+			const target = trigger.targets?.[0];
+			const canGain = !!target && target.isIn() && target.hasGainableCards(player, "he");
+			const result = await player
+				.chooseBool(
+					get.prompt("qunyou_xiemin"),
+					canGain
+						? `将【杀】加入连招条件，并获得${get.translation(target)}的一张牌`
+						: "将【杀】加入连招条件"
+				)
+				.forResult();
+			if (!result?.bool) return;
+			cond.push("sha");
+			player.storage.qunyou_xiemin_condition = cond;
+			player.markSkill("qunyou_xiemin_mark");
+			if (canGain) {
+				player.logSkill("qunyou_xiemin", target);
+				await player.gainPlayerCard({ target, position: "he", forced: true });
+			}
+		},
+		subSkill: {
+			// 连招进度标记：挟 + 右下角「进度/条件数」（聚澜 mark 同款：init 挂载、markSkill 刷新）
+			mark: {
+				name: "挟民",
+				charlotte: true,
+				marktext: "挟",
+				intro: {
+					name: "挟民",
+					content(storage, player) {
+						const cond = player.storage.qunyou_xiemin_condition || ["sha"];
+						const progress = player.storage.qunyou_xiemin_progress || 0;
+						return `连招进度：${progress}/${cond.length}`;
+					},
+					markcount(storage, player) {
+						const cond = player.storage.qunyou_xiemin_condition || ["sha"];
+						const progress = player.storage.qunyou_xiemin_progress || 0;
+						return `${progress}/${cond.length}`;
+					},
+				},
+				init(player, skill) {
+					player.markSkill(skill);
+				},
+				onremove(player, skill) {
+					player.unmarkSkill(skill);
+				},
+			},
+		},
+	},
+
+	// === 势众 ===
+	// 出牌阶段限X次：usable 支持函数 (skill, player)（lib/index.js:10852-10859），X=挟民连招条件数（至少1）。
+	// 「本回合获得的牌」：芳许 mbfangxu 范本（onChooseToUse 收集 getHistory("gain")，filter/filterCard 读事件数据）。
+	// 兵临城下 id=binglinchengxiax（character/shiji/card.js:180）；它放回牌堆顶的剩余牌 = 卡牌事件的 event.showCards。
+	// 逐张当闪电判定牌：player.judge() + directresult 固定判定牌 + 闪电的 judge/judge2（content.js:11903 judge 流程）。
+	qunyou_shizhong: {
+		audio: 2,
+		enable: "chooseToUse",
+		position: "he",
+		usable(skill, player) {
+			return Math.max(1, (player.storage.qunyou_xiemin_condition || []).length);
+		},
+		onChooseToUse(event) {
+			const player = event.player;
+			if (game.online) return;
+			const info = get.info("qunyou_shizhong");
+			if ((player.getStat().skill.qunyou_shizhong || 0) >= info.usable("qunyou_shizhong", player)) return;
+			event.set(
+				"qunyou_shizhong",
+				(() => {
+					event.qunyou_shizhong ??= {};
+					event.qunyou_shizhong[player.playerid] = player.getHistory("gain").reduce((cards, evt) => cards.addArray(evt.cards), []);
+					return event.qunyou_shizhong;
+				})()
+			);
+		},
+		filter(event, player) {
+			const cards = player.getCards("he", (card) => event.qunyou_shizhong?.[player.playerid]?.includes(card));
+			if (!cards.length) return false;
+			// 自身选择流程跳过探测，避免 filterCard 自递归（qunyou_fudui 同款）
+			if (event.skill == "qunyou_shizhong" || event._skill == "qunyou_shizhong") return true;
+			if (!event.filterCard) return true;
+			return event.filterCard(get.autoViewAs({ name: "binglinchengxiax", isCard: true }, "unsure"), player, event);
+		},
+		filterCard(card, player, event) {
+			const evt = event || get.event();
+			return !!evt?.qunyou_shizhong?.[player.playerid]?.includes(card);
+		},
+		selectCard: 1,
+		viewAs: { name: "binglinchengxiax", storage: { qunyou_shizhong: true } },
+		prompt: "势众：将一张本回合获得的牌当【兵临城下】使用",
+		check(card) {
+			return 6 - get.value(card);
+		},
+		ai: {
+			order: 4.5,
+		},
+		group: ["qunyou_shizhong_judge"],
+		subSkill: {
+			// 放回牌堆顶的剩余牌，按堆顶顺序依次当【闪电】的判定牌对你结算
+			judge: {
+				name: "势众",
+				charlotte: true,
+				forced: true,
+				trigger: { player: "binglinchengxiaxAfter" },
+				filter(event, player) {
+					return !!(event.card?.storage?.qunyou_shizhong && Array.isArray(event.showCards) && event.showCards.length > 0);
+				},
+				async content(event, trigger, player) {
+					// showCards 在卡牌 content 末尾被 reverse() 过：反转回「牌堆顶顺序」逐张结算
+					const cards = trigger.showCards.slice().reverse();
+					const shandian = lib.card.shandian;
+					for (const card of cards) {
+						if (!card || !player.isIn()) break;
+						const judgeEvent = player.judge();
+						judgeEvent.directresult = card;
+						judgeEvent.judgestr = "闪电";
+						judgeEvent.judge = shandian.judge;
+						judgeEvent.judge2 = shandian.judge2;
+						const result = await judgeEvent.forResult();
+						if (result?.bool === false) {
+							await player.damage(3, "thunder", "nosource");
+						}
+					}
 				},
 			},
 		},
