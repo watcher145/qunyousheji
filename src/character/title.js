@@ -211,8 +211,6 @@ export const characterTitle = {
 
 	xiaobai_jiangziwen: "骨清为神",
 
-	xiaobai_jiangziwen_dead: "秦广王",
-
 	xiaobai_zhaoqi: "苦无时命",
 
 	xiaobai_zhaorao: "独步天下",
@@ -336,4 +334,8 @@ export const characterTitle = {
 	qunyou_sp_menghuo: "蛮王",
 
 	qunyou_zhangliang: "人公将军",
+
+	qunyou_sunchen: "凶竖乱吴",
+
+	qunyou_wei_dongzhuo: "年少义侠",
 };

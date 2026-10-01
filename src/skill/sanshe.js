@@ -13484,22 +13484,24 @@ ai: {
 				if (!target.isIn() || !target.countCards("he")) continue;
 				await player.gainPlayerCard(target, "he", true);
 			}
+			// 若改后目标含你，你摸一张牌
+			if (player.isIn() && to.includes(player)) await player.draw(1);
 			// 转换状态并刷新 mark
 			player.storage.qunyou_kuangyong = !Boolean(player.storage.qunyou_kuangyong);
 			player.updateMarks();
 		},
-		intro: {
-			// 转换技惯例文本：按 storage 显示当前状态那条；②状态额外列出「上张有目标的牌」的目标
-			content(storage, player) {
-				const head = storage
-					? "转换技，当你使用牌指定目标时，你可以将此牌目标改为你使用的上张有目标的牌的所有目标，以获得原目标的各一张牌。"
-					: "转换技，当你使用牌指定目标时，你可以将此牌目标改为你，以获得原目标的各一张牌。";
-				if (!storage) return head;
-				const list = lib.qunyouKuangyongLastTargets(player, null);
-				const text = list.length ? list.map((target) => get.translation(target)).join("、") : "暂无";
-				return `${head}<br>你使用的上张有目标的牌的目标：${text}`;
+			intro: {
+				// 转换技惯例文本：按 storage 显示当前状态那条；②状态额外列出「上张有目标的牌」的目标
+				content(storage, player) {
+					const head = storage
+						? "转换技，当你使用牌指定目标时，你可以将此牌目标改为你使用的上张有目标的牌的所有目标，以获得原目标的各一张牌；若改后目标含你，你摸一张牌。"
+						: "转换技，当你使用牌指定目标时，你可以将此牌目标改为你，以获得原目标的各一张牌；若改后目标含你，你摸一张牌。";
+					if (!storage) return head;
+					const list = lib.qunyouKuangyongLastTargets(player, null);
+					const text = list.length ? list.map((target) => get.translation(target)).join("、") : "暂无";
+					return `${head}<br>你使用的上张有目标的牌的目标：${text}`;
+				},
 			},
-		},
 		ai: { result: { player: 1 } },
 	},
 
@@ -14875,6 +14877,284 @@ ai: {
 							await player.damage(3, "thunder", "nosource");
 						}
 					}
+				}
+			},
+		},
+	},
+	qunyou_zhidang: {
+		audio: 2,
+		locked: true,
+		forced: true,
+		mod: {
+			// 植党②：使用连接牌无距离无次数限制
+			targetInRange(card, player, target, now) {
+				if (get.is.connectedCard(card)) {
+					return true;
+				}
+			},
+			cardUsable(card, player, num) {
+				if (get.is.connectedCard(card)) {
+					return Infinity;
+				}
+			},
+		},
+		trigger: {
+			// 植党①：使用牌时（原生"当你使用牌时"惯例：宗族流/垂灵/恋对均用 useCard）
+			player: "useCard",
+			// 植党③：一名角色失去连接牌（所有失去路径最终都产生唯一的 lose 事件，直读 event.hs，
+			// 不听 discardAfter/loseAsyncAfter 以免同一次失去被重复计次）
+			global: "loseAfter",
+		},
+		filter(event, player) {
+			if (!player.isIn()) return false;
+			if (event.name == "useCard") {
+				// "连接你与此牌目标"需要你以外的目标作连接对象：无目标牌（闪/无懈/装备等）与纯自目标牌（桃等）不触发
+				if (!(event.targets || []).some((current) => current != player)) return false;
+				return [player, ...(event.targets || [])].some((current) => {
+					return current.isIn() && current.countCards("h", (card) => !get.is.connectedCard(card)) > 0;
+				});
+			}
+			if (event.name == "lose") {
+				return (
+					get.itemtype(event.player) == "player" &&
+					Array.isArray(event.hs) &&
+					event.hs.some((card) => get.is.connectedCard(card)) &&
+					event.player.isIn() &&
+					event.player.countCards("h") == 0
+				);
+			}
+			return false;
+		},
+		async content(event, trigger, player) {
+			if (event.triggername == "useCard") {
+				// 植党①：连接你与此牌目标各一张未连接的手牌（你替每名角色选，姻谋/宿伍同款）
+				const connects = new Map();
+				for (const current of [player, ...(trigger.targets || [])].sortBySeat().toUniqued()) {
+					if (!current.isIn()) continue;
+					const cards = current.getCards("h", (card) => !get.is.connectedCard(card));
+					if (!cards.length) continue;
+					const result =
+						cards.length == 1
+							? { bool: true, links: cards }
+							: await player
+									.choosePlayerCard(current, "h", true)
+									.set("filterButton", (button) => !get.is.connectedCard(button.link))
+									.set("ai", (button) => {
+										const { player: me, target: owner } = get.event();
+										const val = get.value(button.link, owner);
+										return owner == me || get.attitude(me, owner) > 0 ? -val : val;
+									})
+									.forResult();
+					if (result?.bool && result.links?.length) {
+						connects.set(current, result.links);
+					}
+				}
+				for (const [current, cards] of connects) {
+					await current.connectCards(cards);
+				}
+			} else if (event.triggername == "loseAfter") {
+				// 植党③：失去连接牌的角色没有手牌 → 重置伐竖 + 1点火焰伤害
+				const loser = trigger.player;
+				if (!loser?.isIn() || loser.countCards("h") > 0) return;
+				if (player.hasSkill("qunyou_fashu")) {
+					delete player.getStat("skill").qunyou_fashu;
+					game.log(player, "重置了技能", "#g【" + get.translation("qunyou_fashu") + "】");
+				}
+				await loser.damage(player, 1, "fire");
+			}
+		},
+	},
+	qunyou_fashu: {
+		audio: 2,
+		locked: true,
+		forced: true,
+		usable: 1,
+		// 伤害+1 必须在结算前改（damageBegin1）；受到/造成共用此时机，自伤只收集一次
+		trigger: {
+			player: "damageBegin1",
+			source: "damageBegin1",
+		},
+		filter(event, player) {
+			if (!player.isIn()) return false;
+			// 对方：造成伤害时=受伤角色，受到伤害时=伤害来源；无来源/对方不在场 → 不发动（用户确认）
+			const other = event.source == player ? event.player : event.source;
+			return get.itemtype(other) == "player" && other.isIn();
+		},
+		async content(event, trigger, player) {
+			const other = trigger.source == player ? trigger.player : trigger.source;
+			if (other.countConnectedCards() == player.countConnectedCards()) {
+				await player.draw(2);
+				if (other != player && other.isIn()) {
+					await other.draw(2);
+				}
+			} else {
+				trigger.num++;
+			}
+		},
+	},
+	qunyou_yuce: {
+		audio: 2,
+		// 契定技（照原生 乞施 sxrmqishi / 殚瘁 sxrmdancui）：storage 切换 契定技/锁定技 标签，
+		// 任一效果发动时 awakenQidingSkill 契定（其内部已契定则早退，不重复播报），契定后两效果均变强制。
+		// ⚠️ 两条路径共用结尾：“然后回复一点体力并视为使用一张【过河拆桥】”（用户确认的断句）
+		locked(skill, player) {
+			return Boolean(player?.storage?.qunyou_yuce);
+		},
+		qidingSkill(skill, player) {
+			return !player?.storage?.qunyou_yuce;
+		},
+		mark: true,
+		intro: { content: "qidingSkill" },
+		trigger: {
+			player: ["gainAfter", "dying"],
+		},
+		filter(event, player) {
+			if (event.name == "gain") {
+				// 效果A：摸牌阶段外获得的牌（仍在手中且可弃置的至少一张）
+				if (event.getParent("phaseDraw", true)?.player == player) return false;
+				const gained = event.getg?.(player) || [];
+				return player.getDiscardableCards(player, "h").some((card) => gained.includes(card));
+			}
+			if (event.name == "dying") {
+				// 效果B：每回合首次进入濒死（标记由 cost 设置——无论是否发动都消耗“首次”）
+				return !player.hasSkill("qunyou_yuce_dying_used");
+			}
+			return false;
+		},
+		async cost(event, trigger, player) {
+			const qiding = Boolean(player.storage.qunyou_yuce);
+			if (event.triggername == "gainAfter") {
+				const gained = trigger.getg?.(player) || [];
+				const cards = player.getDiscardableCards(player, "h").filter((card) => gained.includes(card));
+				if (!cards.length) return void (event.result = { bool: false });
+				if (qiding) {
+					event.result = { bool: true, cards };
+				} else {
+					const result = await player
+						.chooseBool(get.prompt("qunyou_yuce"), "弃置这些牌，然后回复一点体力并视为使用一张【过河拆桥】")
+						.set("ai", () => false)
+						.forResult();
+					event.result = { bool: result?.bool === true, cards };
+				}
+				return;
+			}
+			// dying 分支：“每回合首次”在此消耗（选择与否都算）
+			player.addTempSkill("qunyou_yuce_dying_used", { global: "phaseAfter" });
+			if (qiding) {
+				event.result = { bool: true };
+			} else {
+				const result = await player
+					.chooseBool(get.prompt("qunyou_yuce"), "令本回合其他角色不能对你使用【桃】，然后回复一点体力并视为使用一张【过河拆桥】")
+					.set("ai", () => true)
+					.forResult();
+				event.result = { bool: result?.bool === true };
+			}
+		},
+		async content(event, trigger, player) {
+			player.awakenQidingSkill(event.name);
+			if (event.triggername == "gainAfter") {
+				// 效果A：弃置这些牌
+				const gained = trigger.getg?.(player) || [];
+				const cards = player.getDiscardableCards(player, "h").filter((card) => gained.includes(card));
+				if (cards.length) await player.discard(cards);
+			} else {
+				// 效果B：本回合其他角色不能对你使用【桃】（cardSavable/targetEnabled 双 mod，
+				// 濒死求桃预检 canSave→cardSavable 也会被拦）
+				for (const current of game.filterPlayer((current) => current != player)) {
+					current.addTempSkill("qunyou_yuce_notao", { global: "phaseAfter" });
+					current.storage.qunyou_yuce_notao = player;
+				}
+			}
+			// 共同结尾：回复一点体力并视为使用一张【过河拆桥】
+			await player.recover(1);
+			const guohe = get.autoViewAs({ name: "guohe", isCard: true });
+			if (player.hasUseTarget(guohe)) {
+				await player.chooseUseTarget(guohe, "迂策：视为使用一张【过河拆桥】", true);
+			}
+		},
+		subSkill: {
+			dying_used: {
+				charlotte: true,
+			},
+			notao: {
+				charlotte: true,
+				onremove: true,
+				mod: {
+					cardSavable(card, player, target) {
+						if (card.name == "tao" && target == player.storage.qunyou_yuce_notao) return false;
+					},
+					targetEnabled(card, player, target) {
+						if (card.name == "tao" && target == player.storage.qunyou_yuce_notao) return false;
+					},
+				},
+			},
+		},
+	},
+	qunyou_yicun: {
+		audio: 2,
+		enable: "phaseUse",
+		usable: 1,
+		filter(event, player) {
+			// 须有手牌，且全部不可使用（用户确认：空手牌不算）；includecard=true → 次数耗尽的杀也算“不可使用”
+			if (!player.countCards("h")) return false;
+			if (player.countCards("h", (card) => player.hasUseTarget(card, true, true))) return false;
+			return game.hasPlayer((current) => current != player && !current.hasSkill("qunyou_yicun_picked"));
+		},
+		filterTarget(card, player, target) {
+			// 本回合未以此法选择过的其他角色（picked 标记随回合结束自动过期）
+			return lib.filter.notMe(card, player, target) && !target.hasSkill("qunyou_yicun_picked");
+		},
+		async content(event, trigger, player) {
+			const target = event.targets[0];
+			if (!target?.isIn()) return;
+			// 标记“本回合已以此法选择过”（选定即消耗，随回合结束过期）
+			target.addTempSkill("qunyou_yicun_picked", { global: "phaseAfter" });
+			await player.showHandcards("异存：展示手牌");
+			await target.showHandcards("异存：展示手牌");
+			const mySuits = player.getCards("h").map((card) => get.suit(card, player));
+			const tsSuits = target.getCards("h").map((card) => get.suit(card, target));
+			// 双向对称（用户确认）：对方独有的花色→我打对方；我独有的花色→对方打我
+			const suitsOnlyTarget = [...new Set(tsSuits)].filter((s) => !mySuits.includes(s));
+			const suitsOnlyMe = [...new Set(mySuits)].filter((s) => !tsSuits.includes(s));
+			const hpBefore = player.hp;
+			let dealt = 0;
+			for (const s of suitsOnlyTarget) {
+				if (!target.isIn() || !player.isIn()) break;
+				await target.damage(player, 1);
+				dealt++;
+			}
+			for (const s of suitsOnlyMe) {
+				if (!player.isIn() || !target.isIn()) break;
+				await player.damage(target, 1);
+			}
+			// 摸牌：造成过伤害→摸伤害数；未造成伤害→改为摸两张
+			if (player.isIn()) {
+				await player.draw(dealt > 0 ? dealt : 2);
+			}
+			// 若你未受到伤害（hp 无变化，含伤害被防止的情形），本回合可再次发动
+			if (player.isIn() && player.hp === hpBefore) {
+				delete player.getStat("skill").qunyou_yicun;
+				game.log(player, "未受到伤害，#g【异存】", "视为未发动过");
+			}
+		},
+		subSkill: {
+			picked: {
+				charlotte: true,
+			},
+		},
+		ai: {
+			order: 4,
+			result: {
+				player(player) {
+					return player.countCards("h") ? 0.1 : 0;
+				},
+				target(player, target) {
+					if (get.attitude(player, target) >= 0) return 0;
+					const mySuits = player.getCards("h").map((card) => get.suit(card, player));
+					const tsSuits = target.getCards("h").map((card) => get.suit(card, target));
+					const deal = [...new Set(tsSuits)].filter((s) => !mySuits.includes(s)).length;
+					const take = [...new Set(mySuits)].filter((s) => !tsSuits.includes(s)).length;
+					return deal - take;
 				},
 			},
 		},

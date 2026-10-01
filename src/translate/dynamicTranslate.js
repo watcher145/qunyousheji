@@ -325,15 +325,54 @@ qunyou_qiongji(player) {
 		const clause = list ? `重铸你区域内的一张${list}牌` : "重铸你区域内的一张牌（花色顺序已删空）";
 		return base.replace("重铸你区域内的一张①♥②♠③♣④♦牌", clause);
 	},
-	// 司酆：蒋子文死亡后仍可发动（司酆死后模式），「你」改为「一号位」——按 player.dead 切换措辞
+	// 司酆：蒋子文死亡后仍可发动（司酆死后模式），「你」改为「一号位」——按 isIn() 切换措辞
+	// （⚠️ player.dead 不是 Player 的属性、恒 undefined；真死后 isIn() 为假）
 	xiaobai_sifeng(player, skill) {
 		const base = lib.translate[`${skill}_info`] || "";
-		if (!player?.dead) {
+		if (player?.isIn()) {
 			return base;
 		}
 		return (
 			"你曾登场过的额定回合开始前，你可以令当前回合角色选择一项：1.交给「一号位」一张牌；2.「一号位」对其发动对应的〖显灾〗效果。若其已死亡，你令一名角色执行此额定回合；若你已死亡，你依然可以发动此技能。"
 		);
+	},
+	// 迂策：契定技——契定后两效果由「可以」变「须」（原生乞施/殚瘁同款切换）
+	qunyou_yuce(player, skill) {
+		if (player?.storage?.qunyou_yuce) {
+			return "锁定技，你于摸牌阶段外获得牌后，你须弃置这些牌；当你每回合首次进入濒死状态时，你须令本回合其他角色不能对你使用【桃】，然后回复一点体力并视为使用一张【过河拆桥】。";
+		}
+		return lib.translate[`${skill}_info`] || "";
+	},
+	// 犷勇：转换技——描述中的当前态（①/②）标蓝（原生 clandongxu 同款 bluetext）
+	qunyou_kuangyong(player, skill) {
+		const second = Boolean(player?.storage?.qunyou_kuangyong);
+		const items = ["①你", "②你使用的上张有目标的牌的所有目标"];
+		const text = items
+			.map((item, index) => {
+				return index == (second ? 1 : 0) ? `<span class='bluetext'>${item}</span>` : item;
+			})
+			.join("");
+		return `转换技，当你使用牌指定目标时，你可以将此牌目标改为${text}，以获得原目标的各一张牌；若改后目标含你，你摸一张牌。`;
+	},
+	// 诂守：动态描述——当前首项标蓝、已删去项划线置灰，尾部附实时进度
+	xiaobai_gushou(player, skill) {
+		const stage = player?.storage?.xiaobai_gushou_stage || 0;
+		const used = player?.storage?.xiaobai_gushou_used || 0;
+		const names = ["伤害牌", "锦囊牌", "K点牌"];
+		const items = ["①伤害牌", "②锦囊牌", "③K点牌"];
+		const list = items
+			.map((item, index) => {
+				if (index < stage) return `<span style='opacity:0.45;text-decoration:line-through'>${item}</span>`;
+				if (index == stage && stage < 3) return `<span class='bluetext'>${item}</span>`;
+				return item;
+			})
+			.join("");
+		const head = `${list}进入弃牌堆前，你的♠基本牌仅能当做首项的基本牌或普通锦囊牌使用，首项牌进入弃牌堆时删去之。均删去后，你分配弃牌堆中上述项牌X张（X为你以此法使用牌数）。`;
+		const status =
+			stage >= 3
+				? `<br>当前：三项均已删去（已以此法使用${used}张♠基本牌）。`
+				: `<br>当前首项：${names[stage]}（已以此法使用${used}张♠基本牌）。`;
+		return head + status;
 	},
 };
 

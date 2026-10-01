@@ -22,7 +22,7 @@ export const characterIntro = {
 	qunyou_chen_zhaoyun: "设计：0^0。<br>评价：挺好的设计，印牌很强",
 	qunyou_wanglang: "设计：滑溜溜。<br>评价：阴完了，拿到A和K就能空城全场",
 	qunyou_cbp_zhaoyun: "设计：琉多斯。<br>修改：欢愉与希望<br>修改点：几乎完全重做<br>评价：我也不知道我改的好不好（我改的就是一坨大的）",
-	qunyou_jiangwei: "来源：BV1CDGv6uESF<br>吐槽：原版那描述都能自创好几个新概念了，还有，太弱了，共同拼点本来就不容易赢，自身顶多是小制衡，没有手牌还发动不了技能",
+	qunyou_jiangwei: "来源：BV1bUbY6SEvH",
 	qunyou_sb_zhugeliang: "设计：罗乐省标9191（B站）<br>吐槽：续天比想象中的更容易重置",
 	qunyou_pengyue: "设计：鹭。<br>评价：实战似乎一般，心血来潮做的一个",
 	qunyou_liumo: "设计：祂不想。<br>评价：十分好玩的设计，伪用一摸一，爽！",
@@ -212,8 +212,6 @@ export const characterIntro = {
 
 	xiaobai_jiangziwen: "设计：汤圆",
 
-	xiaobai_jiangziwen_dead: "设计：汤圆",
-
 	xiaobai_zhaoqi: "设计：扬林",
 
 	xiaobai_zhaorao: "设计：伯约的崛起",
@@ -339,4 +337,8 @@ export const characterIntro = {
 	qunyou_sp_menghuo: "设计：未知（保存了图片，聊天记录翻不到了，原作者看到说一声）",
 
 	qunyou_zhangliang: "设计：炮灰灰君<br>修改：欢愉与希望<br>修改点：加了界版本的鬼道，因为添加了牌堆导致黑桃2到9出现的频率增加，因此特别修改",
+
+	qunyou_sunchen: "设计：阿柴Aa_chai（B站）\n",
+
+	qunyou_wei_dongzhuo: "设计：未知<br>修改：欢愉与希望<br>修改点：“你可以与一名其他角色各自展示手牌”改为“你可以与一名本回合未此法选择过其他角色各自展示手牌”，“若你未受到伤害，此技能视为未发动过”改为“若你未受到伤害/造成伤害，此技能视为未发动过/你摸两张牌”",
 };

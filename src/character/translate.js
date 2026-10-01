@@ -339,9 +339,6 @@ export const characterTranslate = {
 	xiaobai_jiangziwen: "小白蒋子文",
 	xiaobai_jiangziwen_prefix: "小白",
 
-	xiaobai_jiangziwen_dead: "小白蒋子文",
-	xiaobai_jiangziwen_dead_prefix: "小白",
-
 	xiaobai_zhaoqi: "小白赵岐",
 	xiaobai_zhaoqi_prefix: "小白",
 
@@ -493,16 +490,19 @@ export const characterTranslate = {
 	xiaobai_wangjunx_prefix: "小白",
 
 	xiaobai_heqiao: "小白和峤",
-	xiaobai_heqiao_prefix: "小白",	qunyou_mo_wangyun: "魔王允",
+	xiaobai_heqiao_prefix: "小白",	
 
 	xiaobai_jishao: "小白嵇绍",
 	xiaobai_jishao_prefix: "小白",
 
 	xiaobai_zuosi: "小白左思",
-	xiaobai_zuosi_prefix: "小白",	xiaobai_xunkai: "小白荀恺",
-
+	xiaobai_zuosi_prefix: "小白",	
+    xiaobai_xunkai: "小白荀恺",
 	xiaobai_zhaoyu: "小白赵妪",
-	xiaobai_zhaoyu_prefix: "小白",	xiaobai_xunkai_prefix: "小白",	qunyou_mo_wangyun_prefix: "魔",
+	xiaobai_zhaoyu_prefix: "小白",	
+	xiaobai_xunkai_prefix: "小白",	
+	qunyou_mo_wangyun: "魔王允",
+	qunyou_mo_wangyun_prefix: "魔",
 
 	xiaobai_zhangyu: "小白张裕",
 	xiaobai_zhangyu_prefix: "小白",
@@ -530,4 +530,10 @@ export const characterTranslate = {
 
 	qunyou_zhangliang: "群友张梁",
 	qunyou_zhangliang_prefix: "群友",
+
+	qunyou_sunchen: "群友孙綝",
+	qunyou_sunchen_prefix: "群友",
+
+	qunyou_wei_dongzhuo: "群友威董卓",
+	qunyou_wei_dongzhuo_prefix: "群友|威",
 };

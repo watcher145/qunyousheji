@@ -190,7 +190,7 @@ export const characterData = {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["qunyou_xiongbo", "qunyou_jingfa"],
+		skills: ["qunyou_yuce", "qunyou_yicun"],
 	},
 	qunyou_sb_zhugeliang: {
 		sex: "male",
@@ -1421,16 +1421,6 @@ export const characterData = {
 		hasHiddenSkill: true,
 	},
 
-	xiaobai_jiangziwen_dead: {
-		sex: "male",
-		group: "shen",
-		hp: 2,
-		maxHp: 4,
-		hujia: 0,
-		skills: ["xiaobai_xianzai", "xiaobai_sifeng"],
-		isUnseen: true,
-	},
-
 	xiaobai_zhaoqi: {
 		sex: "male",
 		group: "qun",
@@ -2025,5 +2015,23 @@ export const characterData = {
 		maxHp: 4,
 		hujia: 0,
 		skills: ["qunyou_xiemin", "qunyou_shizhong", "xinguidao"],
+	},
+
+	qunyou_sunchen: {
+		sex: "male",
+		group: "wu",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["qunyou_zhidang", "qunyou_fashu"],
+	},
+
+	qunyou_wei_dongzhuo: {
+		sex: "male",
+		group: "qun",
+		hp: 5,
+		maxHp: 5,
+		hujia: 0,
+		skills: ["qunyou_kuangyong"],
 	},
 };
