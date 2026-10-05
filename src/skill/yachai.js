@@ -137,8 +137,20 @@ export const skills = {
 		},
 		check(button) {
 			const player = _status.event.player;
-			if (button.link === "draw") return player.countCards("h") < player.maxHp ? 5 : 1;
-			return player.countCards("h") > 0 ? 5 : 1;
+			const hand = player.countCards("h");
+			const topCard = ui.cardPile.firstChild;
+			const topIsSha = Boolean(topCard && get.name(topCard) == "sha");
+			if (button.link === "draw") {
+				// 满手牌摸不进=浪费该项
+				if (hand >= player.maxHp) return 0;
+				// 牌堆顶有杀（通常是陈训摆的）：立刻摸回来，为潜章“首尾同为杀”蓄力
+				if (topIsSha) return 6;
+				return hand < player.maxHp ? 3 : 1;
+			}
+			// 弃牌项：手牌已满先弃腾位（随后摸牌正好过到牌堆顶的杀）；有低价值牌可弃也行；
+			// 没好处就不选（阶段结束时该项会丢给敌人执行，两项都不浪费）
+			if (hand >= player.maxHp) return 5;
+			return player.getCards("h").some((c) => get.value(c) <= 3) ? 3 : 0;
 		},
 		backup(links) {
 			return get.copy(lib.skill["yachai_qingjie_" + links[0]]);
@@ -166,6 +178,10 @@ export const skills = {
 			audio: "yachai_qingjie",
 			filterCard: true,
 			selectCard: [1, Infinity],
+			check(card) {
+				// 卸牌优先弃最不值钱的
+				return 6 - get.value(card);
+			},
 			async content(event, trigger, player) {
 				await player.discard(event.cards);
 				if (!player.storage.yachai_qingjie_used) player.storage.yachai_qingjie_used = [];
@@ -255,9 +271,10 @@ yachai_jianshi: {
 	ai: {
 		order: 5,
 		result: {
+			// 送牌+增益只应给友方（对方出对应颜色牌时你摸牌）
 			target(player, target) {
 				if (player.countCards("hse") <= 1) return 0;
-				return 1;
+				return get.attitude(player, target) > 0 ? 1 : -1;
 			},
 		},
 	},
@@ -373,7 +390,19 @@ yachai_chenxun: {
 		next.set("list", [["牌堆顶", cards], ["牌堆底"]]);
 		next.set("processAI", function (list) {
 			const cards = list[0][1].slice(0);
-			cards.sort((a, b) => get.value(b) - get.value(a));
+			const friendly = get.attitude(_status.event.player, _status.currentPhase) >= 0;
+			if (friendly) {
+				// 王祥回合：优先把【杀】摆到牌堆顶（清界摸回续用 + 潜章“首尾同为杀”），其余按价值
+				cards.sort((a, b) => {
+					const sa = get.name(a) == "sha" ? 1 : 0;
+					const sb = get.name(b) == "sha" ? 1 : 0;
+					if (sa != sb) return sb - sa;
+					return get.value(b) - get.value(a);
+				});
+			} else {
+				// 敌方回合：好牌沉底饿死对方摸牌（避免无条件置顶资敌）
+				cards.sort((a, b) => get.value(a) - get.value(b));
+			}
 			return [cards, []];
 		});
 		const result = await next.forResult();
@@ -438,13 +467,14 @@ yachai_lijian: {
 			}
 			const again = await player.chooseBool("是否重复【砺剑】流程？")
 				.set("ai", () => {
+					// AI 回调必须纯（CacheContext 缓存/重复调用）：只做比较，不删 storage
 					const p = _status.event.player;
 					const beforeVal = p.storage.yachai_lijian_beforeVal || 0;
 					const afterVal = p.getCards("h").reduce((sum, c) => sum + get.value(c, p), 0);
-					delete p.storage.yachai_lijian_beforeVal;
 					return afterVal > beforeVal ? 1 : 0;
 				})
 				.forResult();
+			delete player.storage.yachai_lijian_beforeVal;
 			if (!again.bool) break;
 		}
 	},
@@ -527,7 +557,7 @@ yachai_anchao: {
 					const hs = player.getCards("h");
 					if (!hs.length) return;
 					const result = await target.chooseButton(["暗潮：观看" + get.translation(player) + "的手牌并获得其中一张", hs])
-						.set("ai", button => -get.value(button.link))
+						.set("ai", button => get.value(button.link))
 						.forResult();
 					if (!result.bool || !result.links?.length) return;
 					await target.gain(result.links[0], player, "give");
@@ -922,9 +952,8 @@ yachai_heshu: {
 						if (player.isDamaged()) return 6;
 						return 3;
 					},
-				},
-				target: {
-					player(player, target) {
+					// 必须是函数：写成对象引擎按 0 处理（get/index.js 只认 number/function）
+					target(player, target) {
 						return get.attitude(player, target);
 					},
 				},
@@ -1631,7 +1660,21 @@ yachai_yanling: {
 		return !player.hasSkill("yachai_yanling_used");
 	},
 	check(event, player) {
-		return event.targets?.length > 1 ? 0 : 1;
+		if (event.targets?.length > 1) return 0;
+		const target = event.targets?.[0];
+		if (!target || !target.isIn()) return 0;
+		// 接管基本稳赚：获取/增益类效果落回自己（不接管就归敌方），目标损失在“接与不接”两个分支完全相同，还白得誉虚。
+		// 唯一避开：目标是队友且其有「被指定为目标后反击」类技能——反击对象读使用者（trigger.player），接管后会反噬自己
+		if (get.attitude(player, target) < 0) return 1;
+		for (const sid of target.getSkills()) {
+			const info = lib.skill[sid];
+			if (!info || info.silent) continue;
+			const tr = info.trigger;
+			if (!tr) continue;
+			const names = Object.values(tr).flat();
+			if (names.some((n) => typeof n == "string" && n.startsWith("useCardToTarget"))) return 0;
+		}
+		return 1;
 	},
 	async cost(event, trigger, player) {
 		event.result = await player
@@ -1735,7 +1778,11 @@ yachai_yuxu: {
 
 		if (player.hp > 1) {
 			const r2 = await player.chooseBool("是否执行第②项“失去体力至1点”？")
-				.set("ai", () => player.hp > 3 ? 1 : 0)
+				.set("ai", () => {
+					// 压到1点换第二次决斗：血量厚、且场上有敌人可打才值得
+					if (player.hp <= 3) return 0;
+					return game.hasPlayer((current) => current != player && current.isIn() && current.countCards("h") > 0) ? 1 : 0;
+				})
 				.forResult();
 			if (r2.bool) {
 				await player.loseHp(player.hp - 1);
@@ -1744,11 +1791,12 @@ yachai_yuxu: {
 		}
 
 		if (!player.isTurnedOver()) {
-const r3 = await player.chooseBool("是否执行第③项“翻至背面”？")
+			const r3 = await player.chooseBool("是否执行第③项“翻至背面”？")
 			.set("ai", () => {
-				// 翻面跳过下回合代价大：手牌充足（可应对/打决斗）才值得换一次决斗次数
-				if (player.isTurnedOver()) return 0;
-				return player.countCards("h") >= 3 ? 1 : 0;
+				// ①已弃光全部牌（此处手牌数恒为0，原条件永假）：只有已压体力(count==2)、
+				// 且场上有1点体力的敌人可被三连决斗终结时，才值得翻面跳过下回合
+				if (count < 2) return 0;
+				return game.hasPlayer((current) => current != player && current.isIn() && current.hp == 1) ? 1 : 0;
 			})
 			.forResult();
 			if (r3.bool) {
@@ -1775,7 +1823,13 @@ const r3 = await player.chooseBool("是否执行第③项“翻至背面”？")
 	},
 	ai: {
 		order: 1,
-		result: { player: 1 },
+		result: {
+			// 代价=弃光所有牌：场上牌≤2时便宜可打；否则只在4血以上（压到1点换双决斗不至于送命）时发动
+			player(player) {
+				if (player.countCards("he") <= 2) return 1;
+				return player.hp > 3 ? 1 : 0;
+			},
+		},
 	},
 },
 
@@ -1954,6 +2008,15 @@ yachai_qiyi: {
 		if (!targets.includes(player)) return false;
 		return true;
 	},
+	// 响应标签必须在技能顶层：hasSkillTag 只读 lib.skill[id].ai（挂进 chooseButton 内是死键）
+	ai: {
+		respondSha: true,
+		respondShan: true,
+		skillTagFilter(player, tag) {
+			const name = "s" + tag.slice("respondS".length);
+			return lib.skill.yachai_qiyi.hiddenCard(player, name);
+		}
+	},
 	chooseButton: {
 		dialog(event, player) {
 			const source = event.respondTo[0];
@@ -1995,14 +2058,6 @@ yachai_qiyi: {
 				}
 			};
 		},
-		ai: {
-			respondSha: true,
-			respondShan: true,
-			skillTagFilter(player, tag) {
-				const name = "s" + tag.slice("respondS".length);
-				return lib.skill.yachai_qiyi.hiddenCard(player, name);
-			}
-		}
 	},
 	content() {},
 	subSkill: {
@@ -2108,7 +2163,15 @@ yachai_jinshi: {
 		if (source && source !== player && source.countGainableCards(player, "e") > 0) return true;
 		return false;
 	},
-	check: () => 1,
+	check(trigger, player) {
+		// 有敌方候选：直接抢；只有队友有装备时，仅当能联动【柱鼎】过牌（装备类柱鼎+有摸牌空间）才动手
+		const candidates = [trigger.player, trigger.source].filter(
+			(current) => current && current !== player && current.isIn() && current.countGainableCards(player, "e") > 0
+		);
+		if (!candidates.length) return false;
+		if (candidates.some((current) => get.attitude(player, current) < 0)) return true;
+		return player.hasSkill("clanzhuding") && player.storage.clanzhuding_type === "equip" && player.countCards("h") < player.maxHp;
+	},
 	async content(event, trigger, player) {
 		const damaged = trigger.player;
 		const source = trigger.source;
@@ -2129,7 +2192,7 @@ yachai_jinshi: {
 			if (!r.bool) return;
 			target = r.targets[0];
 		}
-		const result = await player.gainPlayerCard(target, "e", true).forResult();
+		const result = await player.gainPlayerCard(target, "e", true).set("ai", (card) => get.value(card)).forResult();
 		if (result?.bool && result.cards?.length) {
 			const card = result.cards[0];
 			if (player.getCards("h").includes(card) && get.type(card) === "equip") {
@@ -2143,7 +2206,7 @@ yachai_jinshi: {
 			player.awakenSkill("yachai_faji");
 			player.removeSkill("yachai_jinshi");
 			player.addSkill("yachai_nilv");
-			const r2 = await player.chooseTarget("发机：选择一名其他角色", (card, p, t) => t !== p).forResult();
+			const r2 = await player.chooseTarget("发机：选择一名其他角色", (card, p, t) => t !== p).set("ai", (t) => -get.attitude(player, t)).forResult();
 			if (r2.bool && r2.targets?.length) {
 				const t = r2.targets[0];
 				player.storage.yachai_faji_target = t;
@@ -2378,7 +2441,7 @@ yachai_liuliu: {
 						let chosen;
 						if (mounts.length === 1) chosen = mounts[0];
 						else {
-							const r = await player.chooseButton(["流罹：选择一张坐骑牌", [mounts, "card"]], true).forResult();
+							const r = await player.chooseButton(["流罹：选择一张坐骑牌", [mounts, "card"]], true).set("ai", button => get.value(button.link)).forResult();
 							if (r?.bool && r.links?.length) chosen = r.links[0];
 						}
 						if (chosen) {

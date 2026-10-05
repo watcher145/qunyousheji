@@ -1,344 +1,260 @@
 /** 武将 designer / 简介 characterIntro */
 export const characterIntro = {
-	qunyou_zoushi: "设计：阿桔是我",
-	qunyou_wenyang: "设计：pioneer",
-	qunyou_shibao: "设计：滑溜溜。<br>评价：什么时候铁锁，什么时候戮力，都是要考虑的问题，用不好容易资敌，还容易烧到自己。",
-	qunyou_sunxiu: "设计：？。<br>",
-	wending_clan_xiedaoyun: '设计：元徒<br>修改：欢愉与希望<br>修改点：“妙喻”的“当前回合角色的手牌上限张牌”改为“若干张牌”<br>评价：太摸牌白了，以下这些都是屁话<span style="text-decoration: line-through;"><br>评价：需要攒牌，否则就没牌印无懈和触发响应，但是在敌方连续使用锦囊时，一旦滚起来，就非常恐怖了，无懈需要的底牌越来越少，手上的牌越来越多，属于才女的应对自如十分有画面感。</span><br>个人是十分喜欢这个设计的，毕竟小谢也挺可爱吗，但是问题是回合外的三牌永远是不小的开销，而小谢也没有存牌能力，因此为了可玩性小幅修改，原版当然可以在回合内印印无懈来触发技能，但是小谢光着手牌出回合，好似在雪地里对诗之后光个身子去裸奔了',
-	wending_clan_xiean: "设计：夏商周在。<br>陈郡谢氏中最强的，族谢安的公式打法就是，延后摸3牌，之后的摸牌都不延后->遇到弃牌就延后->用一张伤害牌，然后摸三弃三捡回这张伤害牌。",
-	wending_clan_xiexuan: "设计：拉普拉斯。<br>评价：有点弱了，印杀和桃的条件太苛刻，况且横置角色的条件也很难，如果把兵主不限次数，强度就正常了。",
-	qunyou_zhaoyun: "设计：钟林。<br>评价：又有强度但也不至于太阴的设计。",
-	qunyou_sunshao: "设计：叼五我爱你麻（B站）。<br>评价：实际上非常缺装备牌，导致二技能没牌可换，当然，过牌量不错。",
 	qunyou_caocao: "设计：钟林。<br>修改：欢愉与希望<br>评价：加了个发动三次获得所有展示过的牌，解决了无结果问题，同时为了避免频繁发动，加了展示牌的限制，感觉还是没改到位",
-    wending_clan_xielingyun: "设计：混乱的啃<br>评价：额，你没那么多牌来调节全场，ai的不智能也导致这个武将的强度不好说",
-	wending_clan_xieshi: "设计：ff<br>评价：感觉有公式打法，注意不要资敌以及随机应变就行了",
-	qunyou_sp_wenyang: "设计：昆世<br>评价：贴吧来的设计，如何让出牌带给你成就感？",
-	qunyou_liukun: "设计：欢愉与希望<br>“何意百炼刚，化为绕指柔。”",
-	qunyou_sunjiao: "设计：杰劼夫长(贴吧）<br>评价：很好玩的发育将，前提是你要能发育起来",
-	qunyou_v_luxun: "来源：BV1Rv7S65EAy<br>评价：牌好能永动而且阴（不要吐槽为什么加威，因为还有另一个陆逊）",
-	qunyou_caozhi: "设计：钟林<br>评价：阴",
-	qunyou_simayi: "设计：迟眠饱（B站）<br>，来自BV1vk5G6AERQ。评价：挺看运气的，强度阳顶天",
-	qunyou_haopu: "设计：yyuan<br>评价：很好的设计，但你必须要清楚什么时候拼输才行",
-	qunyou_chen_zhaoyun: "设计：0^0。<br>评价：挺好的设计，印牌很强",
-	qunyou_wanglang: "设计：滑溜溜。<br>评价：阴完了，拿到A和K就能空城全场",
-	qunyou_cbp_zhaoyun: "设计：琉多斯。<br>修改：欢愉与希望<br>修改点：几乎完全重做<br>评价：我也不知道我改的好不好（我改的就是一坨大的）",
-	qunyou_jiangwei: "来源：BV1bUbY6SEvH",
-	qunyou_sb_zhugeliang: "设计：罗乐省标9191（B站）<br>吐槽：续天比想象中的更容易重置",
-	qunyou_pengyue: "设计：鹭。<br>评价：实战似乎一般，心血来潮做的一个",
-	qunyou_liumo: "设计：祂不想。<br>评价：十分好玩的设计，伪用一摸一，爽！",
-	qunyou_meng_liufeng: "设计：未知。<br>评价：拿一点体力上限换两张决斗。额，不好衡量，背景故事写的不错，但我没贴过来",
 	qunyou_caoshuang: "设计：嘻˘꒳˘羲<br>评价：我也不知道有没有bug",
-	qunyou_hanshiwuhu: "设计：佐世保之时雨 && 欢愉与希望（补设）<br>评价：加了个二技能，对于摸牌白还是要有补牌的手段的",
-	qunyou_sb_zhonghui: "设计：熏鱼不爱果子。修改：欢愉与希望<br>评价：我也不知道我改的好不好，总之比原版强了。",
-	qunyou_yang_wang: "设计：西夏笠谷。<br>评价：有操作有强度",
 	qunyou_caoxiancaohua: "设计：西夏笠谷。<br>评价：有操作有强度",
-	qunyou_xx_sunce:"设计：西夏笠谷。<br>评价：",
-	qunyou_lvlingqi:"设计：西夏笠谷。<br>评价：",
-	qunyou_panjun:"设计：西夏笠谷。<br>评价：",
-	qunyou_mo_jiangwei: "设计：墨客。<br>评价：对牌序要求也太高了，对运气要求也高",
-	qunyou_sb_guohuai: "设计：心乐之。<br>评价：沙摩柯和赵俨的私生子，其实强度不高，孩子们，我又卡基本牌了",
+	qunyou_caozhi: "设计：钟林<br>评价：阴",
+	qunyou_cbp_zhaoyun: "设计：琉多斯。<br>修改：欢愉与希望<br>修改点：几乎完全重做<br>评价：我也不知道我改的好不好（我改的就是一坨大的）",
+	qunyou_chen_zhaoyun: "设计：0^0。<br>评价：挺好的设计，印牌很强",
 	qunyou_clan_diaochan: "设计：来自大宝规则集中宗族技的例子<br>评价：自己有黑桃就先给自己用",
-	qunyou_wu_zhangfei: "设计：晴。<br>修改：欢愉与希望<br>修改点：重做一技能<br>评价：原设用三摸三加无限复原限定技就是永动机，现在已经改了，当然还是能滚雪球，但是没那么容易滚起来了",
-	qunyou_v_guanyu: "设计：忆否白露（B站）<br>评价：缺牌，但是至少能加伤",
-	qunyou_zhangyan: "设计：终汐舷<br>评价：阴，但是很爽",
-	shanhe_zhangjiao: "设计：玖宴<br>评价：太好玩了，起义的强度是真高，另外ai比较笨，不会凑三类型，因此给多点人，可以很顺利获得起义",
-	shanhe_luzhi: "设计：魁梧影<br>评价：需要控血线，封牌的确保证了强度，虽然是个摸牌白",
-	shanhe_hanfu: "设计：江雪埋骨",
-	shanhe_lusu: "设计：江雪埋骨<br>修改：欢愉与希望<br>修改点：二技能的失效机制也没讲清楚，转换技其中一个状态失效，于是改成每人限一次了，说实话第一次看到一个状态失效的转换技，有点别扭",
-	shanhe_dongzhuo: "设计：玖宴<br>评价：一开始还以为只能配刘协，直到我发现扶主能重置（其实是我故意曲解，但是我就是不把它当修改，嘿嘿），这下真成大汉忠良了",
-	qunyou_lvyi: "设计：三天内炸白宫（B站）&& 欢愉与希望（补设）<br>修改点：原技能来自BV1X5cozAEMH，说实话原技能有很多边界问题，装备牌怎么算？延时锦囊怎么算？闪和无懈怎么算？因此限定了牌的范围，非伤害牌要有角色目标，同时我还加了个技能补充强度",
-	yachaiclan_cuiyan: "设计：崖柴xxxF（B站）",
-	yachaiclan_wangxiang: "设计：崖柴xxxF（B站）",
-	yachaiclan_diaochan: "设计：崖柴xxxF（B站）",
-	yachaiclan_wuyi: "设计：崖柴xxxF（B站）",
-	yachaiclan_xunyu: "设计：崖柴xxxF（B站）",
-	yachaiclan_luxun: "设计：崖柴xxxF（B站）",
-	yachaiclan_lukang: "设计：崖柴xxxF（B站）",
-	yachaiclan_luji2: "设计：崖柴xxxF（B站）",
-	yachaiclan_luyun: "设计：崖柴xxxF（B站）",
-	yachaiclan_luji: "设计：崖柴xxxF（B站）<br>评价：该览的条件太苛刻了，同时收益也不高，你问我怎么改？我不知道",
-	yachaiclan_luyusheng: "设计：崖柴xxxF（B站）<br>",
-	yachaiclan_lukai: "设计：崖柴xxxF（B站）<br>",
-	yachaiclan_zhugeliang: "设计：崖柴xxxF（B站）<br>评价：原版强度并不高，将明亮出的牌并不一定总是能用，同时柱鼎又要求首次，你要用牌就得放弃柱鼎的补牌，只能说丞相就是鼎柱，宗族技只不过是人家没牌是补一下的工具罢了。<br>修改：加强将明，改成每回合限X次了，丞相理应如此",
-	yachaiclan_zhugezhan: "设计：崖柴xxxF（B站）<br>评价：",
-	yachaiclan_zhugeshang: "设计：崖柴xxxF（B站）<br>评价：",
-	yachaiclan_zhugejin: "设计：崖柴xxxF（B站）<br>评价：",
-	yachaiclan_zhugeke: "设计：崖柴xxxF（B站）<br>评价：",
-	yachaiclan_zhugedan: "设计：崖柴xxxF（B站）<br>评价：完全的反贼位，而且根本没有后期，不过在现在几轮结束游戏的时代倒是意外的适合",
-	yachaiclan_zhugeliang2: "设计：崖柴xxxF（B站）<br>评价：",
-	qunyou_wangyun: "来源：BV12N9gBMEW2",
-	zishu_liyan: "设计：城北徐公 <br>评价：",
-	zishu_lvju: "设计：环己醇 <br>评价：",
-	qunyou_zhouyu: "设计：寻辉逐烨<br>评价：前两个出牌阶段开无中，能出杀就出，后两个出牌阶段就开始烧人了。还是有概率空城的，要注意玩法，小心卧龙诸葛和无懈",
-	zishu_xunyu: "设计：天任 <br>评价：",
-	zishu_wangguan: "设计：环己醇",
-	zishu_sunhe: "设计：柠檬",
-	zishu_zhangjinyun: "设计：固障机器人",
-	zhuoming_feili_gongsunyuan: "设计：梦揽星河<br>评价：说实话就是快速结束游戏的，感觉拿来玩面杀会死人。",
-	zhuoming_gongsunyuan: "设计：终结者一号",
-	zhuoming_liuyan: "设计：可余雪",
-	xiaobai_lizhaoyi: "设计：小叶子<br>评价：",
-	qunyou_dongzhuo: "设计：滑溜溜<br>评价：",
+	qunyou_clan_diaochan2: "设计：monika&于吉",
+	qunyou_clan_jiangwei: "设计：于吉&颖川李氏<br>修改：欢愉与希望<br>修改点：添加了二技能，将一技能“本次造成的伤害-1”改为“以此法造成的伤害值”<br>评价：实际上怎么把手牌弃置到1才是难点，其实应该加一个消耗手牌的技能的，因此修改了一下数值，只要有一张杀杀中了就能继续改阶段了",
+	qunyou_clan_kongyu: "设计：烦不烦吵死了 ",
+	qunyou_clan_wangjun: "设计：静谦",
+	qunyou_clan_wangrong: "设计：璐璐",
+	qunyou_clan_xunzhuan: "设计：此方<br>修改：欢愉与希望<br>修改点：几乎完全重做，但思路相似。<br>评价：数值给的太低了，我直接改成拿牌给牌狂魔了，二技能的确不好改",
+	qunyou_clan_yuankui: "设计：欢愉与希望",
+	qunyou_clan_yuanshao: "设计：BCG&颍川李氏",
+	qunyou_clan_yuanshu: "设计：BCG&颍川李氏<br>修改：欢愉与希望<br>修改点：给一，二技能后面加上，“然后本技能上升一格”<br>评价：沽名明明需要上升，但原设另两个技能却要失去，也就是为了开两无中太难了，而且渐冻人真的没可玩性，还是让技能上升一格保证永续吧",
+	qunyou_clan_yuantanshang: "设计：BCG&颍川李氏",
 	qunyou_clan_zhugejun: "来源：BV1nmK26EEr3<br>评价：",
-	qiufeng_zhangqiying: "设计：门冬<br>修改：欢愉与希望<br>修改点：三宫的牌可再生。<br>评价：原版花哨但实际上可玩性不高，我改的变成了摸牌机器（一坨），实际上可玩性也不高",
-	qiufeng_hushi: "设计：老酒馆的猫<br>修改：欢愉与希望<br>修改点：“若其中仅有一张❤牌”改为“若有❤牌”；",
-	zishu_panshu: "设计：yyuan<br>评价：",
-	qunyou_taishici: "设计：阿桔是我<br>评价：",
-	qunyou_sunce: "设计：罗晓翳不是海龟螺猫（B站）&& 欢愉与希望（补设）<br>评价：",
+	qunyou_dongzhuo: "设计：滑溜溜<br>评价：",
+	qunyou_feiyi: "设计：阿桔是我",
+	qunyou_guanyu: "来源：BV12Y8B6FE3n",
+	qunyou_guojia: "设计：钟林",
 	qunyou_guotu: "设计：烦不烦（B站）",
+	qunyou_hanshiwuhu: "设计：佐世保之时雨 && 欢愉与希望（补设）<br>评价：加了个二技能，对于摸牌白还是要有补牌的手段的",
+	qunyou_haopu: "设计：yyuan<br>评价：很好的设计，但你必须要清楚什么时候拼输才行",
+	qunyou_jiananfeng: "设计：搞电信诈骗的<br>修改：欢愉与希望<br>修改点：原版的不仅删除本项还删除邻项让收益很有限，因此改为删除只删除本项",
+	qunyou_jiangwei: "来源：BV1bUbY6SEvH",
 	qunyou_liuchen: "设计：-黎明-Dawn（B站）",
+	qunyou_liukun: "设计：欢愉与希望<br>“何意百炼刚，化为绕指柔。”",
+	qunyou_liumo: "设计：祂不想。<br>评价：十分好玩的设计，伪用一摸一，爽！",
+	qunyou_luxun: "来源：BV1KHYX6yErH",
+	qunyou_lvlingqi:"设计：西夏笠谷。<br>评价：",
+	qunyou_lvyi: "设计：三天内炸白宫（B站）&& 欢愉与希望（补设）<br>修改点：原技能来自BV1X5cozAEMH，说实话原技能有很多边界问题，装备牌怎么算？延时锦囊怎么算？闪和无懈怎么算？因此限定了牌的范围，非伤害牌要有角色目标，同时我还加了个技能补充强度",
 	qunyou_masu:"设计：小白大白小黑大嘿",
+	qunyou_meng_liufeng: "设计：未知。<br>评价：拿一点体力上限换两张决斗。额，不好衡量，背景故事写的不错，但我没贴过来",
+	qunyou_mo_jiangwei: "设计：墨客。<br>评价：对牌序要求也太高了，对运气要求也高",
+	qunyou_mo_wangyun: "设计：砖<br>修改：欢愉与希望<br>修改点：原技能描述不明，改为“体力值唯一最大的角色”，轮次开始和结束特定条件能补牌",
+	qunyou_panjun:"设计：西夏笠谷。<br>评价：",
+	qunyou_pengyue: "设计：鹭。<br>评价：实战似乎一般，心血来潮做的一个",
+	qunyou_sb_guohuai: "设计：心乐之。<br>评价：沙摩柯和赵俨的私生子，其实强度不高，孩子们，我又卡基本牌了",
+	qunyou_sb_zhonghui: "设计：熏鱼不爱果子。修改：欢愉与希望<br>评价：我也不知道我改的好不好，总之比原版强了。",
+	qunyou_sb_zhugeliang: "设计：罗乐省标9191（B站）<br>吐槽：续天比想象中的更容易重置",
+	qunyou_shibao: "设计：滑溜溜。<br>评价：什么时候铁锁，什么时候戮力，都是要考虑的问题，用不好容易资敌，还容易烧到自己。",
+	qunyou_simayi: "设计：迟眠饱（B站）<br>，来自BV1vk5G6AERQ。评价：挺看运气的，强度阳顶天",
+	qunyou_sp_menghuo: "设计：未知（保存了图片，聊天记录翻不到了，原作者看到说一声）",
+	qunyou_sp_wenyang: "设计：昆世<br>评价：贴吧来的设计，如何让出牌带给你成就感？",
+	qunyou_sunce: "设计：罗晓翳不是海龟螺猫（B站）&& 欢愉与希望（补设）<br>评价：",
+	qunyou_sunchen: "设计：阿柴Aa_chai（B站）\n",
+	qunyou_sunhao: "设计：badlunar<br>修改：欢愉与希望<br>修改点：取消一技能的次数限制，更不容易空城",
+	qunyou_sunjiao: "设计：杰劼夫长(贴吧）<br>评价：很好玩的发育将，前提是你要能发育起来",
+	qunyou_sunshao: "设计：叼五我爱你麻（B站）。<br>评价：实际上非常缺装备牌，导致二技能没牌可换，当然，过牌量不错。",
+	qunyou_sunxiu: "设计：？。<br>",
+	qunyou_sunziliufang: "设计：左小白",
+	qunyou_taishici: "设计：阿桔是我<br>评价：",
+	qunyou_taokan: "设计：余平方<br>修改：欢愉与希望<br>修改点：将“使用一张【杀】”改为“弃置X张【杀】视为使用一张【杀】”<br>评价：原版太无脑了，直接使用一张【杀】极易造成永动",
+	qunyou_v_guanyu: "设计：忆否白露（B站）<br>评价：缺牌，但是至少能加伤",
+	qunyou_v_luxun: "来源：BV1Rv7S65EAy<br>评价：牌好能永动而且阴（不要吐槽为什么加威，因为还有另一个陆逊）",
+	qunyou_wanglang: "设计：滑溜溜。<br>评价：阴完了，拿到A和K就能空城全场",
+	qunyou_wangyun: "来源：BV12N9gBMEW2",
+	qunyou_wei_dongzhuo: "设计：未知<br>修改：欢愉与希望<br>修改点：“你可以与一名其他角色各自展示手牌”改为“你可以与一名本回合未此法选择过其他角色各自展示手牌”，“若你未受到伤害，此技能视为未发动过”改为“若你未受到伤害/造成伤害，此技能视为未发动过/你摸两张牌”",
+	qunyou_wenyang: "设计：pioneer",
+	qunyou_wu_zhangfei: "设计：晴。<br>修改：欢愉与希望<br>修改点：重做一技能<br>评价：原设用三摸三加无限复原限定技就是永动机，现在已经改了，当然还是能滚雪球，但是没那么容易滚起来了",
+	qunyou_xx_sunce:"设计：西夏笠谷。<br>评价：",
+	qunyou_yang_wang: "设计：西夏笠谷。<br>评价：有操作有强度",
+	qunyou_yangqun: "设计：可余雪<br>评价：",
+	qunyou_zhangfei: "设计：一声叶落",
+	qunyou_zhangliang: "设计：炮灰灰君<br>修改：欢愉与希望<br>修改点：加了界版本的鬼道，因为添加了牌堆导致黑桃2到9出现的频率增加，因此特别修改",
+	qunyou_zhangyan: "设计：终汐舷<br>评价：阴，但是很爽",
+	qunyou_zhaoshuang: "设计：欢愉与希望",
+	qunyou_zhaoyun: "设计：钟林。<br>评价：又有强度但也不至于太阴的设计。",
+	qunyou_zhonghui: "设计：朱苦力",
+	qunyou_zhongjin: "来源：BV1r53b61Ep1",
+	qunyou_zhouyu: "设计：寻辉逐烨<br>评价：前两个出牌阶段开无中，能出杀就出，后两个出牌阶段就开始烧人了。还是有概率空城的，要注意玩法，小心卧龙诸葛和无懈",
+	qunyou_zhugeguo: "设计：滑溜溜",
+	qunyou_zoushi: "设计：阿桔是我",
+
 	threed_dongbai: "设计：白驹<br>修改：欢愉与希望<br>修改点：去掉了崩坏的条件限制",
 	threed_heji: "设计：柠檬<br>评价：",
 	threed_qianzhao: "设计：林已<br>修改：欢愉与希望<br>修改点：两处改动点：一个触发时机增加“成为与你距离不为1的其他角色使用牌的唯一目标后”，另一处是选项1改为“你弃置其一张牌。<br>评价：很有简洁之美的设计，但是强度有点落后”",
-	shanhe_jiangwei: "设计：o.O<br>评价：",
-	shanhe_wangyi: "设计：颜渊&江雪<br>评价：有意思的设计，回合开始时必须要给敌人加鸠，否则自己就会一直获得鸠标记，但是血还是太少了，我加了一上限",
-	xiaobai_lite: "设计：why do we fall<br>说明：群相册里的李特忽略了一个边界问题，如果一个阶段内多次触发了括澜的否则分支，该阶段结束时视为使用多张兵临城下吗，其实区别不大，兵临城下是要把牌放回去的，有时候用了多张也不见得收益很高",
-	xiaobai_suojing: "设计：可余雪",
-	zishu_zangba: "设计：小涵",
-	zishu_duanjiong: "设计：..",
-	qunyou_guojia: "设计：钟林",
-	zishu_shantao: "设计：朱苦力",
-	qunyou_zhaoshuang: "设计：欢愉与希望",
+
+	qiufeng_hushi: "设计：老酒馆的猫<br>修改：欢愉与希望<br>修改点：“若其中仅有一张❤牌”改为“若有❤牌”；",
 	qiufeng_xiahouhui: "设计：夜已央<br>修改：欢愉与希望<br>修改点：一技能不再失效，二技能改为本轮弃牌堆；",
-	qunyou_guanyu: "来源：BV12Y8B6FE3n",
-	zishu_maohuanghou: "设计：环己醇<br>评价：",
+	qiufeng_zhangqiying: "设计：门冬<br>修改：欢愉与希望<br>修改点：三宫的牌可再生。<br>评价：原版花哨但实际上可玩性不高，我改的变成了摸牌机器（一坨），实际上可玩性也不高",
+
+	zishu_duanjiong: "设计：..",
 	zishu_guli: "设计：yyuan<br>评价：",
-	zhuoming_mateng: "设计：孝文白王<br>评价：",
-	zhuoming_fq_mateng: "设计：梦揽星河",
-	zhuoming_sc_mateng: "设计：伊藤幸子<br>修改：欢愉与希望<br>修改点：	添加了“否则你将其中一张牌当作-1马置入一名角色的任意装备栏。（可替换原装备）”<br>评价：原版太过依赖场上牌了，因此修改一技能一个给了一个补充-1马的手段",
-	xuandie_xunguan: "设计：玄蝶<br>加强：添加了“失去X个回合后获得”<br>评价：原版的确是具有赌和爆发的特色，但我认为还是有在可玩性上做调整，荀灌也有重新突围的机会",
-	xuandie_lvzhi: "设计：玄蝶",
-	xuandie_wenjun: "设计：玄蝶<br>评价：真浪漫呀",
-	xuandie_zuti: "设计：玄蝶",
-	qunyou_zhongjin: "来源：BV1r53b61Ep1",
-	qunyou_feiyi: "设计：阿桔是我",
-	qunyou_clan_xunzhuan: "设计：此方<br>修改：欢愉与希望<br>修改点：几乎完全重做，但思路相似。<br>评价：数值给的太低了，我直接改成拿牌给牌狂魔了，二技能的确不好改",
-	qunyou_clan_wangrong: "设计：璐璐",
-	qunyou_clan_yuantanshang: "设计：BCG&颍川李氏",
-	zishu_yongkai: "设计：此方",
-	qunyou_yangqun: "设计：可余雪<br>评价：",
-	qunyou_clan_yuanshao: "设计：BCG&颍川李氏",
-	qunyou_clan_yuanshu: "设计：BCG&颍川李氏<br>修改：欢愉与希望<br>修改点：给一，二技能后面加上，“然后本技能上升一格”<br>评价：沽名明明需要上升，但原设另两个技能却要失去，也就是为了开两无中太难了，而且渐冻人真的没可玩性，还是让技能上升一格保证永续吧",
-
-	maokuo_caobuxing: "设计：RP",
-
-	maokuo_jiangwei: "设计：怀默",
-	maokuo_nuqi_jiangwei: "设计：怀默",
-
-	maokuo_pengyang: "设计：冥狐",
-
-	maokuo_wangwang: "设计：陈木",
-
-	qunyou_clan_jiangwei: "设计：于吉&颖川李氏<br>修改：欢愉与希望<br>修改点：添加了二技能，将一技能“本次造成的伤害-1”改为“以此法造成的伤害值”<br>评价：实际上怎么把手牌弃置到1才是难点，其实应该加一个消耗手牌的技能的，因此修改了一下数值，只要有一张杀杀中了就能继续改阶段了",
-
 	zishu_liangxi: "设计：易大剧",
-
-	qunyou_clan_diaochan2: "设计：monika&于吉",
-
-	xiaobai_hufang: "设计：铝",
-
-	xiaobai_lvzhu: "设计：小叶子<br>修改：欢愉与希望<br>修改点：将二技能的“花色”修改为“颜色”，是加强，不过写了那么多比赛设的代码，印基本牌的确要被diy玩坏了",
-
-	xiaobai_malun: "设计：易大剧<br>修改：欢愉与希望<br>修改点：将“【杀】和【闪】”改为了一张基本牌",
-
-	qunyou_taokan: "设计：余平方<br>修改：欢愉与希望<br>修改点：将“使用一张【杀】”改为“弃置X张【杀】视为使用一张【杀】”<br>评价：原版太无脑了，直接使用一张【杀】极易造成永动",
-
-	qunyou_clan_kongyu: "设计：烦不烦吵死了 ",
-
-	xiaobai_zhaoshuang: "设计：小白杯主办组",
-
-	xiaobai_shenmu: "设计：超绝天",
-
-	qunyou_clan_yuankui: "设计：欢愉与希望",
-
-	xiaobai_gaoding: "设计：老酒馆的猫",
+	zishu_liyan: "设计：城北徐公 <br>评价：",
+	zishu_lvju: "设计：环己醇 <br>评价：",
+	zishu_maohuanghou: "设计：环己醇<br>评价：",
+	zishu_panshu: "设计：yyuan<br>评价：",
+	zishu_shantao: "设计：朱苦力",
+	zishu_sunhe: "设计：柠檬",
+	zishu_wangguan: "设计：环己醇",
+	zishu_xunyu: "设计：天任 <br>评价：",
+	zishu_yongkai: "设计：此方",
+	zishu_zangba: "设计：小涵",
+	zishu_zhangjinyun: "设计：固障机器人",
 
 	zhuoming_dongzhuo: "设计：我来天地正秋风<br>修改：欢愉与希望<br>修改点：一技能添加了“否则后面的内容”，二技能添加了“本轮对一名角色第二次造成伤害也能加摸牌数”<br>评价：感觉diy梦董卓时总是喜欢采用启动模板，但启动总是需要条件，因此我给一二技能加了下限，让启动的条件不那么苛刻",
+	zhuoming_feili_gongsunyuan: "设计：梦揽星河<br>评价：说实话就是快速结束游戏的，感觉拿来玩面杀会死人。",
+	zhuoming_fq_mateng: "设计：梦揽星河",
+	zhuoming_gongsunyuan: "设计：终结者一号",
+	zhuoming_liuyan: "设计：可余雪",
+	zhuoming_mateng: "设计：孝文白王<br>评价：",
+	zhuoming_sc_mateng: "设计：伊藤幸子<br>修改：欢愉与希望<br>修改点：	添加了“否则你将其中一张牌当作-1马置入一名角色的任意装备栏。（可替换原装备）”<br>评价：原版太过依赖场上牌了，因此修改一技能一个给了一个补充-1马的手段",
 
-	qunyou_jiananfeng: "设计：搞电信诈骗的<br>修改：欢愉与希望<br>修改点：原版的不仅删除本项还删除邻项让收益很有限，因此改为删除只删除本项",
+	wending_clan_xiean: "设计：夏商周在。<br>陈郡谢氏中最强的，族谢安的公式打法就是，延后摸3牌，之后的摸牌都不延后->遇到弃牌就延后->用一张伤害牌，然后摸三弃三捡回这张伤害牌。",
+	wending_clan_xiedaoyun: '设计：元徒<br>修改：欢愉与希望<br>修改点：“妙喻”的“当前回合角色的手牌上限张牌”改为“若干张牌”<br>评价：太摸牌白了，以下这些都是屁话<span style="text-decoration: line-through;"><br>评价：需要攒牌，否则就没牌印无懈和触发响应，但是在敌方连续使用锦囊时，一旦滚起来，就非常恐怖了，无懈需要的底牌越来越少，手上的牌越来越多，属于才女的应对自如十分有画面感。</span><br>个人是十分喜欢这个设计的，毕竟小谢也挺可爱吗，但是问题是回合外的三牌永远是不小的开销，而小谢也没有存牌能力，因此为了可玩性小幅修改，原版当然可以在回合内印印无懈来触发技能，但是小谢光着手牌出回合，好似在雪地里对诗之后光个身子去裸奔了',
+	wending_clan_xielingyun: "设计：混乱的啃<br>评价：额，你没那么多牌来调节全场，ai的不智能也导致这个武将的强度不好说",
+	wending_clan_xieshi: "设计：ff<br>评价：感觉有公式打法，注意不要资敌以及随机应变就行了",
+	wending_clan_xiexuan: "设计：拉普拉斯。<br>评价：有点弱了，印杀和桃的条件太苛刻，况且横置角色的条件也很难，如果把兵主不限次数，强度就正常了。",
 
-	qunyou_sunhao: "设计：badlunar<br>修改：欢愉与希望<br>修改点：取消一技能的次数限制，更不容易空城",
+	shanhe_dongzhuo: "设计：玖宴<br>评价：一开始还以为只能配刘协，直到我发现扶主能重置（其实是我故意曲解，但是我就是不把它当修改，嘿嘿），这下真成大汉忠良了",
+	shanhe_hanfu: "设计：江雪埋骨",
+	shanhe_jiangwei: "设计：o.O<br>评价：",
+	shanhe_lusu: "设计：江雪埋骨<br>修改：欢愉与希望<br>修改点：二技能的失效机制也没讲清楚，转换技其中一个状态失效，于是改成每人限一次了，说实话第一次看到一个状态失效的转换技，有点别扭",
+	shanhe_luzhi: "设计：魁梧影<br>评价：需要控血线，封牌的确保证了强度，虽然是个摸牌白",
+	shanhe_maliang: "设计：XX",
+	shanhe_wangyi: "设计：颜渊&江雪<br>评价：有意思的设计，回合开始时必须要给敌人加鸠，否则自己就会一直获得鸠标记，但是血还是太少了，我加了一上限",
+	shanhe_zhangjiao: "设计：玖宴<br>评价：太好玩了，起义的强度是真高，另外ai比较笨，不会凑三类型，因此给多点人，可以很顺利获得起义",
 
 	xingyu_sunshangxiang: "设计：志文<br>修改：欢愉与希望<br>修改点：将一技能的“视为使用”改为“使用”",
 
-	qunyou_clan_wangjun: "设计：静谦",
-
-	shanhe_maliang: "设计：XX",
-
-	qunyou_zhugeguo: "设计：滑溜溜",
-
-	xiaobai_liusong: "设计：夜已央",
-
-	xiaobai_zhangjian: "设计：嘭！<br>这是三国时期有记载的终极耄耋。——白小贝",
-
-	xiaobai_shenyi: "设计：食马者",
-
-	xiaobai_baoxun: "设计：雨幕江南",
-
-	xiaobai_chengxi: "设计：cyc",
-
-	xiaobai_xunyue: "设计：Strex",
-
-	xiaobai_feishi: "设计：食马者",
-
-	xiaobai_hanji: "设计：换家德没有马",
-
-	xiaobai_youchu: "设计：WWow",
-
-	xiaobai_lvyi: "设计：劉星壹閃",
-
-	xiaobai_fugu: "设计：易大剧",
-
-	xiaobai_lisheng: "设计：胖即是胖",
-
-	xiaobai_tianxu: "设计：超绝天",
-
-	xiaobai_zhushixing: "设计：虎鲸",
-
-	xiaobai_xuci: "设计：宫商催角羽",
-
-	xiaobai_dinggu: "设计：qqqqq",
-
-	xiaobai_zhugerong: "设计：七哀",
-
-	xiaobai_cuifu: "设计：左小白<br>修改：欢愉与希望<br>修改点：将“本轮已声明”的逻辑去掉，取消掉每种基本牌各一次的限制<br>评价：本来就不好印，其实加这个限制也无所谓，那你问我，空城无限印基本牌怎么办，我认为这是强度的一部分，可以通过二技能的删花色来使一技能废除，如果二技能不删花色又必须拿牌，就无法空城印牌，这倒是和历史上崔令仪的处境相似",
-
-	xiaobai_hushi: "设计：虎鲸",
-
-	xiaobai_jiyan: "设计：大祭司",
-
-	xiaobai_yangxianrong: "设计：winkid",
-
-	xiaobai_jiangziwen: "设计：汤圆",
-
-	xiaobai_zhaoqi: "设计：扬林",
-
-	xiaobai_zhaorao: "设计：伯约的崛起",
-
-	xiaobai_heyong: "设计：大祭司",
-
-	xiaobai_liuhongx: "设计：小叶子",
-
-	xiaobai_liukun: "设计：劉星壹閃",
-
-	xiaobai_liuying: "设计：zzcclll朱苦力",
-
-	xiaobai_liuji: "设计：廷玉",
-
-	xiaobai_liumin: "设计：王秀丽",
-
-	xiaobai_lifeng: "设计：小叶子",
-
-	xiaobai_luyu: "设计：胖宝宝",
-
-	xiaobai_weidan: "设计：易大剧",
-
-	xiaobai_yangyong: "设计：小叶子",
-
-	xiaobai_dengfuren: "设计：食马者",
-
-	xiaobai_louxuan: "设计：胖宝宝",
-
-	xiaobai_maohuanghou: "设计：末页",
-
-	xiaobai_wangsi: "设计：cyc",
-
-	xiaobai_sunshao: "设计：柠檬",
-
-	xiaobai_baochu: "设计：小叶子",
-
-	xiaobai_huzhi: "设计：胖即是胖",
-
-	xiaobai_wangbi: "设计：复仇滚木",
-
-	xiaobai_xumu: "设计：狐狸",
-
-	xiaobai_huzong: "设计：屑",
-
-	xiaobai_zhaozi: "设计：忆雨",
-
-	xiaobai_huangwan: "设计：忘e233",
-
-	xiaobai_gaixun: "设计：Sachiko",
-
-	xiaobai_fuxuan: "设计：静谦",
-
-	xiaobai_simayue: "设计：小叶子",
-
-	xiaobai_wangbimawen: "设计：复仇滚木",
-
-	xiaobai_weiji: "设计：一只白板",
-
-	xiaobai_fanjian: "设计：铝",
-
-	xiaobai_hezhi: "设计：屑",
-
-	xiaobai_lujix: "设计：劉星壹閃",
-
-	xiaobai_doumiao: "设计：小叶子",
-
-	xiaobai_hexiu: "设计：超绝天",
-
-	xiaobai_huangfugui: "设计：左小白",
-
-	xiaobai_yangxu: "设计：胖即是胖<br>修改：欢愉与希望<br>修改点：添加了悬鱼宝物的技能<br>评价：额，宝物没有效果有点可惜，于是写了个联动的装备技能",
-
-	xiaobai_shichong: "设计：我来天地正秋风",
-
-	xiaobai_nieyou: "设计：换家德没有马",
-
-	xiaobai_xueying: "设计：雨幕江南",
-
-	xiaobai_douwu: "设计：大祭司",
-
-	xiaobai_liying: "设计：胖即是胖",
-
-	xiaobai_wangxiu: "设计：夜已央",
-
-	xiaobai_leguang: "设计：换家德没有马",
-
-	xiaobai_peikai: "设计：sachiko",
-
-	xiaobai_peiwei: "设计：天行",
-
-	xiaobai_zhangfang: "设计：静谦",
-
-	xiaobai_guopu: "设计：Why Do We Fall",
-
-	xiaobai_simayou: "设计：Miss",
-
-	xiaobai_simajun: "设计：虎鲸",
-
-	xiaobai_wangjunx: "设计：吴太祖大皇帝",
-
-	xiaobai_heqiao: "设计：可余雪",
-
-	xiaobai_jishao: "设计：以火修功",
-
-	xiaobai_zuosi: "设计：暗夜决彻",	
-	xiaobai_xunkai: "设计：左小白",	
-	qunyou_mo_wangyun: "设计：砖<br>修改：欢愉与希望<br>修改点：原技能描述不明，改为“体力值唯一最大的角色”，轮次开始和结束特定条件能补牌",
-
-	xiaobai_zhaoyu: "设计：柠檬<br>修改：欢愉与希望<br>修改点：威旅取消“本回合结束”效果消失的限制，麾号若两项不能执行则可以摸两张牌。",
-
-	xiaobai_zhangyu: "设计：Mushi",	xiaobai_luoshang: "设计：虎鲸",
-
-	xiaobai_xiyingxi: "设计：胖即是胖",	qunyou_luxun: "来源：BV1KHYX6yErH",
-
-	qunyou_zhonghui: "设计：朱苦力",
-
+	yachaiclan_cuiyan: "设计：崖柴xxxF（B站）",
+	yachaiclan_diaochan: "设计：崖柴xxxF（B站）",
+	yachaiclan_luji: "设计：崖柴xxxF（B站）<br>评价：该览的条件太苛刻了，同时收益也不高，你问我怎么改？我不知道",
+	yachaiclan_luji2: "设计：崖柴xxxF（B站）",
+	yachaiclan_lukai: "设计：崖柴xxxF（B站）<br>",
+	yachaiclan_lukang: "设计：崖柴xxxF（B站）",
+	yachaiclan_luxun: "设计：崖柴xxxF（B站）",
+	yachaiclan_luyun: "设计：崖柴xxxF（B站）",
+	yachaiclan_luyusheng: "设计：崖柴xxxF（B站）<br>",
+	yachaiclan_wangxiang: "设计：崖柴xxxF（B站）",
+	yachaiclan_wuyi: "设计：崖柴xxxF（B站）",
+	yachaiclan_xunyu: "设计：崖柴xxxF（B站）",
+	yachaiclan_zhugedan: "设计：崖柴xxxF（B站）<br>评价：完全的反贼位，而且根本没有后期，不过在现在几轮结束游戏的时代倒是意外的适合",
+	yachaiclan_zhugejin: "设计：崖柴xxxF（B站）<br>评价：",
+	yachaiclan_zhugeke: "设计：崖柴xxxF（B站）<br>评价：",
+	yachaiclan_zhugeliang: "设计：崖柴xxxF（B站）<br>评价：原版强度并不高，将明亮出的牌并不一定总是能用，同时柱鼎又要求首次，你要用牌就得放弃柱鼎的补牌，只能说丞相就是鼎柱，宗族技只不过是人家没牌是补一下的工具罢了。<br>修改：加强将明，改成每回合限X次了，丞相理应如此",
+	yachaiclan_zhugeliang2: "设计：崖柴xxxF（B站）<br>评价：",
+	yachaiclan_zhugeshang: "设计：崖柴xxxF（B站）<br>评价：",
+	yachaiclan_zhugezhan: "设计：崖柴xxxF（B站）<br>评价：",
+
+	xuandie_lvzhi: "设计：玄蝶",
+	xuandie_wenjun: "设计：玄蝶<br>评价：真浪漫呀",
+	xuandie_xunguan: "设计：玄蝶<br>加强：添加了“失去X个回合后获得”<br>评价：原版的确是具有赌和爆发的特色，但我认为还是有在可玩性上做调整，荀灌也有重新突围的机会",
+	xuandie_zuti: "设计：玄蝶",
+
+	maokuo_caobuxing: "设计：RP",
+	maokuo_caogun: "设计：陈木",
+	maokuo_heyan: "设计：七哀凌虚",
+	maokuo_huangchong: "设计：RP",
+	maokuo_jiangwei: "设计：怀默",
+	maokuo_lichunxiang: "设计：RP&辰木",
+	maokuo_liuling: "设计：怀默",
+	maokuo_lukang: "设计：怀默",
+	maokuo_nuqi_jiangwei: "设计：怀默",
+	maokuo_pengyang: "设计：冥狐",
+	maokuo_wangfan: "设计：陈木<br>修改：欢愉与希望<br>修改点：	取消了一技能需要三张牌的类型各不相同的限制",
+	maokuo_wangwang: "设计：陈木",
+	maokuo_weiwen_zhugezhi: "设计：龙哥头肩",
+	maokuo_xiahouhui: "设计：陈木",
+	maokuo_yangxi: "设计：辰木",
+	maokuo_zanghong: "设计：怀默",
+	maokuo_zerong: "设计：Geniova",
 	maokuo_zhangte: "设计：陈木",
 
-	qunyou_sunziliufang: "设计：左小白",
-
-	qunyou_zhangfei: "设计：一声叶落",
-
-	qunyou_sp_menghuo: "设计：未知（保存了图片，聊天记录翻不到了，原作者看到说一声）",
-
-	qunyou_zhangliang: "设计：炮灰灰君<br>修改：欢愉与希望<br>修改点：加了界版本的鬼道，因为添加了牌堆导致黑桃2到9出现的频率增加，因此特别修改",
-
-	qunyou_sunchen: "设计：阿柴Aa_chai（B站）\n",
-
-	qunyou_wei_dongzhuo: "设计：未知<br>修改：欢愉与希望<br>修改点：“你可以与一名其他角色各自展示手牌”改为“你可以与一名本回合未此法选择过其他角色各自展示手牌”，“若你未受到伤害，此技能视为未发动过”改为“若你未受到伤害/造成伤害，此技能视为未发动过/你摸两张牌”",
+	xiaobai_baochu: "设计：小叶子",
+	xiaobai_baoxun: "设计：雨幕江南",
+	xiaobai_chengxi: "设计：cyc",
+	xiaobai_cuifu: "设计：左小白<br>修改：欢愉与希望<br>修改点：将“本轮已声明”的逻辑去掉，取消掉每种基本牌各一次的限制<br>评价：本来就不好印，其实加这个限制也无所谓，那你问我，空城无限印基本牌怎么办，我认为这是强度的一部分，可以通过二技能的删花色来使一技能废除，如果二技能不删花色又必须拿牌，就无法空城印牌，这倒是和历史上崔令仪的处境相似",
+	xiaobai_dengfuren: "设计：食马者",
+	xiaobai_dinggu: "设计：qqqqq",
+	xiaobai_doumiao: "设计：小叶子",
+	xiaobai_douwu: "设计：大祭司",
+	xiaobai_fanjian: "设计：铝",
+	xiaobai_feishi: "设计：食马者",
+	xiaobai_fugu: "设计：易大剧",
+	xiaobai_fuxuan: "设计：静谦",
+	xiaobai_gaixun: "设计：Sachiko",
+	xiaobai_gaoding: "设计：老酒馆的猫",
+	xiaobai_guopu: "设计：Why Do We Fall",
+	xiaobai_hanji: "设计：换家德没有马",
+	xiaobai_heqiao: "设计：可余雪",
+	xiaobai_hexiu: "设计：超绝天",
+	xiaobai_heyong: "设计：大祭司",
+	xiaobai_hezhi: "设计：屑",
+	xiaobai_huangfugui: "设计：左小白",
+	xiaobai_huangwan: "设计：忘e233",
+	xiaobai_hufang: "设计：铝",
+	xiaobai_hushi: "设计：虎鲸",
+	xiaobai_huzhi: "设计：胖即是胖",
+	xiaobai_huzong: "设计：屑",
+	xiaobai_jiangziwen: "设计：汤圆",
+	xiaobai_jishao: "设计：以火修功",
+	xiaobai_jiyan: "设计：大祭司",
+	xiaobai_leguang: "设计：换家德没有马",
+	xiaobai_lifeng: "设计：小叶子",
+	xiaobai_lisheng: "设计：胖即是胖",
+	xiaobai_lite: "设计：why do we fall<br>说明：群相册里的李特忽略了一个边界问题，如果一个阶段内多次触发了括澜的否则分支，该阶段结束时视为使用多张兵临城下吗，其实区别不大，兵临城下是要把牌放回去的，有时候用了多张也不见得收益很高",
+	xiaobai_liuhongx: "设计：小叶子",
+	xiaobai_liuji: "设计：廷玉",
+	xiaobai_liukun: "设计：劉星壹閃",
+	xiaobai_liumin: "设计：王秀丽",
+	xiaobai_liusong: "设计：夜已央",
+	xiaobai_liuying: "设计：zzcclll朱苦力",
+	xiaobai_liying: "设计：胖即是胖",
+	xiaobai_lizhaoyi: "设计：小叶子<br>评价：",
+	xiaobai_louxuan: "设计：胖宝宝",
+	xiaobai_lujix: "设计：劉星壹閃",
+	xiaobai_luoshang: "设计：虎鲸",
+	xiaobai_luyu: "设计：胖宝宝",
+	xiaobai_lvyi: "设计：劉星壹閃",
+	xiaobai_lvzhu: "设计：小叶子<br>修改：欢愉与希望<br>修改点：将二技能的“花色”修改为“颜色”，是加强，不过写了那么多比赛设的代码，印基本牌的确要被diy玩坏了",
+	xiaobai_malun: "设计：易大剧<br>修改：欢愉与希望<br>修改点：将“【杀】和【闪】”改为了一张基本牌",
+	xiaobai_maohuanghou: "设计：末页",
+	xiaobai_nieyou: "设计：换家德没有马",
+	xiaobai_peikai: "设计：sachiko",
+	xiaobai_peiwei: "设计：天行",
+	xiaobai_shenmu: "设计：超绝天",
+	xiaobai_shenyi: "设计：食马者",
+	xiaobai_shichong: "设计：我来天地正秋风",
+	xiaobai_simajun: "设计：虎鲸",
+	xiaobai_simayou: "设计：Miss",
+	xiaobai_simayue: "设计：小叶子",
+	xiaobai_sunshao: "设计：柠檬",
+	xiaobai_suojing: "设计：可余雪",
+	xiaobai_tianxu: "设计：超绝天",
+	xiaobai_wangbi: "设计：复仇滚木",
+	xiaobai_wangbimawen: "设计：复仇滚木",
+	xiaobai_wangjunx: "设计：吴太祖大皇帝",
+	xiaobai_wangsi: "设计：cyc",
+	xiaobai_wangxiu: "设计：夜已央",
+	xiaobai_weidan: "设计：易大剧",
+	xiaobai_weiji: "设计：一只白板",
+	xiaobai_xiyingxi: "设计：胖即是胖",
+	xiaobai_xuci: "设计：宫商催角羽",
+	xiaobai_xueying: "设计：雨幕江南",
+	xiaobai_xumu: "设计：狐狸",
+	xiaobai_xunkai: "设计：左小白",
+	xiaobai_xunyue: "设计：Strex",
+	xiaobai_yangxianrong: "设计：winkid",
+	xiaobai_yangxu: "设计：胖即是胖<br>修改：欢愉与希望<br>修改点：添加了悬鱼宝物的技能<br>评价：额，宝物没有效果有点可惜，于是写了个联动的装备技能",
+	xiaobai_yangyong: "设计：小叶子",
+	xiaobai_youchu: "设计：WWow",
+	xiaobai_zhangfang: "设计：静谦",
+	xiaobai_zhangjian: "设计：嘭！<br>这是三国时期有记载的终极耄耋。——白小贝",
+	xiaobai_zhangyu: "设计：Mushi",
+	xiaobai_zhaoqi: "设计：扬林",
+	xiaobai_zhaorao: "设计：伯约的崛起",
+	xiaobai_zhaoshuang: "设计：小白杯主办组",
+	xiaobai_zhaoyu: "设计：柠檬<br>修改：欢愉与希望<br>修改点：威旅取消“本回合结束”效果消失的限制，麾号若两项不能执行则可以摸两张牌。",
+	xiaobai_zhaozi: "设计：忆雨",
+	xiaobai_zhugerong: "设计：七哀",
+	xiaobai_zhushixing: "设计：虎鲸",
+	xiaobai_zuosi: "设计：暗夜决彻",
 };

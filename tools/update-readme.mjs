@@ -127,6 +127,12 @@ for (const id of allIds) {
   const hasPatch = /设计[：:].*&&.*?[\(（]补设[\)）]/.test(intro) || /[\(（]补设[\)）]/.test(intro);
 
   if (packagedIds.has(id)) {
+    // 来源-only（只有 BV 号/来源、没有设计者）的角色不进包的设计者索引——
+    // 包内未打包一视同仁，统一归入「收集到的好设，但只有来源」
+    if (isBVOrSourceOnly) {
+      collectedSource.push(id);
+      continue;
+    }
     // 找出角色所属的包
     let charPkg = null;
     for (const [pkg, ids] of Object.entries({ ...characterSort, ...xiaobaiSort })) {
@@ -243,15 +249,19 @@ if (xiaobaiOrder.length > 0) {
   }
 }
 
-sections.push(pkgSections.join('\n\n'));
+// 「收集到的好设，但只有来源」紧跟「群友散设」：这批角色多为群友散设包内、只知来源未知设计者
+const sourceSection = collectedSource.length > 0
+  ? '### 收集到的好设，但只有来源\n' + makeMergedLines(collectedSource).join('\n')
+  : null;
+if (sourceSection) {
+  sections.push([...pkgSections.slice(0, 1), sourceSection, ...pkgSections.slice(1)].join('\n\n'));
+} else {
+  sections.push(pkgSections.join('\n\n'));
+}
 
 // Non-package sections
 if (collectedDesigner.length > 0) {
   sections.push('\n### 收集到的好设\n' + makeMergedLines(collectedDesigner).join('\n'));
-}
-
-if (collectedSource.length > 0) {
-  sections.push('\n### 收集到的好设，但只有来源\n' + makeMergedLines(collectedSource).join('\n'));
 }
 
 if (gaishe.length > 0) {

@@ -352,7 +352,7 @@ qunyou_qiongji(player) {
 				return index == (second ? 1 : 0) ? `<span class='bluetext'>${item}</span>` : item;
 			})
 			.join("");
-		return `转换技，当你使用牌指定目标时，你可以将此牌目标改为${text}，以获得原目标的各一张牌；若改后目标含你，你摸一张牌。`;
+		return `转换技，当你使用牌指定目标时，你可以将此牌目标改为${text}，以获得原目标中除你外所有目标的各一张牌；若改后目标含你，你摸一张牌。`;
 	},
 	// 诂守：动态描述——当前首项标蓝、已删去项划线置灰，尾部附实时进度
 	xiaobai_gushou(player, skill) {
@@ -373,6 +373,80 @@ qunyou_qiongji(player) {
 				? `<br>当前：三项均已删去（已以此法使用${used}张♠基本牌）。`
 				: `<br>当前首项：${names[stage]}（已以此法使用${used}张♠基本牌）。`;
 		return head + status;
+	},
+
+	// ==================== 一蛋展示（猫咪大院）：随状态刷新的技能面板描述 ====================
+	// 约定：base 取 lib.translate[skill+"_info"]，动态状态行用 blue/red 追加（妙喻/诂守同款）
+	maokuo_raolue(player) {
+		const base = lib.translate.maokuo_raolue_info || "";
+		if (player.hasSkill("maokuo_raolue_used")) {
+			return `${base}<br>${red("本回合已发动")}`;
+		}
+		const ready = player.storage?.maokuo_raolue_ready;
+		return ready ? `${base}<br>${blue(`已就绪：可视为使用或打出【${get.translation(ready)}】`)}` : base;
+	},
+	maokuo_bolan(player) {
+		const base = lib.translate.maokuo_bolan_info || "";
+		const card = player.storage?.maokuo_bolan_card;
+		return card ? `${base}<br>${blue(`本回合亮出：${get.translation(card.suit)}${get.translation(card.name)}（点数${card.num}）`)}` : base;
+	},
+	maokuo_songjiu(player) {
+		const base = lib.translate.maokuo_songjiu_info || "";
+		return player.hasSkill("maokuo_songjiu_jin") ? `${base}<br>${red("“颂酒”当前失效")}` : base;
+	},
+	maokuo_xunyi(player) {
+		const base = lib.translate.maokuo_xunyi_info || "";
+		const n = player.storage?.maokuo_xunyi_up || 0;
+		return n ? `${base}<br>${blue(`当前：手牌上限和攻击范围+${n}；攻击范围 ${player.getAttackRange()}`)}` : base;
+	},
+	maokuo_shuirong(player) {
+		const base = lib.translate.maokuo_shuirong_info || "";
+		const n = player.storage?.maokuo_shuirong_down || 0;
+		return n ? `${base}<br>${blue(`当前：手牌上限-${n}（现为 ${player.getHandcardLimit()}）`)}` : base;
+	},
+	maokuo_nishui(player) {
+		const base = lib.translate.maokuo_nishui_info || "";
+		const cards = player.getExpansions("maokuo_nishui");
+		const ban = player.getStorage("maokuo_nishui_ban") || [];
+		let str = base;
+		if (cards.length) {
+			str += `<br>${blue(`剩余“逆水”牌：${cards.map(c => `【${get.translation(c.name)}】`).join("、")}`)}`;
+		}
+		if (ban.length) {
+			str += `<br>${red(`不能再使用或打出：${ban.map(n => `【${get.translation(n)}】`).join("、")}`)}`;
+		}
+		return str;
+	},
+	maokuo_qingxuan(player) {
+		const base = lib.translate.maokuo_qingxuan_info || "";
+		if (!ui.cardPile) {
+			return base;
+		}
+		const list = get.info("maokuo_qingxuan").getVisibleTop();
+		if (!list.length) {
+			return base;
+		}
+		return `${base}<br>${blue(`牌堆可见牌：${list.map(item => `第${item.pos}张 ${get.translation(item.card)}`).join("、")}`)}`;
+	},
+	maokuo_shameng(player) {
+		const base = lib.translate.maokuo_shameng_info || "";
+		const st = player.storage?.maokuo_shameng_streak;
+		return st?.target ? `${base}<br>${blue(`本轮连击：${get.translation(st.target)} 已被连续指定${st.count}次（再指定其摸${st.count + 1}张）`)}` : base;
+	},
+	maokuo_canlie(player) {
+		const base = lib.translate.maokuo_canlie_info || "";
+		const n = player.getStorage("maokuo_canlie_count") || 0;
+		return n ? `${base}<br>${blue(`本回合已发动${n}次`)}` : `${base}<br>${blue("本回合尚未发动（首次发动时回复1点体力）")}`;
+	},
+	maokuo_siqian(player) {
+		const base = lib.translate.maokuo_siqian_info || "";
+		const ban = player.getStorage("maokuo_siqian_ban") || [];
+		return ban.length ? `${base}<br>${red(`本回合不能再对${ban.map(s => get.translation(s)).join("、")}色牌发动`)}` : base;
+	},
+	maokuo_kuolue(player) {
+		const base = lib.translate.maokuo_kuolue_info || "";
+		const hit = (player.getStorage("maokuo_kuolue_hitmark") || []).length;
+		return hit ? `${base}<br>${red("本回合已成为过黑色牌的目标")}` : base;
 	},
 };
 

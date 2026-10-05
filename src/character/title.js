@@ -1,341 +1,258 @@
 /** 武将称号 characterTitle */
 export const characterTitle = {
-	qunyou_zoushi: "淯水香魂",
-	qunyou_wenyang: "独骑将军",
-	qunyou_shibao: "乐陵郡公",
-	qunyou_sunxiu: "紫气伤和",
-	wending_clan_xiedaoyun: "咏絮之才",
-	wending_clan_xiean: "雅志轩冕",
-	wending_clan_xiexuan: "芝兰玉树",
-	wending_clan_xielingyun: "不为之赋",
-	wending_clan_xieshi: "岁寒松柏",
-	qunyou_zhaoyun: "炙龙烈胆",
-	qunyou_sunshao: "创基扶政",
 	qunyou_caocao: "山海归心",
-	qunyou_sp_wenyang: "灭光破云",
-	qunyou_liukun: "时穷节乃见",
-	qunyou_simayi: "独水孤清",
-	qunyou_sunjiao: "夏口门使",
-	qunyou_v_luxun: "渊谋谦略",
-	qunyou_caozhi: "酒虎诗龙",
-	qunyou_haopu: "慰壑把晖",
-	qunyou_chen_zhaoyun: "坐收渔利",
-	qunyou_wanglang: "渊薮临危",
-	qunyou_cbp_zhaoyun: "虎威将军",
-	qunyou_jiangwei: "桀慢的麒麟",
-	qunyou_sb_zhugeliang: "炎汉挽歌",
-	qunyou_pengyue: "审时沉势",
-	qunyou_liumo: "问琴雅然",
-	qunyou_meng_liufeng: "翔枝成凤",
 	qunyou_caoshuang: "托孤傲臣",
-	qunyou_hanshiwuhu: "屡败屡战",
-	qunyou_sb_zhonghui: "暂定",
-	qunyou_yang_wang: "贤婉俭德",
 	qunyou_caoxiancaohua: "锦瑟良缘",
-	qunyou_mo_jiangwei: "赴焱窮奇",
-	qunyou_sb_guohuai: "临危济难",
+	qunyou_caozhi: "酒虎诗龙",
+	qunyou_cbp_zhaoyun: "虎威将军",
+	qunyou_chen_zhaoyun: "坐收渔利",
 	qunyou_clan_diaochan: "诛魔成义",
-	qunyou_wu_zhangfei: "烈武恒威",
-	qunyou_v_guanyu: "美髯公",
-	qunyou_xx_sunce: "平江东扫患寇",
-	qunyou_lvlingqi: "红袖仗钺",
-	qunyou_zhangyan: "轻勇骇势",
-	shanhe_zhangjiao: "太平道人",
-	shanhe_luzhi: "桢干质烈",
-	shanhe_hanfu: "虎形羊质",
-	shanhe_lusu: "文韬武略",
-	shanhe_dongzhuo: "肃佞的辅相",
-	qunyou_lvyi: "权伥",
-	yachaiclan_cuiyan: "德音孔昭",
-	yachaiclan_wangxiang: "伐冰之肇",
-	yachaiclan_diaochan: "冲波逆折",
-	yachaiclan_wuyi: "奉书献马",
-	yachaiclan_xunyu: "芳兰生门",
-	qunyou_zhouyu: "火计破曹",
-	yachaiclan_luxun: "忠诚恳至",
-	yachaiclan_lukang: "奕世载美",
-	yachaiclan_luji2: "龙跃于江",
-	yachaiclan_luyun: "荆衡杞梓",
-	qunyou_panjun:"东吴之柱",
-	yachaiclan_luji: "驽马逸足",
-	yachaiclan_luyusheng: "邦士慕则",
-	yachaiclan_lukai: "格业忠勤",
-	yachaiclan_zhugeliang: "日月同悬",
-	yachaiclan_zhugezhan: "掣近掎远",
-	yachaiclan_zhugeshang: "跨父轶祖",
-	yachaiclan_zhugejin: "才猷骏懋",
-	yachaiclan_zhugeke: "枉恪罔逊",
-	yachaiclan_zhugedan: "著勋齾铓",
-	yachaiclan_zhugeliang2: "彪炳人寰",
-	qunyou_wangyun: "今魂兴魄",
-	zishu_liyan: "鄙情逐利",
-	zishu_lvju: "克绍堂构",
-	zishu_xunyu: "君去香留",
-	zishu_sunhe: "阙储狩忌",
-	zishu_zhangjinyun: "未落盛英",
-	zhuoming_feili_gongsunyuan: "鸢飞戾灭",
-	zhuoming_gongsunyuan: "狡投嗜欲",
-	zhuoming_liuyan: "蟠虺望气",
-	xiaobai_lizhaoyi: "兰女同烬",
+	qunyou_clan_diaochan2: "以色为戈",
+	qunyou_clan_jiangwei: "一意回天",
+	qunyou_clan_kongyu: "放龟授左",
+	qunyou_clan_wangjun: "神州陆沉",
+	qunyou_clan_wangrong: "璞隐九曲",
+	qunyou_clan_xunzhuan: "明允笃诚",
+	qunyou_clan_yuankui: "东食西宿",
+	qunyou_clan_yuanshao: "捷成族英",
+	qunyou_clan_yuanshu: "鋩失权惘",
+	qunyou_clan_yuantanshang: "常棣失华",
 	qunyou_clan_zhugejun: "三珠之隐根",
-	qiufeng_zhangqiying: "三六大道",
-	qiufeng_hushi: "杏惹妄疑",
-	zishu_panshu: "瑶台遗韵",
-	qunyou_taishici: "围阵奋戈",
-	qunyou_sunce:"勇冠三江势",
+	qunyou_feiyi: "止步无前",
+	qunyou_guanyu: "义武千秋",
+	qunyou_guojia: "遗策定辽",
 	qunyou_guotu:"凶臣",
+	qunyou_hanshiwuhu: "屡败屡战",
+	qunyou_haopu: "慰壑把晖",
+	qunyou_jiananfeng: "乱华妖后",
+	qunyou_jiangwei: "桀慢的麒麟",
 	qunyou_liuchen:"血溅轩辕",
+	qunyou_liukun: "时穷节乃见",
+	qunyou_liumo: "问琴雅然",
+	qunyou_luxun: "儒才",
+	qunyou_lvlingqi: "红袖仗钺",
+	qunyou_lvyi: "权伥",
 	qunyou_masu:"兵法在胸",
+	qunyou_meng_liufeng: "翔枝成凤",
+	qunyou_mo_jiangwei: "赴焱窮奇",
+	qunyou_mo_wangyun: "易摄承陈",
+	qunyou_panjun:"东吴之柱",
+	qunyou_pengyue: "审时沉势",
+	qunyou_sb_guohuai: "临危济难",
+	qunyou_sb_zhonghui: "暂定",
+	qunyou_sb_zhugeliang: "炎汉挽歌",
+	qunyou_shibao: "乐陵郡公",
+	qunyou_simayi: "独水孤清",
+	qunyou_sp_menghuo: "蛮王",
+	qunyou_sp_wenyang: "灭光破云",
+	qunyou_sunce:"勇冠三江势",
+	qunyou_sunchen: "凶竖乱吴",
+	qunyou_sunhao: "凶昏肆如疾",
+	qunyou_sunjiao: "夏口门使",
+	qunyou_sunshao: "创基扶政",
+	qunyou_sunxiu: "紫气伤和",
+	qunyou_sunziliufang: "织纵朝纲",
+	qunyou_taishici: "围阵奋戈",
+	qunyou_taokan: "激流勇退",
+	qunyou_v_guanyu: "美髯公",
+	qunyou_v_luxun: "渊谋谦略",
+	qunyou_wanglang: "渊薮临危",
+	qunyou_wangyun: "今魂兴魄",
+	qunyou_wei_dongzhuo: "年少义侠",
+	qunyou_wenyang: "独骑将军",
+	qunyou_wu_zhangfei: "烈武恒威",
+	qunyou_xx_sunce: "平江东扫患寇",
+	qunyou_yang_wang: "贤婉俭德",
+	qunyou_yangqun: "力鸣截岳",
+	qunyou_zhangfei: "当阳不让",
+	qunyou_zhangliang: "人公将军",
+	qunyou_zhangyan: "轻勇骇势",
+	qunyou_zhaoshuang: "方圆演数",
+	qunyou_zhaoyun: "炙龙烈胆",
+	qunyou_zhonghui: "独锋剑阴",
+	qunyou_zhongjin: "徒劳代逸",
+	qunyou_zhouyu: "火计破曹",
+	qunyou_zhugeguo: "金枝玉叶",
+	qunyou_zoushi: "淯水香魂",
+
 	threed_dongbai:"渭浊阳关",
 	threed_heji:"亭盖荧宫",
 	threed_qianzhao:"凛正戍远塞",
-	shanhe_jiangwei:"宫锁透甲",
-	shanhe_wangyi:"璟玉秋霜",
-	xiaobai_lite:"六郡行王",
-	xiaobai_suojing:"银钩铮骨",
-	zishu_zangba:"泰山锁钥",
-	zishu_duanjiong:"束马县锋",
-	qunyou_guojia: "遗策定辽",
-	zishu_shantao: "千仞振嵩",
-	qunyou_zhaoshuang: "方圆演数",
+
+	qiufeng_hushi: "杏惹妄疑",
 	qiufeng_xiahouhui: "熠熠珠玉",
-	qunyou_guanyu: "义武千秋",
-	zishu_maohuanghou: "江心何怨",
+	qiufeng_zhangqiying: "三六大道",
+
+	zishu_duanjiong:"束马县锋",
 	zishu_guli: "争舵快航",
-	zhuoming_mateng: "驰陇横秋",
-	zhuoming_fq_mateng: "边雁朔南",
-	zhuoming_sc_mateng: "龙马腾云",
-	xuandie_xunguan: "门蔻丰华",
-	xuandie_lvzhi: "雌龙",
-	xuandie_wenjun: "朱弦明镜",
-	xuandie_zuti: "此非恶声",
-	qunyou_zhongjin: "徒劳代逸",
-	qunyou_feiyi: "止步无前",
-	qunyou_clan_xunzhuan: "明允笃诚",
-	qunyou_clan_wangrong: "璞隐九曲",
-	qunyou_clan_yuantanshang: "常棣失华",
-	zishu_yongkai: "腥麈啄碑",
-	qunyou_yangqun: "力鸣截岳",
-	qunyou_clan_yuanshao: "捷成族英",
-
-	qunyou_clan_yuanshu: "鋩失权惘",
-
-	maokuo_caobuxing: "良匠绘形容",
-
-	maokuo_jiangwei: "炎汉之志",
-	maokuo_nuqi_jiangwei: "怒麒",
-
-	maokuo_pengyang: "革木一声",
-
-	maokuo_wangwang: "晔兮如华",
-
-	qunyou_clan_jiangwei: "一意回天",
-
 	zishu_liangxi: "共济方圆",
-
-	qunyou_clan_diaochan2: "以色为戈",
-
-	xiaobai_hufang: "真艳傲枝",
-
-	xiaobai_lvzhu: "金谷一容",
-
-	xiaobai_malun: "慧臻端节",
-
-	qunyou_taokan: "激流勇退",
-
-	qunyou_clan_kongyu: "放龟授左",
-
-	xiaobai_zhaoshuang: "朱黄行者",
-
-	xiaobai_shenmu: "上清元君",
-
-	qunyou_clan_yuankui: "东食西宿",
-
-	xiaobai_gaoding: "邈蛮心异",
+	zishu_liyan: "鄙情逐利",
+	zishu_lvju: "克绍堂构",
+	zishu_maohuanghou: "江心何怨",
+	zishu_panshu: "瑶台遗韵",
+	zishu_shantao: "千仞振嵩",
+	zishu_sunhe: "阙储狩忌",
+	zishu_xunyu: "君去香留",
+	zishu_yongkai: "腥麈啄碑",
+	zishu_zangba:"泰山锁钥",
+	zishu_zhangjinyun: "未落盛英",
 
 	zhuoming_dongzhuo: "奋峙群饕",
+	zhuoming_feili_gongsunyuan: "鸢飞戾灭",
+	zhuoming_fq_mateng: "边雁朔南",
+	zhuoming_gongsunyuan: "狡投嗜欲",
+	zhuoming_liuyan: "蟠虺望气",
+	zhuoming_mateng: "驰陇横秋",
+	zhuoming_sc_mateng: "龙马腾云",
 
-	qunyou_jiananfeng: "乱华妖后",
+	wending_clan_xiean: "雅志轩冕",
+	wending_clan_xiedaoyun: "咏絮之才",
+	wending_clan_xielingyun: "不为之赋",
+	wending_clan_xieshi: "岁寒松柏",
+	wending_clan_xiexuan: "芝兰玉树",
 
-	qunyou_sunhao: "凶昏肆如疾",
+	shanhe_dongzhuo: "肃佞的辅相",
+	shanhe_hanfu: "虎形羊质",
+	shanhe_jiangwei:"宫锁透甲",
+	shanhe_lusu: "文韬武略",
+	shanhe_luzhi: "桢干质烈",
+	shanhe_maliang: "身衔国命",
+	shanhe_wangyi:"璟玉秋霜",
+	shanhe_zhangjiao: "太平道人",
 
 	xingyu_sunshangxiang: "韂剡鞘利",
 
-	qunyou_clan_wangjun: "神州陆沉",
-
-	shanhe_maliang: "身衔国命",
-
-	qunyou_zhugeguo: "金枝玉叶",
-
-	xiaobai_liusong: "忠鲠不挠",
-
-	xiaobai_zhangjian: "终极耄耋",
-
-	xiaobai_shenyi: "枕戈达旦",
-
-	xiaobai_baoxun: "丹墀蔽月",
-
-	xiaobai_chengxi: "瞋目睚眦",
-
-	xiaobai_xunyue: "方寸经纬",
-
-	xiaobai_feishi: "率意而言",
-
-	xiaobai_hanji: "流泉铸锋",
-
-	xiaobai_youchu: "风起陇西",
-
-	xiaobai_lvyi: "桀犬吠尧",
-
-	xiaobai_fugu: "毅骨罡风",
-
-	xiaobai_lisheng: "虚才雅智",
-
-	xiaobai_tianxu: "锋回戮转",
-
-	xiaobai_zhushixing: "西行求法",
-
-	xiaobai_xuci: "鹬身诽蚌",
-
-	xiaobai_dinggu: "烈胆匡国",
-
-	xiaobai_zhugerong: "崖岸之露",
-
-	xiaobai_cuifu: "绫蝶枝折",
-
-	xiaobai_hushi: "暗月炎花",
-
-	xiaobai_jiyan: "青竹折干",
-
-	xiaobai_yangxianrong: "居辱疑荣",
-
-	xiaobai_jiangziwen: "骨清为神",
-
-	xiaobai_zhaoqi: "苦无时命",
-
-	xiaobai_zhaorao: "独步天下",
-
-	xiaobai_heyong: "烛夜逐明",
-
-	xiaobai_liuhongx: "算圣",
-
-	xiaobai_liukun: "志枭逆虏",
-
-	xiaobai_liuying: "孤原皲木",
-
-	xiaobai_liuji: "完珙以琼",
-
-	xiaobai_liumin: "缜承渊虑",
-
-	xiaobai_lifeng: "蓬蒿易易",
-
-	xiaobai_luyu: "啄影哺弼",
-
-	xiaobai_weidan: "笔走凌云",
-
-	xiaobai_yangyong: "惜相疲行",
-
-	xiaobai_dengfuren: "绮蕊点绛",
-
-	xiaobai_louxuan: "松栽倒壑",
-
-	xiaobai_maohuanghou: "华落沉渊",
-
-	xiaobai_wangsi: "北固山盟",
-
-	xiaobai_sunshao: "革营益进",
-
-	xiaobai_baochu: "奋袂攘臂",
-
-	xiaobai_huzhi: "素业贞粹",
-
-	xiaobai_wangbi: "披棘良吏",
-
-	xiaobai_xumu: "母任之刚",
-
-	xiaobai_huzong: "华藻绕邦",
-
-	xiaobai_zhaozi: "吴魏契约",
-
-	xiaobai_huangwan: "汉阙啼鹃",
-
-	xiaobai_gaixun: "寒柏饮雪",
-
-	xiaobai_fuxuan: "鹑觚立世",
-
-	xiaobai_simayue: "逆浪汹汹",
-
-	xiaobai_wangbimawen: "天人之间",
-
-	xiaobai_weiji: "相王之式",
-
-	xiaobai_fanjian: "烬鼎铭鉴",
-
-	xiaobai_hezhi: "梦桑量海",
-
-	xiaobai_lujix: "诗圃诠生",
-
-	xiaobai_doumiao: "恚凤悬庭",
-
-	xiaobai_hexiu: "持世陈论",
-
-	xiaobai_huangfugui: "雪钺鉴清",
-
-	xiaobai_yangxu: "鱼心可呈",
-
-	xiaobai_shichong: "金谷一炬",
-
-	xiaobai_nieyou: "牂牁何系",
-
-	xiaobai_xueying: "盘石难还",
-
-	xiaobai_douwu: "都亭孤忠",
-
-	xiaobai_liying: "天下模楷",
-
-	xiaobai_wangxiu: "",
-
-	xiaobai_leguang: "神姿朗彻",
-
-	xiaobai_peikai: "郎月入怀",
-
-	xiaobai_peiwei: "成言林薮",
-
-	xiaobai_zhangfang: "凶徒劫命",
-
-	xiaobai_guopu: "囊云界水",
-
-	xiaobai_simayou: "芝兰当道",
-
-	xiaobai_simajun: "扶风定远",
-
-	xiaobai_wangjunx: "恶稔毒痡",
-
-	xiaobai_heqiao: "千丈之松",
-
-	xiaobai_jishao: "内举心膂",
-
-	xiaobai_zuosi: "赋倾洛纸",	xiaobai_xunkai: "荀门失玉",	qunyou_mo_wangyun: "易摄承陈",
-
-	xiaobai_zhaoyu: "踅驳高秋",
-
-	xiaobai_zhangyu: "天祸降人",	xiaobai_luoshang: "贪蚌绞涡",
-
-	xiaobai_xiyingxi: "贵而能贫",	qunyou_luxun: "儒才",
-
-	qunyou_zhonghui: "独锋剑阴",
-
+	yachaiclan_cuiyan: "德音孔昭",
+	yachaiclan_diaochan: "冲波逆折",
+	yachaiclan_luji: "驽马逸足",
+	yachaiclan_luji2: "龙跃于江",
+	yachaiclan_lukai: "格业忠勤",
+	yachaiclan_lukang: "奕世载美",
+	yachaiclan_luxun: "忠诚恳至",
+	yachaiclan_luyun: "荆衡杞梓",
+	yachaiclan_luyusheng: "邦士慕则",
+	yachaiclan_wangxiang: "伐冰之肇",
+	yachaiclan_wuyi: "奉书献马",
+	yachaiclan_xunyu: "芳兰生门",
+	yachaiclan_zhugedan: "著勋齾铓",
+	yachaiclan_zhugejin: "才猷骏懋",
+	yachaiclan_zhugeke: "枉恪罔逊",
+	yachaiclan_zhugeliang: "日月同悬",
+	yachaiclan_zhugeliang2: "彪炳人寰",
+	yachaiclan_zhugeshang: "跨父轶祖",
+	yachaiclan_zhugezhan: "掣近掎远",
+
+	xuandie_lvzhi: "雌龙",
+	xuandie_wenjun: "朱弦明镜",
+	xuandie_xunguan: "门蔻丰华",
+	xuandie_zuti: "此非恶声",
+
+	maokuo_caobuxing: "良匠绘形容",
+	maokuo_caogun: "寓清於濁",
+	maokuo_heyan: "浊世太初",
+	maokuo_huangchong: "悬门抉目",
+	maokuo_jiangwei: "炎汉之志",
+	maokuo_lichunxiang: "香枕云梦",
+	maokuo_liuling: "荷锸任埋",
+	maokuo_lukang: "狂澜身砥柱",
+	maokuo_nuqi_jiangwei: "怒麒",
+	maokuo_pengyang: "革木一声",
+	maokuo_wangfan: "知天知物",
+	maokuo_wangwang: "晔兮如华",
+	maokuo_weiwen_zhugezhi: "沧海沉浮",
+	maokuo_xiahouhui: "凋此红芳年",
+	maokuo_yangxi: "文心雕龙",
+	maokuo_zanghong: "烈志难立",
+	maokuo_zerong: "或坠阿鼻",
 	maokuo_zhangte: "斯城永固",
 
-	qunyou_sunziliufang: "织纵朝纲",
-
-	qunyou_zhangfei: "当阳不让",
-
-	qunyou_sp_menghuo: "蛮王",
-
-	qunyou_zhangliang: "人公将军",
-
-	qunyou_sunchen: "凶竖乱吴",
-
-	qunyou_wei_dongzhuo: "年少义侠",
+	xiaobai_baochu: "奋袂攘臂",
+	xiaobai_baoxun: "丹墀蔽月",
+	xiaobai_chengxi: "瞋目睚眦",
+	xiaobai_cuifu: "绫蝶枝折",
+	xiaobai_dengfuren: "绮蕊点绛",
+	xiaobai_dinggu: "烈胆匡国",
+	xiaobai_doumiao: "恚凤悬庭",
+	xiaobai_douwu: "都亭孤忠",
+	xiaobai_fanjian: "烬鼎铭鉴",
+	xiaobai_feishi: "率意而言",
+	xiaobai_fugu: "毅骨罡风",
+	xiaobai_fuxuan: "鹑觚立世",
+	xiaobai_gaixun: "寒柏饮雪",
+	xiaobai_gaoding: "邈蛮心异",
+	xiaobai_guopu: "囊云界水",
+	xiaobai_hanji: "流泉铸锋",
+	xiaobai_heqiao: "千丈之松",
+	xiaobai_hexiu: "持世陈论",
+	xiaobai_heyong: "烛夜逐明",
+	xiaobai_hezhi: "梦桑量海",
+	xiaobai_huangfugui: "雪钺鉴清",
+	xiaobai_huangwan: "汉阙啼鹃",
+	xiaobai_hufang: "真艳傲枝",
+	xiaobai_hushi: "暗月炎花",
+	xiaobai_huzhi: "素业贞粹",
+	xiaobai_huzong: "华藻绕邦",
+	xiaobai_jiangziwen: "骨清为神",
+	xiaobai_jishao: "内举心膂",
+	xiaobai_jiyan: "青竹折干",
+	xiaobai_leguang: "神姿朗彻",
+	xiaobai_lifeng: "蓬蒿易易",
+	xiaobai_lisheng: "虚才雅智",
+	xiaobai_lite:"六郡行王",
+	xiaobai_liuhongx: "算圣",
+	xiaobai_liuji: "完珙以琼",
+	xiaobai_liukun: "志枭逆虏",
+	xiaobai_liumin: "缜承渊虑",
+	xiaobai_liusong: "忠鲠不挠",
+	xiaobai_liuying: "孤原皲木",
+	xiaobai_liying: "天下模楷",
+	xiaobai_lizhaoyi: "兰女同烬",
+	xiaobai_louxuan: "松栽倒壑",
+	xiaobai_lujix: "诗圃诠生",
+	xiaobai_luoshang: "贪蚌绞涡",
+	xiaobai_luyu: "啄影哺弼",
+	xiaobai_lvyi: "桀犬吠尧",
+	xiaobai_lvzhu: "金谷一容",
+	xiaobai_malun: "慧臻端节",
+	xiaobai_maohuanghou: "华落沉渊",
+	xiaobai_nieyou: "牂牁何系",
+	xiaobai_peikai: "郎月入怀",
+	xiaobai_peiwei: "成言林薮",
+	xiaobai_shenmu: "上清元君",
+	xiaobai_shenyi: "枕戈达旦",
+	xiaobai_shichong: "金谷一炬",
+	xiaobai_simajun: "扶风定远",
+	xiaobai_simayou: "芝兰当道",
+	xiaobai_simayue: "逆浪汹汹",
+	xiaobai_sunshao: "革营益进",
+	xiaobai_suojing:"银钩铮骨",
+	xiaobai_tianxu: "锋回戮转",
+	xiaobai_wangbi: "披棘良吏",
+	xiaobai_wangbimawen: "天人之间",
+	xiaobai_wangjunx: "恶稔毒痡",
+	xiaobai_wangsi: "北固山盟",
+	xiaobai_wangxiu: "",
+	xiaobai_weidan: "笔走凌云",
+	xiaobai_weiji: "相王之式",
+	xiaobai_xiyingxi: "贵而能贫",
+	xiaobai_xuci: "鹬身诽蚌",
+	xiaobai_xueying: "盘石难还",
+	xiaobai_xumu: "母任之刚",
+	xiaobai_xunkai: "荀门失玉",
+	xiaobai_xunyue: "方寸经纬",
+	xiaobai_yangxianrong: "居辱疑荣",
+	xiaobai_yangxu: "鱼心可呈",
+	xiaobai_yangyong: "惜相疲行",
+	xiaobai_youchu: "风起陇西",
+	xiaobai_zhangfang: "凶徒劫命",
+	xiaobai_zhangjian: "终极耄耋",
+	xiaobai_zhangyu: "天祸降人",
+	xiaobai_zhaoqi: "苦无时命",
+	xiaobai_zhaorao: "独步天下",
+	xiaobai_zhaoshuang: "朱黄行者",
+	xiaobai_zhaoyu: "踅驳高秋",
+	xiaobai_zhaozi: "吴魏契约",
+	xiaobai_zhugerong: "崖岸之露",
+	xiaobai_zhushixing: "西行求法",
+	xiaobai_zuosi: "赋倾洛纸",
 };

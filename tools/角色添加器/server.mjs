@@ -426,6 +426,96 @@ function insertObjectEntry(src, anchorRe, entryText) {
 	return src.slice(0, close) + insert + src.slice(close);
 }
 
+/**
+ * 在对象字面量里为新键找「排序插入点」：
+ * 前缀组序沿用**文件内各前缀首次出现的顺序**（群友设计四文件重排后即 qunyou→threed→…→xiaobai），
+ * 同前缀内按 key 字母序；`*_prefix` 附属键跟随主键、不作为比较目标；新前缀 = 追加到末尾。
+ * 返回 { offset: 插入行首, beforeKey }；没有更靠后的键（或键不独行）返回 null = 末尾追加。
+ */
+function findSortedInsertOffset(src, anchorRe, newKey) {
+	const range = findObjectRange(src, anchorRe);
+	if (!range) return null;
+	const { open, close } = range;
+	// 线性扫出顶层键（与 matchDelim 同一套注释/字符串/模板串跳过规则）
+	const tops = [];
+	let i = open + 1;
+	let depth = 0;
+	while (i < close) {
+		const c = src[i];
+		if (c === "/" && src[i + 1] === "/") { const e = src.indexOf("\n", i); i = e < 0 ? close : e; continue; }
+		if (c === "/" && src[i + 1] === "*") { const e = src.indexOf("*/", i + 2); i = e < 0 ? close : e + 2; continue; }
+		if (c === '"' || c === "'") {
+			const keyEnd = skipQuoted(src, i, c);
+			let k = keyEnd;
+			while (k < close && /\s/.test(src[k])) k++;
+			if (src[k] === ":" && depth === 0) tops.push({ key: src.slice(i + 1, keyEnd - 1), keyStart: i });
+			i = keyEnd;
+			continue;
+		}
+		if (c === "`") { i = skipTemplate(src, i); continue; }
+		if (/[A-Za-z_$]/.test(c)) {
+			let j = i;
+			while (j < close && /[\w$]/.test(src[j])) j++;
+			let k = j;
+			while (k < close && /\s/.test(src[k])) k++;
+			if (src[k] === ":" && depth === 0) tops.push({ key: src.slice(i, j), keyStart: i });
+			i = j;
+			continue;
+		}
+		if (c === "{" || c === "(" || c === "[") { depth++; i++; continue; }
+		if (c === "}" || c === ")" || c === "]") { depth--; i++; continue; }
+		i++;
+	}
+	const prefixOf = (k) => (k.includes("_") ? k.slice(0, k.indexOf("_")) : k);
+	const rank = new Map();
+	for (const t of tops) {
+		const p = prefixOf(t.key);
+		if (!rank.has(p)) rank.set(p, rank.size);
+	}
+	const newRank = rank.has(prefixOf(newKey)) ? rank.get(prefixOf(newKey)) : rank.size;
+	for (const t of tops) {
+		if (t.key.endsWith("_prefix")) continue;
+		const r = rank.has(prefixOf(t.key)) ? rank.get(prefixOf(t.key)) : rank.size;
+		if (r > newRank || (r === newRank && t.key > newKey)) {
+			const keyLine = src.lastIndexOf("\n", t.keyStart - 1) + 1;
+			// 键必须独占行首（前面只有缩进），否则放弃排序插入、退回末尾追加
+			if (!/^[ \t]*$/.test(src.slice(keyLine, t.keyStart))) return null;
+			// 若键的上一行是空行、且空行上方所属条目与新键同前缀 → 插到空行之前（贴住本组末尾），
+			// 否则按 keyLine 插（空行后 = 新组开头）。上方条目用 tops 回溯（上一行可能是多行条目的 `},` 收尾行）。
+			let offset = keyLine;
+			if (keyLine > open + 1 && src[keyLine - 1] === "\n") {
+				const blankStart = src.lastIndexOf("\n", keyLine - 2) + 1;
+				const blankLine = src.slice(blankStart, keyLine - 1);
+				if (blankLine.trim() === "" && blankStart > open + 1) {
+					let aboveKey = null;
+					for (let ti = tops.length - 1; ti >= 0; ti--) {
+						if (tops[ti].keyStart < blankStart) { aboveKey = tops[ti].key; break; }
+					}
+					if (aboveKey && prefixOf(aboveKey) === prefixOf(newKey)) offset = blankStart;
+				}
+			}
+			return { offset, beforeKey: t.key };
+		}
+	}
+	return null;
+}
+
+/** 排序插入条目：能找到排序点就插到该条目上方，否则沿用末尾追加 */
+function sortedInsertObjectEntry(src, anchorRe, entryText, mainKey) {
+	const found = mainKey ? findSortedInsertOffset(src, anchorRe, mainKey) : null;
+	if (!found) return insertObjectEntry(src, anchorRe, entryText);
+	const { offset } = found;
+	const eol = detectEol(src);
+	const indent = detectIndent(src, findObjectRange(src, anchorRe).open);
+	const entryLines = entryText.split("\n").map(l => indent + l.replaceAll("\t", indent)).join(eol);
+	// 前一非空白字符为 { / , 时无需补逗号（文件中途条目必有尾逗号，此为防御）。
+	// offset 恒为行首 → 不加前导换行，新条目直接贴住上一行（贴组尾时不产生多余空行）
+	let p = offset - 1;
+	while (p >= 0 && /\s/.test(src[p])) p--;
+	const needLeadComma = p >= 0 && src[p] !== "{" && src[p] !== ",";
+	return src.slice(0, offset) + (needLeadComma ? "," + eol : "") + entryLines + eol + src.slice(offset);
+}
+
 /** 在 characterSort[(pkg)] 数组末尾追加一个 id */
 function insertIntoPackageArray(src, pkg, id) {
 	const range = findObjectRange(src, /(?:export\s+)?(?:const|let|var)\s+characterSort\s*=/);
@@ -578,13 +668,23 @@ async function handleAdd(body, dryRun) {
 	};
 
 	// 预览模式：先在内容里插占位，再截取插入点附近文本
-	const previewOf = (src, anchorRe, entryText) => {
+	const previewOf = (src, anchorRe, entryText, mainKey) => {
 		const range = findObjectRange(src, anchorRe);
 		if (!range) return "（anchor 未匹配）";
 		const eol = detectEol(src);
 		const indent = detectIndent(src, range.open);
 		const entryLines = entryText.split("\n").map(l => indent + l.replaceAll("\t", indent)).join(eol);
-		return "……\n" + entryLines + "\n" + src.slice(range.close, range.close + 40).split("\n")[0] + "\n……";
+		const found = mainKey ? findSortedInsertOffset(src, anchorRe, mainKey) : null;
+		if (!found) {
+			return "……（末尾追加）\n" + entryLines + "\n" + src.slice(range.close, range.close + 40).split("\n")[0].trim() + "\n……";
+		}
+		const { offset, beforeKey } = found;
+		const clean = (s) => s.replace(/\r\n/g, "\n").trim();
+		const beforeLines = clean(src.slice(Math.max(0, offset - 200), offset)).split("\n");
+		const before = beforeLines[beforeLines.length - 1] ?? "";
+		const afterLines = clean(src.slice(offset, offset + 200)).split("\n").filter(l => l.trim() !== "");
+		const after = afterLines[0] ?? "";
+		return `……（插入到 ${beforeKey} 之前）\n` + before + "\n" + entryLines + "\n" + after + "\n……";
 	};
 
 	const dataSrc = readTarget(extName, targets.data.rel);
@@ -597,16 +697,16 @@ async function handleAdd(body, dryRun) {
 
 	if (dryRun) {
 		run("data", () => dataSrc.replace("characterData", "characterData《INSERT》"));
-		results[0].snippet = previewOf(dataSrc, /characterData\s*=/, dataEntry);
+		results[0].snippet = previewOf(dataSrc, /characterData\s*=/, dataEntry, char.id);
 		const translateSrc = readTarget(extName, targets.translate.rel);
-		results.push({ role: "translate", rel: targets.translate.rel, snippet: previewOf(translateSrc, /characterTranslate\s*=/, translateEntry) });
+		results.push({ role: "translate", rel: targets.translate.rel, snippet: previewOf(translateSrc, /characterTranslate\s*=/, translateEntry, char.id) });
 		if (titleEntry) {
 			const titleSrc = readTarget(extName, targets.title.rel);
-			results.push({ role: "title", rel: targets.title.rel, snippet: previewOf(titleSrc, /characterTitle\s*=/, titleEntry) });
+			results.push({ role: "title", rel: targets.title.rel, snippet: previewOf(titleSrc, /characterTitle\s*=/, titleEntry, char.id) });
 		}
 		if (introEntry) {
 			const introSrc = readTarget(extName, targets.intro.rel);
-			results.push({ role: "intro", rel: targets.intro.rel, snippet: previewOf(introSrc, /characterIntro\s*=/, introEntry) });
+			results.push({ role: "intro", rel: targets.intro.rel, snippet: previewOf(introSrc, /characterIntro\s*=/, introEntry, char.id) });
 		}
 		const pkgSrc = readTarget(extName, targets.package.rel);
 		for (const pkg of body.packages || []) {
@@ -622,11 +722,11 @@ async function handleAdd(body, dryRun) {
 		return { ok: true, dryRun: true, results, warns };
 	}
 
-	// 正式写入
-	run("data", src => insertObjectEntry(src, /(?:export\s+)?(?:const|let|var)\s+characterData\s*=/, dataEntry));
-	run("translate", src => insertObjectEntry(src, /(?:export\s+)?(?:const|let|var)\s+characterTranslate\s*=/, translateEntry));
-	if (titleEntry) run("title", src => insertObjectEntry(src, /(?:export\s+)?(?:const|let|var)\s+characterTitle\s*=/, titleEntry));
-	if (introEntry) run("intro", src => insertObjectEntry(src, /(?:export\s+)?(?:const|let|var)\s+characterIntro\s*=/, introEntry));
+	// 正式写入（按前缀组序 + 组内字母序插入；找不到排序点则末尾追加）
+	run("data", src => sortedInsertObjectEntry(src, /(?:export\s+)?(?:const|let|var)\s+characterData\s*=/, dataEntry, char.id));
+	run("translate", src => sortedInsertObjectEntry(src, /(?:export\s+)?(?:const|let|var)\s+characterTranslate\s*=/, translateEntry, char.id));
+	if (titleEntry) run("title", src => sortedInsertObjectEntry(src, /(?:export\s+)?(?:const|let|var)\s+characterTitle\s*=/, titleEntry, char.id));
+	if (introEntry) run("intro", src => sortedInsertObjectEntry(src, /(?:export\s+)?(?:const|let|var)\s+characterIntro\s*=/, introEntry, char.id));
 	{
 		const rel = targets.package.rel;
 		const full = path.join(extDir, rel);

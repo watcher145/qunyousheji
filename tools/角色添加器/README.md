@@ -30,11 +30,21 @@ node server.mjs --port 9527 --no-open
 
 | 角色 | 文件 | 写入内容 |
 |------|------|---------|
-| data | `src/character/data.js` | `characterData` 里追加 `{ sex, group, doubleGroup?, hp, maxHp, hujia, 额外字段, skills }`（双势力时才写 `doubleGroup`，主势力排第一） |
-| translate | `src/character/translate.js` | `characterTranslate` 里追加 `id: "全称"` 和 `id_prefix: "前缀1\|前缀2"` |
-| title | `src/character/title.js` | `characterTitle` 里追加 `id: "称号"` |
-| intro | `src/character/intro.js` | `characterIntro` 里追加 `id: "简介"` |
-| package | `src/package.js` | `characterSort` 对应包数组末尾追加 `"id"` |
+| data | `src/character/data.js` | `characterData` 里插入 `{ sex, group, doubleGroup?, hp, maxHp, hujia, 额外字段, skills }`（双势力时才写 `doubleGroup`，主势力排第一） |
+| translate | `src/character/translate.js` | `characterTranslate` 里插入 `id: "全称"` 和 `id_prefix: "前缀1\|前缀2"`（两行作为整体相邻插入） |
+| title | `src/character/title.js` | `characterTitle` 里插入 `id: "称号"` |
+| intro | `src/character/intro.js` | `characterIntro` 里插入 `id: "简介"` |
+| package | `src/package.js` | `characterSort` 对应包数组末尾追加 `"id"`（包数组的显示顺序手动维护，不自动排序） |
+
+### 插入位置（排序插入）
+
+data / translate / title / intro 四个文件按「条目排序约定」插入，**不是**无脑追加到对象末尾：
+
+- **前缀组顺序沿用文件内各前缀首次出现的顺序**（群友设计四文件已重排为 `qunyou_` → `threed_` → … → `maokuo_` → `xiaobai_`，新条目会插进所属前缀组）；
+- 同一前缀组内按 id 字母序落位；`id_prefix` 附属键与主条目作为一个整体插入；
+- 插到组尾时会自动贴住本组最后一个条目（跨过组间空行），保持「组内紧凑、组间空行」的排版；
+- 文件里没有的新前缀 → 追加到对象末尾（= 新包约定）；
+- 预览会显示实际插入点（「插入到 xxx 之前」/「末尾追加」），确认后再写盘。
 
 ## 安全机制
 

@@ -173,7 +173,8 @@ clanlunyi: {
 		if (cards.length === 1) {
 			card = cards[0];
 		} else {
-			const result = await player.chooseButton(["选择一张牌置于牌堆底", cards]).set("ai", () => -1).forResult();
+			// ai=-1 会让 AI 永远取消（ai.basic.chooseButton 对 ≤0 分不确认），改为 bury 最不值钱的牌
+			const result = await player.chooseButton(["选择一张牌置于牌堆底", cards]).set("ai", button => -get.value(button.link)).forResult();
 			if (!result.bool || !result.links || !result.links.length) return;
 			card = result.links[0];
 		}

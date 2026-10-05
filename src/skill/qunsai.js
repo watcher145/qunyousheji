@@ -311,6 +311,15 @@ filter(event, player) {
 			}
 			return wending_yanghui_phaseDiscardCards(event, player).length >= 2;
 		},
+		ai: {
+			effect: {
+				target(card, player, target) {
+					// 受伤=翻面+摸3：对养晦拥有者动手前敌人会掂量（本引擎 maixie 无劝退消费，必须写 effect.target）
+					if (player.hasSkillTag("jueqing", false, target)) return [1, -1];
+					if (get.tag(card, "damage")) return [1, 0.55];
+				},
+			},
+		},
 		async cost(event, trigger, player) {
 			event.result = await player.chooseBool(get.prompt2(event.skill)).set("ai", () => true).forResult();
 		},
@@ -2118,7 +2127,8 @@ zishu_jinlu: {
 				await player.damage(player, X, "fire");
 				if (!player.isIn()) return;
 				const result = await player.chooseTarget(true, lib.filter.notMe,
-					"燼路：选择一名角色受到" + X + "点火焰伤害").forResult();
+					"燼路：选择一名角色受到" + X + "点火焰伤害"
+				).set("ai", (target) => get.damageEffect(target, player, player, "fire")).forResult();
 				if (result?.bool && result.targets?.length) {
 					await player.damage(result.targets[0], X, "fire");
 				}
@@ -2427,7 +2437,7 @@ zishu_zhilian_resolve: {
 	async content(event, trigger, player) {
 		const result = await player
 			.chooseTarget("织连：连招完成！令一名角色回复1点体力")
-			.set("ai", target => -get.attitude(player, target))
+			.set("ai", target => get.recoverEffect(target, player, player))
 			.forResult();
 		if (result.bool) {
 			await result.targets[0].recover();
@@ -2808,7 +2818,7 @@ threed_xiang_e: {
 		if (!discarded.length) {
 			const result = await player
 				.chooseTarget(get.prompt2("threed_xiang_e"), "令一名其他角色执行一个弃牌阶段", lib.filter.notMe)
-				.set("ai", target => get.attitude(player, target) * (target.countCards("he") - target.getHandcardLimit()))
+				.set("ai", target => -get.attitude(player, target) * Math.max(0, target.countCards("he") - target.getHandcardLimit()))
 				.forResult();
 			if (result?.bool && result.targets?.length) {
 				const target = result.targets[0];
@@ -3067,6 +3077,9 @@ threed_xuyi2: {
 		}
 		const used = player.storage.threed_xuyi2_used || [];
 		return !used.includes(player.countCards("h"));
+	},
+	ai: {
+		order: 4,
 	},
 	onuse(result, player) {
 		if (!Array.isArray(player.storage.threed_xuyi2_used)) {
@@ -3457,10 +3470,14 @@ shanhe_jueliang: {
 		return event.filterCard(get.autoViewAs({ name: "wugu", isCard: true, storage: { shanhe_jueliang: true } }, "unsure"), player, event);
 	},
 	group: ["shanhe_jueliang_reduce", "shanhe_jueliang_remain"],
+	ai: {
+		order: 5,
+		result: { player: 1 },
+	},
 	async content(event, trigger, player) {
 		const result = await player
 			.chooseToDiscard("脧粮：弃置任意张牌（可不弃置）", [0, Infinity], "he")
-			.set("ai", card => get.value(card))
+			.set("ai", card => 6 - get.value(card))
 			.forResult();
 		if (!result?.bool) return;
 		const cards = result.cards || [];
@@ -6094,7 +6111,7 @@ zishu_jieshuo: {
 					.chooseTarget(true, "桀朔：转移此【杀】", (card, p, t) => {
 						return p.inRange(t) && t !== target && t !== player && lib.filter.targetEnabled(trigger.card, player, t);
 					})
-					.set("ai", (t) => get.attitude(target, t))
+					.set("ai", (t) => -get.attitude(target, t))
 					.forResult();
 				const chosen = result?.targets?.[0];
 				if (!chosen) return;
@@ -7024,6 +7041,13 @@ maokuo_xiangxie_shan: {
 		return 1;
 	},
 	prompt: "相携：将一张牌置于武将牌上，视为使用一张【闪】",
+	// 喂杀结算 hasShan 预检（引擎只读技能顶层 hiddenCard，不能放进 ai）
+	hiddenCard(player, name) {
+		if (name != "shan") {
+			return false;
+		}
+		return player.countCards("he") > 0 && lib.skill.maokuo_xiangxie.isWai(player);
+	},
 	ai: {
 		order: 4,
 		respondShan: true,
@@ -7033,12 +7057,6 @@ maokuo_xiangxie_shan: {
 			}
 			if (arg === "respond") {
 				return false; // 仅使用不可打出（卫境同款）
-			}
-			return player.countCards("he") > 0 && lib.skill.maokuo_xiangxie.isWai(player);
-		},
-		hiddenCard(player, name) {
-			if (name != "shan") {
-				return false;
 			}
 			return player.countCards("he") > 0 && lib.skill.maokuo_xiangxie.isWai(player);
 		},
@@ -7097,17 +7115,18 @@ maokuo_xiangxie_tao: {
 		return 1;
 	},
 	prompt: "相携：将两张同花色的牌置于武将牌上，视为使用一张【桃】",
+	// 喂濒死求桃预检（引擎只读技能顶层 hiddenCard）
+	hiddenCard(player, name) {
+		if (name != "tao") {
+			return false;
+		}
+		return lib.skill.maokuo_xiangxie.hasSameSuit(player, 2) && lib.skill.maokuo_xiangxie.isWai(player);
+	},
 	ai: {
 		order: 4,
 		save: true,
 		skillTagFilter(player, tag, arg) {
 			if (tag != "save") {
-				return false;
-			}
-			return lib.skill.maokuo_xiangxie.hasSameSuit(player, 2) && lib.skill.maokuo_xiangxie.isWai(player);
-		},
-		hiddenCard(player, name) {
-			if (name != "tao") {
 				return false;
 			}
 			return lib.skill.maokuo_xiangxie.hasSameSuit(player, 2) && lib.skill.maokuo_xiangxie.isWai(player);
@@ -7167,14 +7186,15 @@ maokuo_xiangxie_wuxie: {
 		return 1;
 	},
 	prompt: "相携：将三张同花色的牌置于武将牌上，视为使用一张【无懈可击】",
+	// 喂 hasWuxie 预检（引擎只读技能顶层 hiddenCard）
+	hiddenCard(player, name) {
+		if (name != "wuxie") {
+			return false;
+		}
+		return lib.skill.maokuo_xiangxie.hasSameSuit(player, 3) && lib.skill.maokuo_xiangxie.isWai(player);
+	},
 	ai: {
 		order: 4,
-		hiddenCard(player, name) {
-			if (name != "wuxie") {
-				return false;
-			}
-			return lib.skill.maokuo_xiangxie.hasSameSuit(player, 3) && lib.skill.maokuo_xiangxie.isWai(player);
-		},
 	},
 },
 
@@ -7876,6 +7896,10 @@ shanhe_zhusha: {
 	filter(event, player) {
 		return player.countCards("h") > 0 && game.hasPlayer((current) => current !== player && current.countCards("h") > 0);
 	},
+	ai: {
+		order: 5,
+		result: { player: 1 },
+	},
 	async content(event, trigger, player) {
 		await player.draw(1);
 		if (!player.countCards("h")) return;
@@ -7887,6 +7911,7 @@ shanhe_zhusha: {
 		const giver = giveResult.targets[0];
 		const cardResult = await player
 			.chooseCard("h", 1, true, `逐杀：交给${get.translation(giver)}一张手牌`)
+			.set("ai", (card) => 6 - get.value(card))
 			.forResult();
 		if (!cardResult?.bool || !cardResult.cards?.length) return;
 		await player.give(cardResult.cards, giver);
@@ -8378,4 +8403,317 @@ threed_zhiyong: {
 		return false;
 	},
 },
+// ==================== 陆抗（猫咪大院·怀默）：桌面“地势”标记 + 最短路径越过判定 ====================
+// “地势”标记：一枚置于两名相邻角色座位之间的桌面标记，有“山/泽”两面，可反复重摆。
+// 状态存于陆抗：storage.maokuo_tianqian_gap = { a, b }（标记两侧邻座）+ storage.maokuo_tianqian_face = "shan"|"ze"；
+// 落位后在两侧邻座各挂一枚对应面的可视 mark（storage.maokuo_tianqian_mark 记录另一侧邻与面）。
+maokuo_tianqian: {
+	audio: 2,
+	init(player, skill) {
+		player.storage.maokuo_tianqian_gap = null; // 持有未落位
+		player.storage.maokuo_tianqian_face = null;
+	},
+	// ⚠️ 不能写 forced：forced 会在引擎里短路 cost（content.js:3526），而“选落点+选面”全在 cost 里；
+	//    去掉 forced 后由 cost 的两个无取消项 chooseControl 保证放置强制执行
+	trigger: { player: ["phaseBegin", "damage"] },
+	filter(event, player) {
+		return player.isIn();
+	},
+	async cost(event, trigger, player) {
+		const curFace = player.storage.maokuo_tianqian_face;
+		// 选落点：先选一名角色，再选其相邻角色之一；第一步可取消 = 保持原间隙不变
+		const anchorRes = await player
+			.chooseTarget("天堑：选择一名角色（“地势”标记将置于其与相邻角色的座位之间）；取消则间隙保持不变", (card, p, t) => t.isIn())
+			.set("ai", (target) => Math.random())
+			.forResult();
+		const anchor = anchorRes?.targets?.[0];
+		let newPair = null;
+		if (anchor?.isIn()) {
+			const neighbors = [anchor.getNext(), anchor.getPrevious()].filter((t) => t && t.isIn());
+			if (neighbors.length) {
+				const nbRes = await player
+					.chooseTarget(`天堑：选择${get.translation(anchor)}的相邻角色（标记置于两者座位之间）`, true, (card, p, t) => neighbors.includes(t))
+					.set("ai", (target) => Math.random())
+					.forResult();
+				const neighbor = nbRes?.targets?.[0];
+				if (neighbor?.isIn()) newPair = { a: anchor, b: neighbor };
+			}
+		}
+		// 选面：已有面时可“保持现状”
+		const faceOptions = (curFace ? ["保持现状"] : []).concat(["山", "泽"]);
+		const faceRes = await player
+			.chooseControl(faceOptions)
+			.set("prompt", "天堑：以哪种形式放置“地势”标记？")
+			.set("ai", () => (Math.random() < 0.5 ? (curFace ? "保持现状" : "山") : "泽"))
+			.forResult();
+		let face = curFace;
+		if (faceRes?.control == "山") face = "shan";
+		else if (faceRes?.control == "泽") face = "ze";
+		if (!newPair && face == curFace) return void (event.result = { bool: false }); // 位置与形态都保持 → 无事发生
+		const gap = newPair || player.storage.maokuo_tianqian_gap;
+		if (!gap) return void (event.result = { bool: false }); // 首次落位却取消了选点
+		event.result = { bool: true, cost_data: { pair: gap, face } };
+	},
+	async content(event, trigger, player) {
+		lib.skill.maokuo_tianqian.placeMarks(event.cost_data.pair, event.cost_data.face, player);
+	},
+	placeMarks(pair, face, owner) {
+		// 清除旧落位的可视标记（⚠️ markSkill 只创建 marks 节点、不进 player.skills → 判据用 p.marks 而非 hasSkill）
+		for (const p of game.players) {
+			if (p.marks.maokuo_tianqian_shan || p.marks.maokuo_tianqian_ze) {
+				p.unmarkSkill("maokuo_tianqian_shan");
+				p.unmarkSkill("maokuo_tianqian_ze");
+				delete p.storage.maokuo_tianqian_mark;
+			}
+		}
+		owner.storage.maokuo_tianqian_gap = { a: pair.a, b: pair.b };
+		owner.storage.maokuo_tianqian_face = face;
+		const markId = face == "shan" ? "maokuo_tianqian_shan" : "maokuo_tianqian_ze";
+		for (const f of [pair.a, pair.b]) {
+			f.markSkill(markId);
+			f.storage.maokuo_tianqian_mark = { face, other: f == pair.a ? pair.b : pair.a };
+		}
+		game.log(owner, "将", "#g“地势”标记", "以", "#g" + (face == "shan" ? "山" : "泽"), "的形式置于", pair.a, "与", pair.b, "的座位之间");
+	},
+	subSkill: {
+		shan: {
+			charlotte: true,
+			mark: true,
+			marktext: "山",
+			intro: {
+				content(storage, player) {
+					const g = storage || {};
+					return `地势标记（山）：位于${get.translation(player)}与${get.translation(g.other)}的座位之间。`;
+				},
+			},
+		},
+		ze: {
+			charlotte: true,
+			mark: true,
+			marktext: "泽",
+			intro: {
+				content(storage, player) {
+					const g = storage || {};
+					return `地势标记（泽）：位于${get.translation(player)}与${get.translation(g.other)}的座位之间。`;
+				},
+			},
+		},
+	},
+},
+// 制地：锁定技，唯一目标的使用牌其攻击路径经过标记间隙时结算
+//（越过判定与“途经你”同款弧线口径：较短弧经过标记即成立，等长时任一弧经过即成立，见 crossed）
+maokuo_zhidi: {
+	audio: 2,
+	locked: true,
+	forced: true,
+	trigger: { global: "useCardToTarget" },
+	filter(event, player) {
+		if (!player.isIn()) return false;
+		if (!event.isFirstTarget) return false;
+		const use = event.getParent("useCard", true);
+		const targets = use?.targets || [];
+		if (targets.length != 1) return false; // 指定唯一目标
+		const gap = player.storage.maokuo_tianqian_gap;
+		if (!gap || !player.storage.maokuo_tianqian_face) return false; // 标记未落位
+		const user = use.player;
+		const target = targets[0];
+		if (user == target || !user.isIn() || !target.isIn()) return false;
+		return lib.skill.maokuo_zhidi.crossed(user, target, player);
+	},
+	async content(event, trigger, player) {
+		const use = trigger.getParent("useCard", true);
+		const user = use.player;
+		const target = use.targets[0];
+		const face = player.storage.maokuo_tianqian_face;
+		if (face == "shan") {
+			await target.draw(1);
+		} else {
+			// 泽：使用者自选弃置目标角色的一张牌（手牌+装备区）
+			if (!target.countCards("he")) return;
+			const res = await user
+				.choosePlayerCard(target, "he", true)
+				.set("prompt", "制地：弃置" + get.translation(target) + "的一张牌")
+				.set("ai", (button) => get.value(button.link))
+				.forResult();
+			if (res?.cards?.length) await target.discard(res.cards, user);
+		}
+	},
+	// 越过判定：与“途经你”（怀烈 relevant）同款弧线口径——标记间隙视为路径上的一个点，
+	// 沿两条弧走向目标：较短弧经过间隙即越过；等长（双最短路）时任一弧越过即越过。
+	// ⚠️ 不用距离等式判定——坐骑等距离修正会让等式产生假阳性（实测“没经过标记却发动”）
+	crossed(user, target, owner) {
+		const gap = owner.storage.maokuo_tianqian_gap;
+		if (!gap || user == target) return false;
+		const pass = (forward) => {
+			let steps = 0;
+			let prev = user;
+			let cur = forward ? user.getNext() : user.getPrevious();
+			while (cur && cur != user) {
+				steps++;
+				// 跨过标记间隙（a→b 或 b→a 的相邻步）→ 这条弧经过标记
+				if ((prev == gap.a && cur == gap.b) || (prev == gap.b && cur == gap.a)) {
+					return { cross: true, steps };
+				}
+				if (cur == target) return { cross: false, steps };
+				prev = cur;
+				cur = forward ? cur.getNext() : cur.getPrevious();
+			}
+			return { cross: false, steps: Infinity };
+		};
+		const cw = pass(true);
+		const ccw = pass(false);
+		if (cw.steps < ccw.steps) return cw.cross;
+		if (ccw.steps < cw.steps) return ccw.cross;
+		return cw.cross || ccw.cross;
+	},
+	// 标记间隙 → 当前存活环侧邻 [P, Q]：沿座位环把 a/b 归位到最近的存活角色（含 a/b 自身）
+	gapPair(gap) {
+		const fix = (seat, step) => {
+			let cur = seat;
+			let guard = 0;
+			while (cur && !cur.isIn() && guard++ <= game.players.length + game.dead.length) cur = step(cur);
+			return cur && cur.isIn() ? cur : null;
+		};
+		const P = fix(gap.a, (x) => x.previousSeat);
+		const Q = fix(gap.b, (x) => x.nextSeat);
+		if (!P || !Q || P == Q) return null;
+		return [P, Q];
+	},
+	// 存活环最短步数（顺/逆取短；沿 getNext/getPrevious 存活链）
+	dist(a, b) {
+		if (a == b) return 0;
+		let cur = a.getNext();
+		let n = 1;
+		while (cur && cur != a) {
+			if (cur == b) return n;
+			cur = cur.getNext();
+			n++;
+		}
+		cur = a.getPrevious();
+		n = 1;
+		while (cur && cur != a) {
+			if (cur == b) return n;
+			cur = cur.getPrevious();
+			n++;
+		}
+		return Infinity;
+	},
+},
+// 迁阵：自己的回合开始时（额定回合开始前）询问是否将本轮额定回合迁至「地势」标记处执行：
+//   · 标记间隙在本轮尚未被轮序跨过（标记在座位之后）→ 推迟：跳过本次额定回合（取消 phase 事件），
+//     轮序跨过间隙时（间隙侧邻的 phaseOver）与另一侧邻换座——轮序 findNext 自然落到陆抗新座位，
+//     额定回合于标记处执行；
+//   · 间隙已被跨过（标记在座位之前）→ 移动座位到标记处，本回合于该处执行（提前的等价形式）。
+maokuo_qianzhen: {
+	audio: 2,
+	lastDo: true, // 天堑（同在回合开始重摆标记）先结算，迁阵再按新落点询问
+	trigger: {
+		player: "phaseBegin",
+		global: "phaseOver",
+	},
+	filter(event, player) {
+		if (!player.isIn()) return false;
+		const gap = player.storage.maokuo_tianqian_gap;
+		if (!gap || !player.storage.maokuo_tianqian_face) return false;
+		if (event.name == "phaseOver") {
+			// 已推迟：刚结束回合的是间隙侧邻，且轮序下一步正跨向另一侧邻（到达标记位置）
+			if (player.storage.maokuo_qianzhen_pending !== true) return false;
+			const pair = lib.skill.maokuo_qianzhen.gapAlivePair(gap);
+			if (!pair || !pair.includes(event.player)) return false;
+			return lib.skill.maokuo_qianzhen.findNext(event.player) == (pair[0] == event.player ? pair[1] : pair[0]);
+		}
+		// phaseBegin：标记已落位、未处于推迟待执行、未就位在间隙上
+		if (player.storage.maokuo_qianzhen_pending) return false;
+		const pair = lib.skill.maokuo_qianzhen.gapAlivePair(gap);
+		if (!pair || pair.includes(player)) return false;
+		return true;
+	},
+	async cost(event, trigger, player) {
+		const pair = lib.skill.maokuo_qianzhen.gapAlivePair(player.storage.maokuo_tianqian_gap);
+		if (event.triggername == "phaseOver") {
+			// 推迟落地：与轮序前方一侧邻换座（座位移动到此位置），换座后轮序 findNext 自然落在陆抗
+			const other = pair[0] == trigger.player ? pair[1] : pair[0];
+			event.result = { bool: true, cost_data: { move: true, swapWith: other } };
+			return;
+		}
+		const crossedThisRound = player.storage.maokuo_qianzhen_crossed == game.roundNumber;
+		if (crossedThisRound) {
+			// 间隙已被跨过（标记在座位之前）：移动座位到标记处，本回合于该处执行
+			let nearer = pair[0];
+			if (lib.skill.maokuo_zhidi.dist(player, pair[1]) < lib.skill.maokuo_zhidi.dist(player, pair[0])) nearer = pair[1];
+			const res = await player
+				.chooseBool(get.prompt("maokuo_qianzhen"), "将你的座位移动至「地势」标记处（与" + get.translation(nearer) + "交换座位），本回合于该处执行")
+				.set("ai", () => true)
+				.forResult();
+			event.result = { bool: res?.bool === true, cost_data: { move: true, swapWith: nearer } };
+			return;
+		}
+		// 推迟：跳过本次额定回合，待轮序跨过间隙时再执行
+		const res = await player
+			.chooseBool(get.prompt("maokuo_qianzhen"), "将本回合的额定回合推迟至「地势」标记所在的位置执行")
+			.set("ai", () => true)
+			.forResult();
+		event.result = { bool: res?.bool === true, cost_data: { defer: true } };
+	},
+	async content(event, trigger, player) {
+		if (event.cost_data.defer) {
+			player.storage.maokuo_qianzhen_pending = true;
+			game.log(player, "将本回合的额定回合推迟至", "#g「地势」标记", "处执行");
+			trigger.cancel(); // 跳过本次额定回合（trigger = 当前的 phase 事件，取消后剩余阶段不再执行）
+			return;
+		}
+		const other = event.cost_data.swapWith;
+		if (!other?.isIn() || !player.isIn()) return;
+		game.broadcastAll((t1, t2) => game.swapSeat(t1, t2), player, other);
+		// 标记侧邻重绑：间隙另一侧座位现在是陆抗
+		const gap = player.storage.maokuo_tianqian_gap;
+		if (gap) {
+			if (gap.a == other) gap.a = player;
+			if (gap.b == other) gap.b = player;
+		}
+		const face = player.storage.maokuo_tianqian_face;
+		const alivePair = lib.skill.maokuo_qianzhen.gapAlivePair(gap);
+		if (alivePair) lib.skill.maokuo_tianqian.placeMarks({ a: alivePair[0], b: alivePair[1] }, face, player);
+		game.log(player, "将自己的座位移动到了", "#g「地势」标记", "所在的位置");
+	},
+	gapAlivePair(gap) {
+		return lib.skill.maokuo_zhidi.gapPair(gap);
+	},
+	// 照 phaseLoop 的 findNext（position 升序，找不到则回绕到首位）
+	findNext(current) {
+		const players = game.players.slice(0).concat(game.dead).sort((a, b) => parseInt(a.dataset.position) - parseInt(b.dataset.position));
+		const position = parseInt(current.dataset.position);
+		for (const p of players) {
+			if (parseInt(p.dataset.position) > position) return p;
+		}
+		return players[0] || null;
+	},
+	subSkill: {
+		round: {
+			charlotte: true,
+			sub: true,
+		},
+		// 轮序跨过标记间隙的时点（间隙侧邻的 phaseOver，且 findNext 指向另一侧邻）：
+		// 记录「本轮已跨过」（记轮数，跨轮自动失效），供迁阵区分推迟/移动两条路径
+		cross: {
+			charlotte: true,
+			sub: true,
+			forced: true,
+			popup: false,
+			silent: true,
+			trigger: { global: "phaseOver" },
+			filter(event, player) {
+				const gap = player.storage.maokuo_tianqian_gap;
+				if (!gap) return false;
+				const pair = lib.skill.maokuo_qianzhen.gapAlivePair(gap);
+				if (!pair || !pair.includes(event.player)) return false;
+				return lib.skill.maokuo_qianzhen.findNext(event.player) == (pair[0] == event.player ? pair[1] : pair[0]);
+			},
+			content(event, trigger, player) {
+				player.storage.maokuo_qianzhen_crossed = game.roundNumber;
+			},
+		},
+	},
+	group: ["maokuo_qianzhen_cross", "maokuo_qianzhen_round"],
+	},
 }

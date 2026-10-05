@@ -123,6 +123,7 @@ const characterSortTranslate = {
 	threed: "3D吧赛",
 	qiufeng: "秋风杯",
 	xiaobai: "小白杯",
+	xiaobai_sgs48: "SGS48",
 	xiaobai_ten: "十届小白杯",
 	xiaobai_eleven: "十一届小白杯",
 	xiaobai_twelve: "十二届小白杯",
@@ -130,7 +131,7 @@ const characterSortTranslate = {
 	xiaobai_fourteen: "十四届小白杯",
 	xiaobai_fifteen: "十五届小白杯",
 	xiaobai_sixteen: "十六届小白杯",
-	xiaobai_sgs48: "SGS48",
+	
 	zishubei: "自书杯",
 	zhuoming: "濯名杯",
 	qunyou_chenjunxieshi: "问鼎•陈郡谢氏",
@@ -160,7 +161,8 @@ const characterSort = {
 	qunyou_gaijin: ["qunyou_pengyue"],
 	qunyou_yongdong: ["qunyou_wanglang"],
 	xuandie_design: ["xuandie_xunguan", "xuandie_lvzhi", "xuandie_wenjun", "xuandie_zuti"],
-	maomi_dayuan: ["maokuo_caobuxing", "maokuo_jiangwei", "maokuo_nuqi_jiangwei", "maokuo_pengyang", "maokuo_wangwang", "maokuo_zhangte"],
+	maomi_dayuan: ["maokuo_caobuxing", "maokuo_jiangwei", "maokuo_nuqi_jiangwei", "maokuo_pengyang", "maokuo_wangwang", "maokuo_zhangte", "maokuo_lukang",
+		"maokuo_lichunxiang", "maokuo_weiwen_zhugezhi", "maokuo_wangfan", "maokuo_liuling", "maokuo_huangchong", "maokuo_caogun", "maokuo_xiahouhui", "maokuo_yangxi", "maokuo_zanghong", "maokuo_heyan", "maokuo_zerong"],
 };
 
 // 小白杯：独立成大包，内部按 FreeKill 的「届」分小包
