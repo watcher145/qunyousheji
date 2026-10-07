@@ -1,6 +1,7 @@
 import { lib, game, get, _status } from "noname";
 import dynamicTranslates from "./translate/dynamicTranslate.js";
 import { getXiaobaiPack } from "./package.js";
+import { qunyou_longwei_tagFilter } from "./skill/sanshe.js";
 
 /**
  * 扩展加载时执行：可在此注册 lib.namePrefix、合并 lib.dynamicTranslate 等
@@ -265,6 +266,31 @@ export function precontent() {
 		});
 		game.addGlobalSkill("qunyou_fugai_replace");
 	}
+
+	// 龙威（skill/sanshe.js）：让「距离≤1 内有可用龙威持有者」的角色被引擎认为「有【杀】/【闪】」。
+	// 否则 skip_shan（"无闪自动取消"）等预检会让没杀/闪的角色**根本不弹响应窗口** → 龙威拦不到。
+	// 手法同护驾 hujia（character/standard.js:516-527）/ 激将 jijiang：hasSha()/hasShan()
+	// 会回退到 hasSkillTag("respondSha"/"respondShan")（player.js:13516/13535）。
+	// ⚠️ 必须做成**全局技能**——预检查的是「被帮助者」的 hasSha/hasShan，不是龙威持有者的。
+	if (!lib.skill.global.includes("qunyou_longwei_tag")) {
+		Object.assign(lib.skill, {
+			qunyou_longwei_tag: {
+				charlotte: true,
+				ai: {
+					respondSha: true,
+					respondShan: true,
+					skillTagFilter: qunyou_longwei_tagFilter,
+				},
+			},
+		});
+		game.addGlobalSkill("qunyou_longwei_tag");
+	}
+
+	// 奇兵对【兵临城下】`binglinchengxiax` 的 content 包装**不在这里**：
+	// precontent 执行时 `lib.card` 尚未加载（同 lib.skill 的时机问题），`lib.card.binglinchengxiax`
+	// 会是 undefined → 包装被静默跳过。已移到 `skill/sanshe.js` 的 `qunyou_qibing.patchBinglin()`
+	// （由技能 `init` + 首次使用时调用）。
+
 	/* 分辙全局补丁暂时停用（含修复），排查卡死
 	// 分辙：令持有 qunyou_fenzhe_wai 的角色本回合可对游戏外（移出游戏）的角色使用牌。
 	// 引擎在目标过滤（lib.filter.targetEnabledx/2/3、targetEnabled）与结算口（content.js:9400/9790）

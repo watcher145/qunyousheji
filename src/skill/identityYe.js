@@ -65,6 +65,23 @@ export function qunyouYeGain(player) {
 }
 
 export const skills = {
+// === 野心家 ===
+	// 身份↔技能同步兜底：任意技能效果只要改了 identity，下个检查点自动补挂/卸〖跋扈〗〖飞扬〗
+	qunyou_ye_init: {
+		charlotte: true,
+		forced: true,
+		popup: false,
+		silent: true,
+		trigger: { global: ["gameStart", "roundStart"] },
+		filter(event, player) {
+			return lib.config.mode == "identity" && _status.mode == "normal";
+		},
+		// async：走 AsyncCompiler 保住模块级闭包（同步 content 引用模块函数会 ReferenceError，知识库 #70）
+		async content(event, trigger, player) {
+			qunyouYeSyncSkills();
+		},
+	},
+// === 跋扈 ===
 	// 〖跋扈〗——复刻斗地主地主版（mode/doudizhu.js bahu），生效条件改为"野心家身份"
 	qunyou_yebahu: {
 		charlotte: true,
@@ -84,6 +101,7 @@ export const skills = {
 			},
 		},
 	},
+// === 飞扬 ===
 	// 〖飞扬〗——复刻斗地主地主版 OL 飞扬（mode/doudizhu.js feiyang），生效条件改为"野心家身份"
 	qunyou_yefeiyang: {
 		charlotte: true,
@@ -123,21 +141,6 @@ export const skills = {
 		popup: false,
 		async content(event, trigger, player) {
 			await player.discardPlayerCard(player, "j", true, player.countCards("j"));
-		},
-	},
-	// 身份↔技能同步兜底：任意技能效果只要改了 identity，下个检查点自动补挂/卸〖跋扈〗〖飞扬〗
-	qunyou_ye_init: {
-		charlotte: true,
-		forced: true,
-		popup: false,
-		silent: true,
-		trigger: { global: ["gameStart", "roundStart"] },
-		filter(event, player) {
-			return lib.config.mode == "identity" && _status.mode == "normal";
-		},
-		// async：走 AsyncCompiler 保住模块级闭包（同步 content 引用模块函数会 ReferenceError，知识库 #70）
-		async content(event, trigger, player) {
-			qunyouYeSyncSkills();
 		},
 	},
 };

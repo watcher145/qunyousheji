@@ -141,6 +141,150 @@ function clanZuguanBestGain(player, target, cards) {
 
 // 宗族技 — clan*
 export const skills = {
+// === 过庭 ===
+clan_guoting: {
+	audio: 2,
+	clanSkill: true,
+	locked: true,
+	forced: true,
+	trigger: { player: "phaseUseEnd" },
+	filter(event, player) {
+		if (!player.hasClan("鲁国孔氏")) return false;
+		// 有同族角色（含自己）已受伤
+		if (!game.hasPlayer((cur) => cur.hasClan("鲁国孔氏") && cur.isDamaged())) return false;
+		// 手牌中存在“唯一最多”的花色
+		const suits = {};
+		player.getCards("h").forEach((card) => {
+			const suit = get.suit(card, player);
+			suits[suit] = (suits[suit] || 0) + 1;
+		});
+		const entries = Object.entries(suits).sort((a, b) => b[1] - a[1]);
+		if (!entries.length) return false;
+		return entries.length == 1 || entries[0][1] > entries[1][1];
+	},
+	async content(event, trigger, player) {
+		const suits = {};
+		player.getCards("h").forEach((card) => {
+			const suit = get.suit(card, player);
+			suits[suit] = (suits[suit] || 0) + 1;
+		});
+		const entries = Object.entries(suits).sort((a, b) => b[1] - a[1]);
+		if (!entries.length || (entries.length > 1 && entries[0][1] <= entries[1][1])) return;
+		const suit = entries[0][0];
+		const cards = player.getCards("h", (card) => get.suit(card, player) == suit);
+		if (!cards.length) return;
+		await player.recast(cards);
+		// 横置或重置等量名角色（超过场上人数则截断；含自己）
+		const num = Math.min(cards.length, game.players.length);
+		if (num <= 0) return;
+		const result = await player
+			.chooseTarget(num, true, "过庭：横置或重置" + get.cnNumber(num) + "名角色")
+			.set("ai", (target) => {
+				const player2 = get.player();
+				// 无法被横置的角色选了也白选（原生【铁索连环】的 ai 同款规避）
+				if (target.hasSkillTag("noLink")) return 0;
+				let value = -get.attitude(player2, target);
+				// 反转语义：已横置的目标会被"重置"（等于放他一马）→ 大幅降权，优先未横置的敌人
+				if (target.isLinked()) value *= 0.2;
+				return value;
+			})
+			.forResult();
+		if (!result?.targets?.length) return;
+		// 与【铁索连环】一致：content 是 `await event.target.link()`（无参）。
+		// link(bool) 传 true 时若已横置会直接移除事件、什么都不发生（player.js:9594-9606）；
+		// 无参才走 link content（content.js:12039）按当前状态反转——已横置者被重置。
+		for (const target of result.targets) {
+			await target.link();
+		}
+	},
+},
+// === 星孤 ===
+clan_xinggu: {
+	audio: 2,
+	clanSkill: true,
+	trigger: { player: "phaseUseBegin" },
+	direct: true,
+	filter(event, player) {
+		return player.isIn();
+	},
+	async content(event, trigger, player) {
+		while (player.isIn()) {
+			const card = clanXingguSharedCard(player);
+			const hits = typeof card.storage.fulei == "number" ? card.storage.fulei : 0;
+			// 交待天水姜氏共同的浮雷判定黑桃命中次数，每次判定后重新询问，取消即停
+			const go = await player
+				.chooseBool(`星孤：是否进行一次【浮雷】判定？（天水姜氏共同的浮雷判定已命中黑桃${hits}次，本次若命中将受到${hits + 1}点雷电伤害）`)
+				.set("choice", player.hp > hits + 1)
+				.forResult();
+			if (!go.bool) {
+				break;
+			}
+			const judgeEvent = player.judge(card);
+			judgeEvent.set("callback", async (event2) => {
+				// 获得判定牌（趁判定牌仍在处理区时收集，洛神同款）
+				if (get.position(event2.card, true) === "o") {
+					await player.gain({ cards: [event2.card], animate: "gain2" });
+				}
+			});
+			const result = await judgeEvent.forResult();
+			// 视为同一张【浮雷】：黑桃命中时计数记在全族共享的这张牌上，伤害随累计次数递增（浮雷同公式：X=已命中次数）
+			if (result.bool === false) {
+				card.storage.fulei = (typeof card.storage.fulei == "number" ? card.storage.fulei : 0) + 1;
+				if (player.isIn()) {
+					await player.damage(card.storage.fulei, "thunder", "nosource");
+				}
+			}
+		}
+	},
+},
+// === 沽名 ===
+clanguming: {
+	audio: 2,
+	clanSkill: true,
+	locked: true,
+	forced: true,
+	trigger: { player: "phaseZhunbeiBegin" },
+	filter(event, player) {
+		// 至少存在一名沽名未升至首位的同族角色，否则整个技能不发动
+		return game.hasPlayer(cur => cur.hasClan("汝南袁氏") && cur.skills.indexOf("clanguming") > 0);
+	},
+	async content(event, trigger, player) {
+		const result = await player
+			.chooseTarget(true, "沽名：请选择一名同族角色，令其〖沽名〗上升一格", (card, player2, target) => {
+				return target.hasClan("汝南袁氏") && target.skills.indexOf("clanguming") > 0;
+			})
+			.set("ai", target => {
+				const player2 = get.player();
+				return get.attitude(player2, target) + (target == player2 ? 1 : 0);
+			})
+			.forResult();
+		if (!result?.targets?.length) return;
+		const target = result.targets[0];
+		// 沽名前移一格（helper 内含缓存清理、联机同步与鬩墙失效位置同步）
+		qunyou_gumingMove(target, 1);
+		// 持有者视为使用【无中生有】或【桃】（桃仅在可用时进入选项；仅剩一个选项直接跳过选择）
+		// ⚠️ chooseButton 的按钮数组必须与 "vcard" 类型标记配对成 [按钮数组, "vcard"]，否则按钮按无类型创建会抛“button不合法”
+		const cardList = [["锦囊", "", "wuzhong"]];
+		if (lib.filter.cardEnabled(get.autoViewAs({ name: "tao", isCard: true }), player)) {
+			cardList.push(["基本", "", "tao"]);
+		}
+		let name = "wuzhong";
+		if (cardList.length > 1) {
+			const choice = await player
+				.chooseButton(["沽名：视为使用一张牌", [cardList, "vcard"]], true)
+				.set("ai", button => {
+					const player2 = get.player();
+					if (button.link[2] == "tao") return player2.hp <= 2 ? 3 : 1;
+					return 2;
+				})
+				.forResult();
+			if (!choice?.links?.length) return;
+			name = choice.links[0][2];
+		}
+		// 无中生有与桃均为对己使用的牌（wuzhong: filterTarget target === player），目标须传自己，否则结算取不到 event.target
+		await player.useCard(get.autoViewAs({ name, isCard: true }), [player]);
+	},
+},
 // === 沦佚 ===
 clanlunyi: {
 	audio: 2,
@@ -181,7 +325,6 @@ clanlunyi: {
 		await game.cardsGotoPile(card);
 	},
 },
-
 // === 潜章 ===
 clanqianzhang: {
 	audio: 2,
@@ -226,7 +369,48 @@ clanqianzhang: {
 		},
 	},
 },
-
+// === 树泽 ===
+clanshuze: {
+	audio: 2,
+	clanSkill: true,
+	trigger: { player: ["turnOverEnd", "linkEnd", "removeJiu", "useCard1"], global: "phaseAfter" },
+	filter(event, player, name) {
+		if (event.name === "turnOver") {
+			return !player.isTurnedOver();
+		}
+		if (event.name === "link") {
+			return !player.isLinked();
+		}
+		if (event.name === "removeJiu") {
+			return true;
+		}
+		if (name === "useCard1") {
+			if (player.hasSkill("xu_jiu", true) && event.card?.name === "sha" && lib.skill.jiu2?.filter?.(event, player)) {
+				return true;
+			}
+			if (
+				player.hasSkill("xu_zuijiu", true) &&
+				!event.card?.xu_huangzui &&
+				["basic", "trick"].includes(get.type(event.card)) &&
+				!get.tag(event.card, "damage") &&
+				lib.skill.xu_zuijiu2?.filter?.(event, player)
+			) {
+				return true;
+			}
+			return false;
+		}
+		if (name === "phaseAfter") {
+			return player.hasSkill("xu_zuijiu", true) && !player.hasSkillTag("jiuSustain", null, name);
+		}
+		return false;
+	},
+	check() {
+		return true;
+	},
+	async content(event, trigger, player) {
+		await clanshuze_effect(player);
+	},
+},
 // === 训礼 ===
 clanxunli: {
 	audio: 2,
@@ -266,7 +450,6 @@ clanxunli: {
 		await target.draw();
 	},
 },
-
 // === 柱鼎 ===
 clanzhuding: {
 	audio: 2,
@@ -325,7 +508,6 @@ clanzhuding: {
 		},
 	},
 },
-
 // === 族冠 ===
 	clanzuguan: {
 		audio: 2,
@@ -374,194 +556,4 @@ clanzhuding: {
 			threaten: 2,
 		},
 	},
-
-// === 过庭 ===
-clan_guoting: {
-	audio: 2,
-	clanSkill: true,
-	locked: true,
-	forced: true,
-	trigger: { player: "phaseUseEnd" },
-	filter(event, player) {
-		if (!player.hasClan("鲁国孔氏")) return false;
-		// 有同族角色（含自己）已受伤
-		if (!game.hasPlayer((cur) => cur.hasClan("鲁国孔氏") && cur.isDamaged())) return false;
-		// 手牌中存在“唯一最多”的花色
-		const suits = {};
-		player.getCards("h").forEach((card) => {
-			const suit = get.suit(card, player);
-			suits[suit] = (suits[suit] || 0) + 1;
-		});
-		const entries = Object.entries(suits).sort((a, b) => b[1] - a[1]);
-		if (!entries.length) return false;
-		return entries.length == 1 || entries[0][1] > entries[1][1];
-	},
-	async content(event, trigger, player) {
-		const suits = {};
-		player.getCards("h").forEach((card) => {
-			const suit = get.suit(card, player);
-			suits[suit] = (suits[suit] || 0) + 1;
-		});
-		const entries = Object.entries(suits).sort((a, b) => b[1] - a[1]);
-		if (!entries.length || (entries.length > 1 && entries[0][1] <= entries[1][1])) return;
-		const suit = entries[0][0];
-		const cards = player.getCards("h", (card) => get.suit(card, player) == suit);
-		if (!cards.length) return;
-		await player.recast(cards);
-		// 横置或重置等量名角色（超过场上人数则截断；含自己）
-		const num = Math.min(cards.length, game.players.length);
-		if (num <= 0) return;
-		const result = await player
-			.chooseTarget(num, true, "过庭：横置或重置" + get.cnNumber(num) + "名角色")
-			.set("ai", (target) => {
-				const player2 = get.player();
-				// 无法被横置的角色选了也白选（原生【铁索连环】的 ai 同款规避）
-				if (target.hasSkillTag("noLink")) return 0;
-				let value = -get.attitude(player2, target);
-				// 反转语义：已横置的目标会被"重置"（等于放他一马）→ 大幅降权，优先未横置的敌人
-				if (target.isLinked()) value *= 0.2;
-				return value;
-			})
-			.forResult();
-		if (!result?.targets?.length) return;
-		// 与【铁索连环】一致：content 是 `await event.target.link()`（无参）。
-		// link(bool) 传 true 时若已横置会直接移除事件、什么都不发生（player.js:9594-9606）；
-		// 无参才走 link content（content.js:12039）按当前状态反转——已横置者被重置。
-		for (const target of result.targets) {
-			await target.link();
-		}
-	},
-},
-
-// === 沽名 ===
-clanguming: {
-	audio: 2,
-	clanSkill: true,
-	locked: true,
-	forced: true,
-	trigger: { player: "phaseZhunbeiBegin" },
-	filter(event, player) {
-		// 至少存在一名沽名未升至首位的同族角色，否则整个技能不发动
-		return game.hasPlayer(cur => cur.hasClan("汝南袁氏") && cur.skills.indexOf("clanguming") > 0);
-	},
-	async content(event, trigger, player) {
-		const result = await player
-			.chooseTarget(true, "沽名：请选择一名同族角色，令其〖沽名〗上升一格", (card, player2, target) => {
-				return target.hasClan("汝南袁氏") && target.skills.indexOf("clanguming") > 0;
-			})
-			.set("ai", target => {
-				const player2 = get.player();
-				return get.attitude(player2, target) + (target == player2 ? 1 : 0);
-			})
-			.forResult();
-		if (!result?.targets?.length) return;
-		const target = result.targets[0];
-		// 沽名前移一格（helper 内含缓存清理、联机同步与鬩墙失效位置同步）
-		qunyou_gumingMove(target, 1);
-		// 持有者视为使用【无中生有】或【桃】（桃仅在可用时进入选项；仅剩一个选项直接跳过选择）
-		// ⚠️ chooseButton 的按钮数组必须与 "vcard" 类型标记配对成 [按钮数组, "vcard"]，否则按钮按无类型创建会抛“button不合法”
-		const cardList = [["锦囊", "", "wuzhong"]];
-		if (lib.filter.cardEnabled(get.autoViewAs({ name: "tao", isCard: true }), player)) {
-			cardList.push(["基本", "", "tao"]);
-		}
-		let name = "wuzhong";
-		if (cardList.length > 1) {
-			const choice = await player
-				.chooseButton(["沽名：视为使用一张牌", [cardList, "vcard"]], true)
-				.set("ai", button => {
-					const player2 = get.player();
-					if (button.link[2] == "tao") return player2.hp <= 2 ? 3 : 1;
-					return 2;
-				})
-				.forResult();
-			if (!choice?.links?.length) return;
-			name = choice.links[0][2];
-		}
-		// 无中生有与桃均为对己使用的牌（wuzhong: filterTarget target === player），目标须传自己，否则结算取不到 event.target
-		await player.useCard(get.autoViewAs({ name, isCard: true }), [player]);
-	},
-},
-
-// === 星孤 ===
-clan_xinggu: {
-	audio: 2,
-	clanSkill: true,
-	trigger: { player: "phaseUseBegin" },
-	direct: true,
-	filter(event, player) {
-		return player.isIn();
-	},
-	async content(event, trigger, player) {
-		while (player.isIn()) {
-			const card = clanXingguSharedCard(player);
-			const hits = typeof card.storage.fulei == "number" ? card.storage.fulei : 0;
-			// 交待天水姜氏共同的浮雷判定黑桃命中次数，每次判定后重新询问，取消即停
-			const go = await player
-				.chooseBool(`星孤：是否进行一次【浮雷】判定？（天水姜氏共同的浮雷判定已命中黑桃${hits}次，本次若命中将受到${hits + 1}点雷电伤害）`)
-				.set("choice", player.hp > hits + 1)
-				.forResult();
-			if (!go.bool) {
-				break;
-			}
-			const judgeEvent = player.judge(card);
-			judgeEvent.set("callback", async (event2) => {
-				// 获得判定牌（趁判定牌仍在处理区时收集，洛神同款）
-				if (get.position(event2.card, true) === "o") {
-					await player.gain({ cards: [event2.card], animate: "gain2" });
-				}
-			});
-			const result = await judgeEvent.forResult();
-			// 视为同一张【浮雷】：黑桃命中时计数记在全族共享的这张牌上，伤害随累计次数递增（浮雷同公式：X=已命中次数）
-			if (result.bool === false) {
-				card.storage.fulei = (typeof card.storage.fulei == "number" ? card.storage.fulei : 0) + 1;
-				if (player.isIn()) {
-					await player.damage(card.storage.fulei, "thunder", "nosource");
-				}
-			}
-		}
-	},
-},
-
-// === 树泽 ===
-clanshuze: {
-	audio: 2,
-	clanSkill: true,
-	trigger: { player: ["turnOverEnd", "linkEnd", "removeJiu", "useCard1"], global: "phaseAfter" },
-	filter(event, player, name) {
-		if (event.name === "turnOver") {
-			return !player.isTurnedOver();
-		}
-		if (event.name === "link") {
-			return !player.isLinked();
-		}
-		if (event.name === "removeJiu") {
-			return true;
-		}
-		if (name === "useCard1") {
-			if (player.hasSkill("xu_jiu", true) && event.card?.name === "sha" && lib.skill.jiu2?.filter?.(event, player)) {
-				return true;
-			}
-			if (
-				player.hasSkill("xu_zuijiu", true) &&
-				!event.card?.xu_huangzui &&
-				["basic", "trick"].includes(get.type(event.card)) &&
-				!get.tag(event.card, "damage") &&
-				lib.skill.xu_zuijiu2?.filter?.(event, player)
-			) {
-				return true;
-			}
-			return false;
-		}
-		if (name === "phaseAfter") {
-			return player.hasSkill("xu_zuijiu", true) && !player.hasSkillTag("jiuSustain", null, name);
-		}
-		return false;
-	},
-	check() {
-		return true;
-	},
-	async content(event, trigger, player) {
-		await clanshuze_effect(player);
-	},
-},
 };

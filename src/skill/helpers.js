@@ -96,6 +96,46 @@ export function qunyou_discardCountThisRound() {
 	return num;
 }
 
+/**
+ * 本回合进入弃牌堆、且**仍在**弃牌堆的牌。
+ * 口径与「赴国」getTurnDiscardCards 一致：按**角色 getHistory("lose")** 认领
+ * （evt.position=弃牌堆 且 getParent("phase") 属当前回合），再补 cardMove 里的
+ * cardsDiscard（无 lose 前置的直接弃置路径）；「仍在」校验按弃牌堆 childNodes 成员。
+ * 用于「囤田」「奇兵」这类以"本回合弃牌堆"为操作对象的技能。
+ */
+export function qunyou_turnDiscards() {
+	// 非对局环境（技能面板预览 / mark 悬浮）判空。
+	if (!ui?.discardPile) return [];
+	const currentPlayer = _status.currentPhase;
+	if (!currentPlayer) return [];
+	const result = [];
+	const addCard = (card) => {
+		if (result.includes(card)) return;
+		if (!Array.from(ui.discardPile.childNodes).includes(card)) return;
+		result.push(card);
+	};
+	for (const target of game.filterPlayer()) {
+		target.getHistory("lose", (evt) => {
+			if (evt.position != ui.discardPile) return false;
+			const p = evt.getParent("phase");
+			if (!p || p.player !== currentPlayer) return false;
+			(evt.cards2 || evt.cards || []).forEach(addCard);
+		});
+	}
+	game.getGlobalHistory?.("cardMove", (evt) => {
+		if (evt.name != "cardsDiscard") return false;
+		const p = evt.getParent("phase");
+		if (!p || p.player !== currentPlayer) return false;
+		(evt.cards || []).forEach(addCard);
+	});
+	return result;
+}
+
+/** 本回合弃牌堆已有的花色（囤田的 mark 与询问共用同一口径） */
+export function qunyou_turnSuits() {
+	return [...new Set(qunyou_turnDiscards().map((card) => get.suit(card)).filter((suit) => suit))];
+}
+
 export function zishu_yusan_getCards(player) {
 	const last = player.storage.zishu_yusan_last;
 	if (!last) return [];
