@@ -280,4 +280,10 @@ export const characterTitle = {
 	xiaobai_zhugerong: "崖岸之露",
 	xiaobai_zhushixing: "西行求法",
 	xiaobai_zuosi: "赋倾洛纸",
+	
+	zizi_caozhencaoxiu: "风虎云龙",
+	zizi_guotufengji: "恶主凶臣",
+	zizi_jiangwanfeiyi: "匡赞和舒",
+	zizi_weiwenzhugezhi: "游子海子",
+	zizi_yangzhiyangyan: "霜雪连枝",
 };

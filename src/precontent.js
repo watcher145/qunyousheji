@@ -212,6 +212,21 @@ export function precontent() {
 			return span.outerHTML;
 		},
 	});
+	// 子子杯：取卡面右下角“子子”落款印的洋红色，楷体加浅描边保证势力光圈上可读
+	lib.namePrefix.set("子子", {
+		getSpan: () => {
+			const span = document.createElement("span"), style = span.style;
+			style.writingMode = style.webkitWritingMode = "horizontal-tb";
+			style.fontFamily = "STXingkai, KaiTi, '楷体', sans-serif";
+			style.fontSize = "11px";
+			style.color = "#ff7cc0";
+			style.textShadow = "0 0 1px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.55)";
+			style.fontWeight = "bold";
+			style.letterSpacing = "-0.5px";
+			span.textContent = "子子";
+			return span.outerHTML;
+		},
+	});
 	// 注册汉势力
 	game.addGroup("han", "汉", "汉势力", {
 		color: "#FAD6A2",

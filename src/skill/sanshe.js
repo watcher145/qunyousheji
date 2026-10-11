@@ -111,6 +111,17 @@ const qunyouPhaseEvents = ["phaseZhunbei", "phaseDraw", "phaseUse", "phaseDiscar
 // 阶段触发事件（phaseXBegin/Before）回调里的 event 就是 phaseX 事件本体，用 event.name 定位阶段
 const qunyouPhaseIndex = (event) => qunyouPhaseEvents.indexOf(event.name);
 
+// 挑龙 —— 当前是否处于"打出"（响应）窗口：
+// chooseButton.dialog/prompt 里 _status.event 可能是 chooseToUse/chooseToRespond 本体，
+// 也可能已被 filterButton 推进到内层 chooseButton 事件，故两级都查
+const qunyouTiaolongRespond = () => {
+	const evt = _status.event;
+	if (!evt) return false;
+	if (evt.name == "chooseToRespond") return true;
+	const parent = typeof evt.getParent == "function" ? evt.getParent() : null;
+	return !!parent?.name && parent.name == "chooseToRespond";
+};
+
 // 忌刻 —— 四个固定位次选项（①②③④）；storage 记录已删除项的下标
 export const qunyou_jike_del = (player) => player.storage.qunyou_jike_del || [];
 export const qunyou_jike_texts = () => [
@@ -792,13 +803,15 @@ export const skills = {
 		audio: 2,
 		locked: true,
 		forced: true,
-		trigger: { source: "damage" },
+		trigger: { source: "damage", player: "damage" },
 		filter(event, player) {
-			return event.player?.isIn();
+			// 你造成伤害 → 展示受伤角色；你受到伤害 → 展示伤害来源
+			const target = event.player == player ? event.source : event.player;
+			return !!target?.isIn();
 		},
 		async content(event, trigger, player) {
-			const target = trigger.player;
-			// 展示受伤角色的所有手牌，X 为其中花色数
+			const target = trigger.player == player ? trigger.source : trigger.player;
+			// 展示目标角色的所有手牌，X 为其中花色数
 			const hand = target.getCards("h");
 			if (hand.length) {
 				await target.showCards(hand, get.translation(target) + "的手牌");
@@ -808,14 +821,18 @@ export const skills = {
 			let converted = false;
 			if (X >= 1 && X <= 4) {
 				const state = player.storage.qunyou_tiaolong || 0;
-				if (state != X - 1) {
-					player.storage.qunyou_tiaolong = X - 1;
-					player.updateMarks("qunyou_tiaolong");
-					game.log(player, "将", "#g【挑龙】", "转至了第" + get.cnNumber(X) + "项");
-					converted = true;
-				}
+			if (state != X - 1) {
+				player.storage.qunyou_tiaolong = X - 1;
+				player.updateMarks("qunyou_tiaolong");
+				game.log(player, "将", "#g【挑龙】", "转至了第" + get.cnNumber(X) + "项");
+				converted = true;
 			}
-			if (converted) return;
+		}
+		if (converted) {
+			// 摸至X张牌：把手牌补到X张，已≥X则不摸
+			await player.draw(Math.max(0, X - player.countCards("h")));
+			return;
+		}
 			// 若无法转换，你回复1点体力
 			if (player.isDamaged()) {
 				await player.recover();
@@ -10075,8 +10092,11 @@ qunyou_shangbing: {
 			dialog(event, player) {
 				const state = player.storage.qunyou_tiaolong || 0;
 				const names = ["sha", "shan", "jiu", "tao"];
-				const list = [["基本", "", names[state]], ["锦囊", "", "juedou"], ["锦囊", "", "wuxie"]];
-				return ui.create.dialog("挑龙：视为使用一张牌", [list, "vcard"], "hidden");
+				// 打出（响应）窗口里只有当前状态牌可能合法（杀/闪），
+				// 【决斗】【无懈可击】只在"使用"时才有意义，响应窗口不列
+				const respond = qunyouTiaolongRespond();
+				const list = respond ? [["基本", "", names[state]]] : [["基本", "", names[state]], ["锦囊", "", "juedou"], ["锦囊", "", "wuxie"]];
+				return ui.create.dialog(`挑龙：视为${respond ? "打出" : "使用"}一张牌`, [list, "vcard"], "hidden");
 			},
 			filter(button, player) {
 				const evt = _status.event.getParent();
@@ -10129,9 +10149,11 @@ qunyou_shangbing: {
 				const names = ["sha", "shan", "jiu", "tao"];
 				const name = links[0][2];
 				const prev = names[(state + 3) % 4], next = names[(state + 1) % 4];
-				if (name == "juedou") return "挑龙：将一张【" + get.translation(prev) + "】当作【决斗】使用";
-				if (name == "wuxie") return "挑龙：将一张【" + get.translation(next) + "】当作【无懈可击】使用";
-				return "挑龙：将一张非基本牌当作【" + get.translation(name) + "】使用";
+				// 响应窗口说"打出"，出牌窗口说"使用"
+				const verb = qunyouTiaolongRespond() ? "打出" : "使用";
+				if (name == "juedou") return "挑龙：将一张【" + get.translation(prev) + "】当作【决斗】" + verb;
+				if (name == "wuxie") return "挑龙：将一张【" + get.translation(next) + "】当作【无懈可击】" + verb;
+				return "挑龙：将一张非基本牌当作【" + get.translation(name) + "】" + verb;
 			},
 		},
 		ai: {

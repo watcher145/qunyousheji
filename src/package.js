@@ -83,6 +83,7 @@ const pkgPrefixMap = {
 	qunyou_yongdong: "群友",
 	xuandie_design: "蝶设",
 	maomi_dayuan: "猫咪",
+	zizi: "子子",
 };
 
 function applyCharacterPrefixes(translate) {
@@ -143,6 +144,7 @@ const characterSortTranslate = {
 	qunyou_yongdong:"能永动的武将",
 	xuandie_design: "玄蝶的设计",
 	maomi_dayuan: "猫咪大院",
+	zizi: "子子杯",
 };
 
 const characterSort = {
@@ -166,6 +168,8 @@ const characterSort = {
 	xuandie_design: ["xuandie_xunguan", "xuandie_lvzhi", "xuandie_wenjun", "xuandie_zuti"],
 	maomi_dayuan: ["maokuo_caobuxing", "maokuo_jiangwei", "maokuo_nuqi_jiangwei", "maokuo_pengyang", "maokuo_wangwang", "maokuo_zhangte", "maokuo_lukang",
 		"maokuo_lichunxiang", "maokuo_weiwen_zhugezhi", "maokuo_wangfan", "maokuo_liuling", "maokuo_huangchong", "maokuo_caogun", "maokuo_xiahouhui", "maokuo_yangxi", "maokuo_zanghong", "maokuo_heyan", "maokuo_zerong"],
+	// 子子杯（第二届子子杯S2·轮首，双头武将，按字母序）
+	zizi: ["zizi_caozhencaoxiu", "zizi_guotufengji", "zizi_jiangwanfeiyi", "zizi_weiwenzhugezhi", "zizi_yangzhiyangyan"],
 };
 
 // 小白杯：独立成大包，内部按 FreeKill 的「届」分小包

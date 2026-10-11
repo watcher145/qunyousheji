@@ -207,7 +207,7 @@ const dynamicTranslates = {
 			head += i === state ? blue(nums[i] + "【" + names[i] + "】") : nums[i] + "【" + names[i] + "】";
 		}
 		const prev = names[(state + 3) % 4], next = names[(state + 1) % 4];
-		return `${head}使用；${get.poptip("qunyou_tiaolong")}当前状态的上一状态（${blue("【" + prev + "】")}）的同名牌你仅可当作【决斗】使用，下一状态（${blue("【" + next + "】")}）的同名牌你仅可当作【无懈可击】使用。`;
+		return `${head}使用或打出；${get.poptip("qunyou_tiaolong")}当前状态的上一状态（${blue("【" + prev + "】")}）的同名牌你仅可当作【决斗】使用，下一状态（${blue("【" + next + "】")}）的同名牌你仅可当作【无懈可击】使用。`;
 	},
 	qunyou_fenzhe(player) {
 		const idx = Number.isInteger(player.storage.qunyou_fenzhe) ? player.storage.qunyou_fenzhe : 0;
@@ -336,6 +336,25 @@ qunyou_qiongji(player) {
 			"你曾登场过的额定回合开始前，你可以令当前回合角色选择一项：1.交给「一号位」一张牌；2.「一号位」对其发动对应的〖显灾〗效果。若其已死亡，你令一名角色执行此额定回合；若你已死亡，你依然可以发动此技能。"
 		);
 	},
+	// 素翩：第一段失效期间置灰（字段改写型；锚点与 xiaobai_supian_info 逐字一致）
+	xiaobai_supian(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		if ((player.storage?.xiaobai_supian_ban_num || 0) > 0) {
+			return base.replace(
+				"你可以重铸X张牌并使用其中一张牌，然后此段失效至有X张牌被使用后。",
+				`<font color='grey'>你可以重铸X张牌并使用其中一张牌，然后此段失效至有X张牌被使用后。</font>`
+			);
+		}
+		return base;
+	},
+	// 先略：失效期间（进入濒死前）整段描述置灰（字段改写型）
+	xingyu_xianlue(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		if (player.storage?.xingyu_xianlue_off) {
+			return `<font color='grey'>${base}</font>`;
+		}
+		return base;
+	},
 	// 迂策：契定技——契定后两效果由「可以」变「须」（原生乞施/殚瘁同款切换）
 	qunyou_yuce(player, skill) {
 		if (player?.storage?.qunyou_yuce) {
@@ -447,6 +466,158 @@ qunyou_qiongji(player) {
 		const base = lib.translate.maokuo_kuolue_info || "";
 		const hit = (player.getStorage("maokuo_kuolue_hitmark") || []).length;
 		return hit ? `${base}<br>${red("本回合已成为过黑色牌的目标")}` : base;
+	},
+	// ===== 转换技当前态标色（原生 clandongxu 同款：阳 firetext / 阴 bluetext；①② 型标蓝当前项）=====
+	// 时宠：阳摸三 / 阴摸一
+	zishu_shichong(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		if (player.storage?.[skill]) {
+			return base.replace("阴：改为摸一张牌", `<span class='bluetext'>阴：改为摸一张牌</span>`);
+		}
+		return base.replace("阳：改为摸三张牌", `<span class='firetext'>阳：改为摸三张牌</span>`);
+	},
+	// 踏塞：两处 ①②（额外装备马 + 视为使用/打出）随同一状态标色
+	zhuoming_tasai(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		if (player.storage?.[skill]) {
+			return base.replace("②进攻马", `<span class='bluetext'>②进攻马</span>`).replace("②【闪】", `<span class='bluetext'>②【闪】</span>`);
+		}
+		return base.replace("①防御马", `<span class='firetext'>①防御马</span>`).replace("①【杀】", `<span class='firetext'>①【杀】</span>`);
+	},
+	// 合纵：①声东击西 / ②树上开花
+	shanhe_hezong(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		const y1 = "①你可以弃置一张牌并视为使用一张【声东击西】。";
+		const y2 = "②你可以弃置两张牌并令一名本回合未以此法使用过【树上开花】的角色视为使用一张【树上开花】。";
+		if (player.storage?.[skill]) {
+			return base.replace(y2, `<span class='bluetext'>${y2}</span>`);
+		}
+		return base.replace(y1, `<span class='firetext'>${y1}</span>`);
+	},
+	// 定仪：阳各摸一张 / 阴各重铸一张
+	qunyou_dingyi(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		if (player.storage?.[skill]) {
+			return base.replace("阴：重铸你与一名角色各一张牌", `<span class='bluetext'>阴：重铸你与一名角色各一张牌</span>`);
+		}
+		return base.replace("阳：你与一名角色各摸一张牌", `<span class='firetext'>阳：你与一名角色各摸一张牌</span>`);
+	},
+	// 腐虐：阳黑牌 / 阴红牌
+	qunyou_funve(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		if (player.storage?.[skill]) {
+			return base.replace("阴：红色牌", `<span class='bluetext'>阴：红色牌</span>`);
+		}
+		return base.replace("阳：黑色牌", `<span class='firetext'>阳：黑色牌</span>`);
+	},
+	// 懷綏：①红牌当远交近攻 / ②黑牌当兵粮寸断
+	qunyou_huaisui(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		if (player.storage?.[skill]) {
+			return base.replace("②黑牌当【兵粮寸断】", `<span class='bluetext'>②黑牌当【兵粮寸断】</span>`);
+		}
+		return base.replace("①红牌当【远交近攻】", `<span class='firetext'>①红牌当【远交近攻】</span>`);
+	},
+	// 精策：①花色数 / ②类别数
+	qunyou_jingce(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		if (player.storage?.[skill]) {
+			return base.replace("②类别数", `<span class='bluetext'>②类别数</span>`);
+		}
+		return base.replace("①花色数", `<span class='firetext'>①花色数</span>`);
+	},
+	// 周礼：阳亮堆顶使用 / 阴亮堆底获得
+	qunyou_zhouli(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		if (player.storage?.[skill]) {
+			return base.replace("阴：结束阶段，你可亮出牌堆底的一张牌并获得之", `<span class='bluetext'>阴：结束阶段，你可亮出牌堆底的一张牌并获得之</span>`);
+		}
+		return base.replace("阳：准备阶段，你可亮出牌堆顶的一张牌并使用之", `<span class='firetext'>阳：准备阶段，你可亮出牌堆顶的一张牌并使用之</span>`);
+	},
+	// 周旋：阳弃半 / 阴摸半
+	qunyou_zhouxuan(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		if (player.storage?.[skill]) {
+			return base.replace("阴：摸一半的手牌（向上取整）", `<span class='bluetext'>阴：摸一半的手牌（向上取整）</span>`);
+		}
+		return base.replace("阳：弃一半的手牌（向下取整）", `<span class='firetext'>阳：弃一半的手牌（向下取整）</span>`);
+	},
+	// 抛石：①皆相同 / ②皆不同
+	qiufeng_paoshi(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		if (player.storage?.[skill]) {
+			return base.replace("②皆不同", `<span class='bluetext'>②皆不同</span>`);
+		}
+		return base.replace("①皆相同", `<span class='firetext'>①皆相同</span>`);
+	},
+	// 孤胆：下个阶段与销毁牌两处 阳/阴 随同一状态标色
+	qunyou_gudan(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		if (player.storage?.[skill]) {
+			return base.replace("阴：摸牌阶段", `<span class='bluetext'>阴：摸牌阶段</span>`).replace("阴：【随机应变】", `<span class='bluetext'>阴：【随机应变】</span>`);
+		}
+		return base.replace("阳：出牌阶段", `<span class='firetext'>阳：出牌阶段</span>`).replace("阳：【涯角枪】", `<span class='firetext'>阳：【涯角枪】</span>`);
+	},
+	// 先斩：阳回复 / 阴失去
+	qunyou_xianzhan(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		if (player.storage?.[skill]) {
+			return base.replace("阴：失去本回合你已使用牌的花色数点体力", `<span class='bluetext'>阴：失去本回合你已使用牌的花色数点体力</span>`);
+		}
+		return base.replace("阳：回复本回合你已使用牌的花色数点体力", `<span class='firetext'>阳：回复本回合你已使用牌的花色数点体力</span>`);
+	},
+	// 交阋：①全员无中生有 / ②无懈或闪
+	zishu_jiaoxi(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		const y1 = "①所有角色均可以将一张锦囊牌当一张【无中生有】使用";
+		const y2 = "②你可以将颜色与上次因此转化牌相同的牌当【无懈可击】或【闪】使用";
+		if (player.storage?.[skill]) {
+			return base.replace(y2, `<span class='bluetext'>${y2}</span>`);
+		}
+		return base.replace(y1, `<span class='firetext'>${y1}</span>`);
+	},
+	// 颠池：阳体力变化为1 / 阴回复至上限（尾部"摸至四张"为两态共用，不标色）
+	xiaobai_dianchi(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		if (player.storage?.[skill]) {
+			return base.replace("阴：当你回复体力至上限后", `<span class='bluetext'>阴：当你回复体力至上限后</span>`);
+		}
+		return base.replace("阳：当你的体力变化为1后", `<span class='firetext'>阳：当你的体力变化为1后</span>`);
+	},
+	// 观城：①桃园结义 / ②万箭齐发
+	xiaobai_guancheng(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		if (player.storage?.[skill]) {
+			return base.replace("②【万箭齐发】", `<span class='bluetext'>②【万箭齐发】</span>`);
+		}
+		return base.replace("①【桃园结义】", `<span class='firetext'>①【桃园结义】</span>`);
+	},
+	// 言祸：阳闪电判定 / 阴他人令执行阳项（含删标签尾句）
+	xiaobai_yanhuo(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		const y1 = "阳：准备阶段，你可以进行一次【闪电】判定";
+		const y2 = "阴：其他角色的结束阶段，其可以令你执行阳项，若你因此进入濒死状态，删去〖言祸〗转换技标签。";
+		if (player.storage?.[skill]) {
+			return base.replace(y2, `<span class='bluetext'>${y2}</span>`);
+		}
+		return base.replace(y1, `<span class='firetext'>${y1}</span>`);
+	},
+	// 焰灾：①过河拆桥 / ②借刀杀人
+	xiaobai_yanzai(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		if (player.storage?.[skill]) {
+			return base.replace("②【借刀杀人】", `<span class='bluetext'>②【借刀杀人】</span>`);
+		}
+		return base.replace("①【过河拆桥】", `<span class='firetext'>①【过河拆桥】</span>`);
+	},
+	// 恣逸：阳视为使用酒 / 阴他人交牌令发动神点
+	xiaobai_ziyi(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		const y2 = "阴：其他角色的出牌阶段，其可交给你至少一张牌，并令你发动〖神点〗，然后若你因〖神点〗摸牌数少于其交出牌数，你失去1点体力。";
+		if (player.storage?.[skill]) {
+			return base.replace(y2, `<span class='bluetext'>${y2}</span>`);
+		}
+		return base.replace("阳：你可以视为使用【酒】", `<span class='firetext'>阳：你可以视为使用【酒】</span>`);
 	},
 };
 

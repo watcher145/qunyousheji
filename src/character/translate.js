@@ -512,4 +512,15 @@ export const characterTranslate = {
 	xiaobai_zhushixing_prefix: "小白",
 	xiaobai_zuosi: "小白左思",
 	xiaobai_zuosi_prefix: "小白",
+	// === 子子杯（第二届子子杯S2·轮首，双头武将，&为双头分隔符） ===
+	zizi_caozhencaoxiu: "子子曹真&曹休",
+	zizi_caozhencaoxiu_prefix: "子子",
+	zizi_guotufengji: "子子郭图&逢纪",
+	zizi_guotufengji_prefix: "子子",
+	zizi_jiangwanfeiyi: "子子蒋琬&费祎",
+	zizi_jiangwanfeiyi_prefix: "子子",
+	zizi_weiwenzhugezhi: "子子卫温&诸葛直",
+	zizi_weiwenzhugezhi_prefix: "子子",
+	zizi_yangzhiyangyan: "子子杨芷&杨艳",
+	zizi_yangzhiyangyan_prefix: "子子",
 };

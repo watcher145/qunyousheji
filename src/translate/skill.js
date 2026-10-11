@@ -13,6 +13,7 @@ import { yachaiTranslate } from "./yachai.js";
 import { xuandieTranslate } from "./xuandie.js";
 import { maokuoTranslate } from "./maokuo.js";
 import { xiaobaiTranslate } from "./xiaobai.js";
+import { ziziTranslate } from "./zizi.js";
 import { clanTranslate } from "./clan.js";
 import { miscTranslate } from "./misc.js";
 
@@ -29,6 +30,7 @@ export const skillTranslate = {
 	...xuandieTranslate,
 	...maokuoTranslate,
 	...xiaobaiTranslate,
+	...ziziTranslate,
 	...clanTranslate,
 	...miscTranslate,
 };
