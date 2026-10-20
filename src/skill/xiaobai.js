@@ -5187,11 +5187,16 @@ xiaobai_guajie: {
 	mark: true,
 	marktext: "易",
 	intro: {
+		// 角标 = 辟易数量（storage.xiaobai_guajie 本身是 undefined，必须用 markcount 供数）
+		markcount(storage, player) {
+			return (player.storage.xiaobai_piyi_slots || []).length;
+		},
+		// 悬浮：按牌名聚合（去重 ×N）
 		content(storage, player) {
-			const list = player.storage.xiaobai_piyi_list || [];
-			if (!list.length) return "暂无“辟易”。";
+			const slots = player.storage.xiaobai_piyi_slots || [];
+			if (!slots.length) return "暂无“辟易”。";
 			const counts = {};
-			for (const name of list) counts[name] = (counts[name] || 0) + 1;
+			for (const slot of slots) counts[slot.name] = (counts[slot.name] || 0) + 1;
 			return (
 				"当前“辟易”（上限8）：" +
 				Object.keys(counts)
@@ -5200,70 +5205,45 @@ xiaobai_guajie: {
 			);
 		},
 	},
-	// 游戏开始时获得两个“辟易”
+	// 锁定技（trigger + forced ⇒ get.is.locked 判为锁定技，面板自动加“锁定技”标签）
 	trigger: { global: "gameStart" },
 	forced: true,
 	popup: false,
 	silent: true,
 	filter(event, player) {
-		return !(player.storage.xiaobai_piyi_list || []).length;
+		return !(player.storage.xiaobai_piyi_slots || []).length;
 	},
 	content(event, trigger, player) {
-		player.storage.xiaobai_piyi_list = ["wuxie", "wuxie"];
+		// 两个“初始状态”的辟易：各自的「」都是【无懈可击】
+		player.storage.xiaobai_piyi_slots = [{ name: "wuxie" }, { name: "wuxie" }];
 		player.updateMarks("xiaobai_guajie");
 	},
-	group: ["xiaobai_guajie_gain"],
-	subSkill: {
-		// 抵消了其他角色使用的普通锦囊牌 → 获得一个新“辟易”（牌名改为被抵消牌名；每种牌名限一个；超出上限替换其一）
-		gain: {
-			audio: "xiaobai_guajie",
-			charlotte: true,
-			sub: true,
-			name: "卦解",
-			trigger: { global: "useCardAfter" },
-			direct: true,
-			filter(event, player) {
-				if (!player.isIn() || !event._neutralized) return false;
-				// 被抵消的是普通锦囊（非延时）
-				if (get.type(event.card) != "trick") return false;
-				// 子事件链中找到自己的辟易无懈
-				let found = false;
-				(function find(evt) {
-					for (const child of evt.childEvents || []) {
-						if (child.name == "useCard" && child.card?.storage?.xiaobai_piyi && child.player == player) found = true;
-						find(child);
-					}
-				})(event);
-				return found;
-			},
-			async content(event, trigger, player) {
-				player.logSkill("xiaobai_guajie");
-				const name = get.name(trigger.card);
-				const list = (player.storage.xiaobai_piyi_list ??= []);
-				if (list.includes(name)) return; // 每种牌名限获得一个
-				if (list.length < 8) {
-					list.push(name);
-					player.updateMarks("xiaobai_guajie");
-					game.log(player, "获得了一个", "#g【" + get.translation(name) + "】的“辟易”");
-					return;
-				}
-				// 超出上限：替换原有之一
-				const options = [...new Set(list)].map((n) => "【" + get.translation(n) + "】");
-				const ctrl = await player
-					.chooseControl(options)
-					.set("prompt", "卦解：“辟易”已达上限，替换哪一个为【" + get.translation(name) + "】？")
-					.set("ai", () => 0)
-					.forResult();
-				if (!ctrl?.control) return;
-				const targetName = ctrl.control.slice(1, -1);
-				const idx = list.indexOf(targetName);
-				if (idx >= 0) {
-					list.splice(idx, 1, name);
-					player.updateMarks("xiaobai_guajie");
-					game.log(player, "将一个", "#g【" + get.translation(targetName) + "】的“辟易”替换为了", "#g【" + get.translation(name) + "】");
-				}
-			},
-		},
+	// 获得一个“辟易”——由〖辟易〗调用（“上限8 / 超出替换”规则只此一处）。
+	// 每个辟易是**独立实例** { name }，name 就是它的「」内容；不叠数值，所以能表达“我有哪些牌名”
+	async gain(player, name) {
+		const slots = (player.storage.xiaobai_piyi_slots ??= []);
+		if (slots.some((slot) => slot.name === name)) return; // 已有此牌名的辟易 → 不再获得
+		if (slots.length < 8) {
+			slots.push({ name });
+			player.updateMarks("xiaobai_guajie");
+			game.log(player, "获得了一个", "#g【" + get.translation(name) + "】的“辟易”");
+			return;
+		}
+		// 超出上限：玩家选一个牌名替换
+		const names = [...new Set(slots.map((slot) => slot.name))];
+		const ctrl = await player
+			.chooseControl(names.map((n) => "【" + get.translation(n) + "】"))
+			.set("prompt", "卦解：“辟易”已达上限，替换哪一个为【" + get.translation(name) + "】？")
+			.set("ai", () => 0)
+			.forResult();
+		if (!ctrl?.control) return;
+		const old = ctrl.control.slice(1, -1);
+		const slot = slots.find((s) => s.name === old);
+		if (!slot) return;
+		slot.name = name;
+		delete slot.used; // 换进来的是一枚新辟易，本轮可再用
+		player.updateMarks("xiaobai_guajie");
+		game.log(player, "将一个", "#g【" + get.translation(old) + "】的“辟易”替换为了", "#g【" + get.translation(name) + "】");
 	},
 	ai: {
 		result: {
@@ -6291,9 +6271,22 @@ xiaobai_huisu: {
 //    （本技能靠 filter 首行的"已选中技能则直接放行"绕过，同道转 filter 首行的 event.potdaozhuan）
 xiaobai_huoyan: {
 	audio: 2,
-	// 印"使用"基本牌（无素材，牌面运行时才定）：出牌阶段使用窗 + 濒死求桃窗都可发动，
-	// 目标（【杀】）/濒死者一律交给引擎的 filterTarget 处理，不再自己 chooseUseTarget
+	// 印"使用"基本牌（无素材，牌面运行时才定）：出牌阶段使用窗 + 【杀】的闪响应窗 + 濒死求桃窗
+	// 都可发动，目标（【杀】）/濒死者一律交给引擎的 filterTarget 处理，不再自己 chooseUseTarget
 	enable: "chooseToUse",
+	// hiddenCard：四个"开窗预检"的通行证（缺了它，杀/闪/桃窗口会在开窗前就把你当"没牌"跳过）。
+	// 引擎链路（noname/library/element/player.js）：
+	//   hasSha/hasShan → hasUsableCard(牌名, "use")      ← 2949 起
+	//   canSave       → hasUsableCard(牌名, "all")       ← 2496 起
+	//   hasWuxie      → 直接调 hiddenCard(player,"wuxie") ← 13470 起
+	// hasUsableCard 的 hiddenCard 分支还额外要求「info.enable 命中当前窗口 + info.filter 通过」，
+	// 本技能 enable 只有 chooseToUse ⇒ 打出窗（chooseToRespond）天然不算数，与描述"视为使用"一致
+	hiddenCard(player, name) {
+		// 只放行基本牌：【无懈可击】这类锦囊不放行（本技能只印基本牌，enable 也不含 chooseToRespond）
+		if (get.type(name) != "basic") return false;
+		if (player.hasSkill("xiaobai_huoyan_invalid")) return false;
+		return game.hasPlayer((current) => lib.xiaobaiHuoyanCanMove(current, player));
+	},
 	// 候选牌面缓存到事件上（同〖拾昔〗clanshixi 的 event.clanshixi），
 	// onChooseToUse 在 game.check() 之前跑，filter 与 dialog 共用同一份
 	onChooseToUse(event) {
@@ -6395,11 +6388,21 @@ xiaobai_huoyan: {
 	},
 	ai: {
 		order: 6,
-		// 只影响出牌窗的"使用"决策（描述只写视为使用），不设 respondSha/respondShan/save：
-		// 那些标记是给"视为打出"的响应窗用的，本技能 enable 只挂 chooseToUse
-		skillTagFilter(player) {
+		// 开窗预检的第二道门：hasSha/hasShan 先查 hasSkillTag("respondSha"/"respondShan")、
+		// canSave 先查 hasSkillTag("save")（player.js:13503/13525/2496），命中就直接放行，
+		// 不必再走 hasUsableCard。这三个标签是"使用/打出"双用开关：
+		//   respondSha/respondShan 的 arg 为 "use"/"respond"/"all"；save 的 arg 是濒死者 Player。
+		// 本技能 enable 只挂 chooseToUse（覆盖闪响应窗 respondShan 与濒死窗 dying，但不覆盖
+		// chooseToRespond 的"打出"窗）⇒ arg==="respond" 时拒掉。
+		respondSha: true,
+		respondShan: true,
+		save: true,
+		skillTagFilter(player, tag, arg) {
 			if (player.hasSkill("xiaobai_huoyan_invalid")) return false;
-			return game.hasPlayer((current) => lib.xiaobaiHuoyanCanMove(current, player));
+			if (!game.hasPlayer((current) => lib.xiaobaiHuoyanCanMove(current, player))) return false;
+			// save 的 arg 是濒死者对象，只有 respondSha/respondShan 会传 "respond"
+			if (arg === "respond") return false;
+			return true;
 		},
 		result: { player: 1 },
 	},
@@ -7892,6 +7895,15 @@ xiaobai_kenyan: {
 		},
 	},
 	enable: ["chooseToUse", "phaseUse"],
+	// hiddenCard：恳言印的是"本回合上一张用过的基本牌/普通锦囊"（运行时才定，可能是【闪】/【桃】/【酒】/【无懈】）
+	// ⇒ 必须按当前 source.name 喂预检，否则闪窗(hasShan)/濒死窗(canSave)/无懈窗(hasWuxie)都会在开窗前跳过
+	hiddenCard(player, name) {
+		const info = player.storage.xiaobai_kenyan_source;
+		if (!info?.name || info.name !== name || !player.isIn()) return false;
+		const need = (player.storage.xiaobai_kenyan_times || 0) + 1;
+		if (need > 3) return false;
+		return player.countCards("h", (card) => lib.xiaobaiKenyanMatch(card, player, info) >= need) > 0;
+	},
 	filter(event, player) {
 		const info = player.storage.xiaobai_kenyan_source;
 		if (!info?.name || !player.isIn()) return false;
@@ -10372,60 +10384,114 @@ xiaobai_pingfeng: {
 // === 辟易 ===
 // 辟易：以八卦阵的方式使用对应牌名的牌（每轮每个“辟易”限一次；判定为红色才生效）
 xiaobai_piyi: {
-	charlotte: true,
-	enable: ["chooseToUse"],
+	audio: "xiaobai_guajie",
+	// 真技能（不再是 charlotte 隐藏技）：有独立 _info + 动态描述（lib.dynamicTranslate.xiaobai_piyi）。
+	// 数据：storage.xiaobai_piyi_slots = [{name, used?}, …] —— 每个元素 = 一个“辟易”实例，name 就是它的「」。
+	// “每轮每个辟易各一次”按**实例**记（slot.used），轮首由 clear 子技能清掉：
+	// ⚠️ 不能按牌名记——初始两枚辟易同名（都是【无懈可击】），按牌名会“用一个锁两个”。
+	// ⚠️ 实现必须照抄原生【八卦阵】(bagua_skill, card/standard.js:3809)：钩"开窗 Begin"，
+	//    **判定通过才写 trigger.result 并 untrigger**；判定不通过就什么都不做、窗口照常继续。
+	//    不要用 chooseButton+backup 的 precontent 去"中止本次使用"，两个原因：
+	//    ① **无懈窗带 nouse=true**（card/standard.js:4168）⇒ precontent 在该窗**根本不执行**
+	//       （content.js:4759 的 `!event.nouse` 守卫）→ 判定都没判就直接把无懈用掉了（本次 bug 根因）；
+	//    ② 即便执行，precontent 里 `event.result.bool = false` 的语义是"结束出牌阶段"（红线 6.6），不是"本次不结算"。
+	// hiddenCard：辟易的牌名全是锦囊（初始两枚【无懈可击】，之后是被抵消过的普通锦囊牌名）⇒
+	// 必须喂 hasWuxie 预检。无懈窗的候选列表就是 game.filterPlayer(current => ... && current.hasWuxie(map))
+	// （card/standard.js:4200），不写则持有辟易的角色被直接跳过、永远无法用辟易抵消锦囊
+	hiddenCard(player, name) {
+		return lib.skill.xiaobai_piyi.getRemain(player).some((slot) => slot.name === name);
+	},
+	// 本轮还可用的辟易实例。
+	// ⚠️ 必须按**实例**记（slot.used），不能按牌名：初始两个辟易同名（都是【无懈可击】），
+	// 按牌名记会“用一个锁两个”。
+	getRemain(player) {
+		return (player.storage.xiaobai_piyi_slots || []).filter((slot) => !slot.used);
+	},
+	trigger: { player: "chooseToUseBegin" },
 	filter(event, player) {
+		if (event.responded || event.xiaobai_piyi) return false; // 已有人响应 / 本技能自己开的窗
+		if (!event.filterCard) return false;
 		const remain = lib.skill.xiaobai_piyi.getRemain(player);
 		if (!remain.length) return false;
-		if (event.skill == "xiaobai_piyi" || event._skill == "xiaobai_piyi") return true;
-		return remain.some((name) => event.filterCard?.(get.autoViewAs({ name }, "unsure"), player, event));
+		// 剩余辟易里只要有"当前窗能用"的牌名就提供发动（闪响应窗/濒死窗/无懈窗都自动覆盖）
+		return remain.some((slot) => event.filterCard({ name: slot.name, isCard: true }, player, event));
 	},
-	// 剩余可用（未在本轮用过）的辟易牌名
-	getRemain(player) {
-		const list = (player.storage.xiaobai_piyi_list || []).slice(0);
-		for (const used of player.storage.xiaobai_piyi_used || []) {
-			const idx = list.indexOf(used);
-			if (idx >= 0) list.splice(idx, 1);
+	check(event, player) {
+		const remain = lib.skill.xiaobai_piyi.getRemain(player);
+		const usable = remain.filter((slot) => event.filterCard?.({ name: slot.name, isCard: true }, player, event));
+		if (!usable.length) return false;
+		// 无懈窗：只无懈**敌方**用的牌（respondTo = [使用者, 被响应的牌]，card/standard.js:4163）；
+		// 自己用的牌不必自己无懈，友方/中立（态度≥0）也不值得
+		if (event.type == "wuxie" && event.respondTo) {
+			const source = event.respondTo[0];
+			if (!source || source == player || get.attitude(player, source) >= 0) return false;
 		}
-		return [...new Set(list)];
+		return true;
 	},
-	chooseButton: {
-		dialog(event, player) {
-			const remain = lib.skill.xiaobai_piyi.getRemain(player);
-			const list = remain.map((name) => [get.type(name), "", name]);
-			return ui.create.dialog("辟易：以【八卦阵】的方式使用一张牌", [list, "vcard"]);
-		},
-		check(button) {
-			if (_status.event.getParent().type != "phase") return 1;
-			return get.player().getUseValue(get.autoViewAs({ name: button.link[2] }, null, true));
-		},
-		backup(links, player) {
-			const name = links[0][2];
-			return {
-				audio: "xiaobai_guajie",
-				filterCard: () => false,
-				selectCard: 0,
-				viewAs: { name, isCard: true, storage: { xiaobai_piyi: true } },
-				log: false,
-				async precontent(event, trigger, player) {
-					// 八卦阵判定：红色才视为使用（不消耗实体牌）
-					const judgeResult = await player.judge("bagua", (card) => (get.color(card) === "red" ? 1.5 : -0.5)).forResult();
-					if (!judgeResult || judgeResult.judge <= 0) {
-						// 判定未生效：视为未发动（不消耗本轮次数）
-						event.result.bool = false;
-						return;
-					}
-					player.logSkill("xiaobai_guajie");
-					(player.storage.xiaobai_piyi_used ??= []).push(name);
-				},
-			};
-		},
-		prompt(links) {
-			return "辟易：以【八卦阵】的方式使用【" + get.translation(links[0][2]) + "】（判定为红色才生效）";
-		},
+	async content(event, trigger, player) {
+		const remain = lib.skill.xiaobai_piyi.getRemain(player);
+		const names = [...new Set(remain.map((slot) => slot.name))];
+		let name = names[0];
+		if (names.length > 1) {
+			// 多枚可选时问用哪一枚（只有一个牌名就不问）
+			const res = await player
+				.chooseButton(["辟易：选择一枚“辟易”", [names.map((n) => [get.type(n), "", n]), "vcard"]])
+				.set("ai", (button) => get.player().getUseValue(get.autoViewAs({ name: button.link[2] }, null, true)))
+				.forResult();
+			if (!res?.bool || !res.links?.length) return; // 取消 → 什么都不做，窗口照常继续
+			name = res.links[0][2];
+		}
+		// 先消耗这一枚（按实例记；判定为黑也照样消耗本轮次数）
+		const slot = (player.storage.xiaobai_piyi_slots || []).find((s) => s.name === name && !s.used);
+		if (slot) slot.used = true;
+		// 八卦阵判定（照抄 bagua_skill 的写法）
+		trigger.xiaobai_piyi = true;
+		const judgeEvent = player.judge("bagua", (card) => (get.color(card) === "red" ? 1.5 : -0.5));
+		judgeEvent.judge2 = (result) => result.bool;
+		const judgeResult = await judgeEvent.forResult();
+		if (!judgeResult || judgeResult.judge <= 0) return; // 判定为黑：本次不生效，窗口照常继续
+		player.logSkill("xiaobai_piyi");
+		trigger.untrigger();
+		trigger.set("responded", true);
+		// skill 与 card.storage 双标记：长辟易子技能要认出"这张无懈是我辟易印的"（两处任一命中即可）
+		trigger.result = { bool: true, skill: "xiaobai_piyi", card: { name, isCard: true, storage: { xiaobai_piyi: true } } };
 	},
-	group: ["xiaobai_piyi_clear"],
+	group: ["xiaobai_piyi_gain", "xiaobai_piyi_clear"],
 	subSkill: {
+		// 抵消了**其他角色**使用的普通锦囊牌 → 获得一个单独的“辟易”，其「」改为该牌名
+		// （挂在子技能上而非主技能：主技能已有 filter/chooseButton，同对象再写一套 filter 会被后键吃掉）
+		gain: {
+			audio: "xiaobai_guajie",
+			charlotte: true,
+			sub: true,
+			name: "辟易",
+			trigger: { global: "useCardAfter" },
+			direct: true,
+			filter(event, player) {
+				if (!player.isIn() || !event._neutralized) return false;
+				// 被抵消的必须是普通锦囊（get.type 对延时锦囊返回 "delay"）
+				if (get.type(event.card) != "trick") return false;
+				// 必须是“其他角色”使用的：否则自己用锦囊、自己辟易无懈，会自己刷辟易
+				if (!event.player || event.player == player) return false;
+				// 在被抵消事件的子事件链里找到“自己用辟易印出的那张无懈”
+				// （childEvents 是引擎真实字段：gameEvent.js:123 定义、:202 逐级 push；引擎自己也这么走，
+				//  见 get/index.js:276-278。卡上认 card.storage，卡外认 useCard.skill —— 任一命中即可）
+				let found = false;
+				(function find(evt) {
+					for (const child of evt.childEvents || []) {
+						if (child.name == "useCard" && child.player == player && (child.card?.storage?.xiaobai_piyi || child.skill == "xiaobai_piyi")) {
+							found = true;
+						}
+						find(child);
+					}
+				})(event);
+				return found;
+			},
+			async content(event, trigger, player) {
+				// “已有此牌名的辟易就不获得 / 上限8 / 超出替换”都在卦解的 gain 里，只有一处规则
+				await lib.skill.xiaobai_guajie.gain(player, get.name(trigger.card));
+			},
+		},
 		clear: {
 			charlotte: true,
 			sub: true,
@@ -10434,10 +10500,11 @@ xiaobai_piyi: {
 			popup: false,
 			silent: true,
 			filter(event, player) {
-				return (player.storage.xiaobai_piyi_used || []).length > 0;
+				return (player.storage.xiaobai_piyi_slots || []).some((slot) => slot.used);
 			},
 			content(event, trigger, player) {
-				player.storage.xiaobai_piyi_used = [];
+				// 每轮每个辟易各一次 ⇒ 轮首清掉全部“本轮已用”标记
+				for (const slot of player.storage.xiaobai_piyi_slots || []) delete slot.used;
 			},
 		},
 	},
@@ -14685,6 +14752,20 @@ xiaobai_xuancheng: {
 xiaobai_xuancheng_o: {
 	charlotte: true,
 	enable: ["chooseToUse"],
+	// hiddenCard：模式1印【无懈可击】、模式2印【闪】⇒ 分别喂 hasWuxie 与 hasShan 预检
+	// （不写则无懈窗候选列表直接不含你、闪窗在 skip_shan 下也不开）
+	hiddenCard(player, name) {
+		const owner = game.findPlayer((current) => current.hasSkill("xiaobai_xuancheng"));
+		if (!owner?.isIn()) return false;
+		const mode = owner.storage.xiaobai_xuancheng_mode || 0;
+		if (mode == 1) {
+			return name == "wuxie" && player.countCards("h", (card) => get.name(card, player) == "shan") > 0;
+		}
+		if (mode == 2) {
+			return name == "shan" && player.countCards("h", (card) => get.type(card, player) != "basic") > 0;
+		}
+		return false;
+	},
 	filter(event, player) {
 		const owner = game.findPlayer((current) => current.hasSkill("xiaobai_xuancheng"));
 		if (!owner?.isIn()) return false;
@@ -14750,6 +14831,15 @@ xiaobai_xuancheng_o: {
 xiaobai_xuancheng_self: {
 	charlotte: true,
 	enable: ["chooseToUse", "phaseUse"],
+	// hiddenCard：模式2把非基本手牌当【杀】使用 ⇒ 借刀窗的 hasSha 预检需要它
+	// （模式1只在出牌阶段把【杀】当锦囊用，phase 窗无预检）
+	hiddenCard(player, name) {
+		const mode = player.storage.xiaobai_xuancheng_mode || 0;
+		if (mode == 2 && name == "sha") {
+			return player.countCards("h", (card) => get.type(card, player) != "basic") > 0;
+		}
+		return false;
+	},
 	filter(event, player) {
 		const mode = player.storage.xiaobai_xuancheng_mode || 0;
 		if (mode == 0 || !player.isIn()) return false;
@@ -17669,7 +17759,9 @@ xiaobai_zhiwen: {
 				"背水"
 			])
 			.set("prompt", "鸷刎：选择一项")
-			.set("ai", function() { return "cancel2" })
+			// AI 必须返回实际选项：恒返回 "cancel2" 会在选牌/转化前 return，
+			// 玩家侧毫无消耗，而出牌阶段每轮都会重新选中本技能 → 无限发动。
+			.set("ai", function() { return "选项一" })
 			.forResult();
 		if (optResult.control === "cancel2") return;
 

@@ -15,7 +15,7 @@ export const maokuoTranslate = {
 			"觉醒技，回合结束时，若你的体力值为1/没有手牌，你弃置所有手牌/将体力值减至1，获得“残猎”，然后再执行一个额外的回合。",
 	maokuo_fushi: "浮饰",
 	maokuo_fushi_info:
-			"若牌堆顶的第X张牌可见（X为你某一种花色手牌的数量），当你需要使用该牌时，你可以展示所有手牌，使用之。",
+			"若牌堆顶的第X张牌可见（X为你某一种花色手牌的数量），当你需要使用或打出该牌时，你可以展示所有手牌，使用或打出之。",
 	maokuo_huifo: "会佛",
 	maokuo_huifo_info:
 			"出牌阶段，你可以与一名其他角色同时展示一张手牌，若这两张牌的颜色：不同，将你与其展示的牌按序扣置于你的武将牌上；相同，你与其轮流获得一张“会佛”牌，直到没有“会佛”牌为止，然后你结束此回合；当你于此阶段内对另一名角色发动“会佛”后，你结束此回合。",
@@ -31,10 +31,11 @@ export const maokuoTranslate = {
 			"锁定技，当你造成伤害或受到伤害时，若你的区域内有可见黑色牌，当前回合角色选择其中一张，你将之当【无中生有】使用。",
 	maokuo_kuolue: "阔略",
 	maokuo_kuolue_info:
-			"一名角色的结束阶段，若你于此回合内未成为过黑色牌的目标，你可以亮出一张手牌：当你的手牌均可见时，你令手牌均不可见，摸一张牌。",
+			"一名角色的结束阶段，若你于此回合内未成为过黑色牌的目标，你可以明置一张手牌：当你的手牌均明置时，你令你的手牌均暗置，摸一张牌。",
 	visible_maokuo_kuolue: "阔略",
 	maokuo_kuolue_hit: "阔略",
 	maokuo_kuolue_hitmark: "阔略",
+	maokuo_kuolue_show: "阔略",
 	maokuo_lukang: "陆抗",
 	maokuo_lukang_prefix: "猫咪",
 	maokuo_luomo: "落墨",
@@ -43,8 +44,9 @@ export const maokuoTranslate = {
 	maokuo_luomo_used: "落墨",
 	maokuo_nishui: "逆水",
 	maokuo_nishui_info:
-			"游戏开始时，你将【杀】、【闪】、【桃】、【酒】各一张置于武将牌上。你可以将一张“逆水”牌移出游戏，视为使用之，然后直到游戏结束，你不能使用或打出相同名称的牌。",
+		"你可以视为使用一张基本牌，然后你本局游戏不能再使用或打出此基本牌；你的牌被其他角色获得后，你摸此技能的发动次数张牌。",
 	maokuo_nishui_use: "逆水",
+	maokuo_nishui_gain: "逆水",
 	maokuo_qianzhen: "迁阵",
 	maokuo_qianzhen_info:
 			"你可以将你每轮的额定回合提前或推迟至“地势”标记所在的位置执行，然后此额定回合开始前，你将自己的座位移动到此位置。",
@@ -62,11 +64,6 @@ export const maokuoTranslate = {
 	maokuo_raolue: "娆掠",
 	maokuo_raolue_info:
 			"每回合限一次，当你需要使用或打出【杀】/【闪】时，你可以展示一张【杀】/【闪】，然后若其他男性角色展示一张【杀】/【闪】，视为你使用或打出之。",
-	maokuo_raolue_sha: "娆掠",
-	maokuo_raolue_shan: "娆掠",
-	maokuo_raolue_flow: "娆掠",
-	maokuo_raolue_ready: "娆掠",
-	maokuo_raolue_used: "娆掠",
 	maokuo_shameng: "歃盟",
 	maokuo_shameng_info:
 			"每阶段限一次，包括你在内的任意角色于自己的出牌阶段内需要使用【杀】时，可以声明一项：弃置自己的所有手牌，或令你失去1点体力。若你同意，则执行此项，视为其使用【杀】。此【杀】结算后，其摸X张牌（X为其目标本轮内最近连续被以此法使用的【杀】指定为目标的次数，一轮结束重新计数）。",
@@ -86,7 +83,7 @@ export const maokuoTranslate = {
 			"锁定技，你的锦囊牌视为【决斗】；当你造成伤害后，你回复等量的体力；你不以此法回复体力时，防止之；当你杀死其他角色后，你不执行奖惩。",
 	maokuo_siqian: "思虔",
 	maokuo_siqian_info:
-			"当你成为【杀】的目标后，你可以摸一张牌并展示之，若你的武将牌上：没有此花色的牌，你须将之置于武将牌上；有此花色的牌，你于此回合内再次成为此花色牌的目标时，你不能发动“思虔”。",
+			"当你成为牌的目标后，你可以摸一张牌并展示之，若你的武将牌上：没有此花色的牌，你须将之置于武将牌上；有此花色的牌，你于此回合内再次成为此花色牌的目标时，你不能发动“思虔”。",
 	maokuo_siqian_ban: "思虔",
 	maokuo_songjiu: "颂酒",
 	maokuo_songjiu_info:

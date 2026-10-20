@@ -30,8 +30,8 @@ export const zishuTranslate = {
 	zishu_huifen_info: "你可将【杀】当【树上开花】使用，然后此技能失效至你下次一次性获得至少三张牌。",
 	zishu_jiaoxi: "交阋",
 	zishu_jiaoxi_info: `转换技，①所有角色均可以将一张锦囊牌当一张【无中生有】使用；②你可以将颜色与上次因此转化牌相同的牌当【无懈可击】或【闪】使用。你抵消牌后，可以转换${get.poptip("zishu_jiaoxi")}或摸一张牌。`,
-	zishu_jiaoxie: "骄黠",
-	zishu_jiaoxie_info:
+	zishu_jiaoxia: "骄黠",
+	zishu_jiaoxia_info:
 			"每轮限四次，你可以：视为使用或打出一张【杀】（消耗1次），或消耗所有剩余次数以视为使用一张【兵临城下】。",
 	zishu_jibi: "急鞭",
 	zishu_jibi_info:

@@ -21,7 +21,7 @@ export const zhuomingTranslate = {
 	zhuoming_juanlong_info: "限定技，弃牌阶段，你可以改为摸四张牌并分配若干手牌；因此获得至少三张牌的角色可以使用若干【杀】；因此成为至少两次目标角色失去一点体力；因此死亡至少一名角色后重置此技能。",
 	zhuoming_juanlong_assigned: "已分配",
 	zhuoming_liezong: "裂宗",
-	zhuoming_liezong_info: "出牌阶段，你可以弃置一张牌；然后若你手牌数差X成为手牌数最多，你摸X张牌，此阶段此技能失效，且你使用牌均无次数、距离限制（X为本回合弃牌堆中伤害牌数）。若你装备牌的牌数不少于一号位，你受到伤害后也可发动；若一号位体力值不多于你，你回复体力后也可发动。若两项条件均满足，“弃置”改为“使用”。",
+	zhuoming_liezong_info: "出牌阶段，你可以弃置一张牌；然后若你手牌数差X成为手牌数最多，你摸X张牌，此阶段此技能失效，且你使用牌均无次数、距离限制（X为本回合弃牌堆中伤害牌数）。",
 	zhuoming_quantong: "遣通",
 	zhuoming_quantong_info: `魏势力技，出牌阶段限一次，你可以令一名其他角色对你发动${get.poptip("quhu")}。`,
 	zhuoming_shuocheng: "朔骋",

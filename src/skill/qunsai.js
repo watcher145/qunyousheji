@@ -1043,7 +1043,7 @@ qiufeng_liugong_trigger: {
 			console.log("六宫 getStartedEvent=" + (_status.eventManager.getStartedEvent()?.name || "null"));
 			const btnEvt = player.chooseButton(
 				["选择一张六宫牌", [liugongCards, "card"]]
-			).set("ai", c => Math.random());
+			).set("ai", (button) => -get.value(button.link, player));
 			console.log("六宫 btnEvt.parent=" + (btnEvt.parent?.name || "null"));
 			console.log("六宫 btnEvt.player=" + (btnEvt.player?.name || btnEvt.player || "null"));
 			const cardRes = await btnEvt.forResult();
@@ -1118,6 +1118,7 @@ qiufeng_paoshi: {
 	audio: 2,
 	enable: ["chooseToUse"],
 	group: ["qiufeng_paoshi_record", "qiufeng_paoshi_reset"],
+	zhuanhuanji: true,
 	mark: true,
 	marktext: "☯",
 	init(player, skill) {
@@ -1708,8 +1709,9 @@ zishu_chuyan: {
 			.set("prompt", "觸顏：请选择“重铸”或“弃置”")
 			.set("ai", () => {
 				const worst = current.getCards("he").sort((a, b) => get.value(a) - get.value(b))[0];
-				if (!isInitiator && (!worst || get.value(worst) >= 6)) return "cancel2";
-				return Math.random() < 0.6 ? "重铸" : "弃置";
+				// 重铸恒 ≥ 弃置（弃置纯亏）；只有被代管且手牌很少/最差牌也不差时才取消
+				if (!isInitiator && (!worst || get.value(worst) >= 7 || current.countCards("he") <= 1)) return "cancel2";
+				return "重铸";
 			});
 	},
 	chooseCardFunc(current, optionMap) {
@@ -2064,7 +2066,19 @@ zishu_henglan: {
 			.chooseControl("cancel2")
 			.set("choiceList", choices)
 			.set("prompt", get.prompt("zishu_henglan"))
-			.set("ai", () => 0)
+			.set("ai", () => {
+				const give = choices.indexOf("分配你的一张牌");
+				const move = choices.indexOf("移动场上的一张牌");
+				// 默认“分配”：pair=自己+队友，队内无损且自己必进 pair
+				// 只在给不起牌或场上有敌方高价值装备（偷装备）时改为移动
+				const enemyEquip =
+					move >= 0 &&
+					game.hasPlayer(
+						(cur) => cur != player && cur.isIn() && get.attitude(player, cur) < 0 && cur.getCards("e").some((card) => get.value(card) >= 6)
+					);
+				if (move >= 0 && (give < 0 || player.countCards("he") <= 1 || enemyEquip)) return move;
+				return give >= 0 ? give : 0;
+			})
 			.forResult();
 		if (choice.control == "cancel2") return;
 		if (choices[choice.index] == "移动场上的一张牌") {
@@ -2211,7 +2225,15 @@ zishu_jiaoxi: {
 		const choice = await player
 			.chooseControl("转换交阋", "摸一张牌")
 			.set("prompt", get.prompt("zishu_jiaoxi"))
-			.set("ai", () => 1)
+			.set("ai", () => {
+				const p = get.player();
+				// ②（个人防御：同色当闪/无懈）已转换时继续摸牌；
+				// ①（全场锦囊当无中）不稳定但能自用，满血手牌多且还有锦囊时留①，否则转回②
+				if (p.storage.zishu_jiaoxi) return 1;
+				const trick = p.countCards("h", (card) => get.type2(card) == "trick") > 0;
+				if (p.hp >= p.maxHp && p.countCards("h") >= 3 && trick) return 1;
+				return 0;
+			})
 			.forResult();
 		if (choice?.control === "转换交阋") {
 			player.changeZhuanhuanji("zishu_jiaoxi");
@@ -2246,6 +2268,12 @@ zishu_jiaoxi: {
 			prompt: "将一张锦囊牌当【无中生有】使用",
 			check(card) {
 				return get.value({ name: "wuzhong" }, get.player()) - get.value(card);
+			},
+			ai: {
+				order: 6,
+				result: {
+					player: 1,
+				},
 			},
 			precontent(event, trigger, player) {
 				const card = event.result?.cards?.[0] || event.result?.card;
@@ -2314,29 +2342,39 @@ zishu_jiaoxi: {
 				player.changeZhuanhuanji("zishu_jiaoxi");
 			},
 			prompt: "将一张同色牌当【无懈可击】或【闪】使用",
+			ai: {
+				// 响应型转化：没有 order 时 AI 不会在闪/无懈窗口里点这个技能
+				order: 8,
+				respondShan: true,
+				skillTagFilter(player, tag) {
+					if (tag != "respondShan") return false;
+					const color = player.storage.zishu_jiaoxi_lastColor;
+					return !!color && player.countCards("hes", (card) => get.color(card, false) == color) > 0;
+				},
+			},
 		},
 	},
 },
 // === 骄黠 ===
-zishu_jiaoxie: {
+zishu_jiaoxia: {
 	audio: 2,
 	mark: true,
 	marktext: "黠",
 	init(player) {
-		player.storage.zishu_jiaoxie = 4;
+		player.storage.zishu_jiaoxia = 4;
 	},
 	intro: {
 		content(storage, player) {
-			const left = player.storage.zishu_jiaoxie || 0;
+			const left = player.storage.zishu_jiaoxia || 0;
 			return `每轮限四次，剩余${left}次。<br>你可以视为使用或打出一张【杀】（消耗1次），或消耗所有剩余次数以视为使用一张【兵临城下】。`;
 		},
 	},
 	enable: ["chooseToUse", "chooseToRespond"],
 	filter(event, player) {
-		const rem = player.storage.zishu_jiaoxie || 0;
+		const rem = player.storage.zishu_jiaoxia || 0;
 		if (rem <= 0) return false;
 		if (event.type == "wuxie") return false;
-		if (event.skill == "zishu_jiaoxie" || event._skill == "zishu_jiaoxie") {
+		if (event.skill == "zishu_jiaoxia" || event._skill == "zishu_jiaoxia") {
 			return true;
 		}
 		if (event.filterCard({ name: "sha", isCard: true }, player, event)) {
@@ -2350,7 +2388,7 @@ zishu_jiaoxie: {
 	},
 	// hiddenCard 必须位于技能顶层：引擎 hasUsableCard/hasWuxie 预检只读 info.hiddenCard（player.js:2988）
 	hiddenCard(player, name) {
-		return name == "sha" && (player.storage.zishu_jiaoxie || 0) > 0;
+		return name == "sha" && (player.storage.zishu_jiaoxia || 0) > 0;
 	},
 	chooseButton: {
 		filter(button, player) {
@@ -2377,7 +2415,7 @@ zishu_jiaoxie: {
 			if (
 				evt.name == "chooseToUse" &&
 				evt.filterCard(get.autoViewAs({ name: "binglinchengxiax", isCard: true }, "unsure"), player, evt) &&
-				(player.storage.zishu_jiaoxie || 0) > 0 &&
+				(player.storage.zishu_jiaoxia || 0) > 0 &&
 				game.hasPlayer((t) => t != player && player.canUse(get.autoViewAs({ name: "binglinchengxiax", isCard: true }, "unsure"), t, false))
 			) {
 				list.push(["trick", "", "binglinchengxiax", ""]);
@@ -2392,20 +2430,20 @@ zishu_jiaoxie: {
 			const name = links[0][2];
 			const all = name == "binglinchengxiax";
 			return {
-				audio: "zishu_jiaoxie",
+				audio: "zishu_jiaoxia",
 				filterCard: () => false,
 				selectCard: -1,
 				popname: true,
 				viewAs: { name, isCard: true },
 				log: false,
 				async precontent(event, trigger, player) {
-					player.logSkill("zishu_jiaoxie");
+					player.logSkill("zishu_jiaoxia");
 					if (all) {
-						player.storage.zishu_jiaoxie = 0;
+						player.storage.zishu_jiaoxia = 0;
 					} else {
-						player.storage.zishu_jiaoxie = Math.max(0, (player.storage.zishu_jiaoxie || 0) - 1);
+						player.storage.zishu_jiaoxia = Math.max(0, (player.storage.zishu_jiaoxia || 0) - 1);
 					}
-					player.updateMarks("zishu_jiaoxie");
+					player.updateMarks("zishu_jiaoxia");
 				},
 			};
 		},
@@ -2418,24 +2456,25 @@ zishu_jiaoxie: {
 		order: 4.5,
 		respondSha: true,
 		skillTagFilter(player, tag, arg) {
-			if ((player.storage.zishu_jiaoxie || 0) <= 0) return false;
+			if ((player.storage.zishu_jiaoxia || 0) <= 0) return false;
 			if (arg === "respond") return false;
 			return tag == "respondSha";
 		},
 		// hiddenCard 已移至技能顶层（引擎预检只读 info.hiddenCard）
 	},
-	group: ["zishu_jiaoxie_reset"],
+	group: ["zishu_jiaoxia_reset"],
 	subSkill: {
 		reset: {
 			name: "骄黠",
 			charlotte: true,
-			trigger: { player: "roundStart" },
+			// roundStart 的宿主是 phase 事件，player 角色只有当轮首个行动角色能匹配 → 必须用 global（filterTrigger 只对 global 跳过 event[role]===player 检查，noname/library/index.js:10812）
+			trigger: { global: "roundStart" },
 			forced: true,
 			popup: false,
 			silent: true,
 			content(event, trigger, player) {
-				player.storage.zishu_jiaoxie = 4;
-				player.updateMarks("zishu_jiaoxie");
+				player.storage.zishu_jiaoxia = 4;
+				player.updateMarks("zishu_jiaoxia");
 			},
 		},
 	},
@@ -4689,7 +4728,11 @@ zhuoming_weigong: {
 				const choice = await player
 					.chooseControl("第①项", "第②项", "第③项", "第④项")
 					.set("prompt", "伪恭：周始——将一项改为推进")
-					.set("ai", () => 0)
+					.set("ai", () => {
+						// 四位齐全时把推进压到末位（④），其余回退把序号压回 0/1；
+						// 只有 1-2 位时末位不可达，改为让①推进，尽早摸牌
+						return (player.storage.zhuoming_feili_slots?.length || 4) >= 4 ? 3 : 0;
+					})
 					.forResult();
 				if (choice?.control) {
 					player.storage.zhuoming_weigong_forward = ["第①项", "第②项", "第③项", "第④项"].indexOf(choice.control);
@@ -4708,10 +4751,12 @@ zhuoming_weigong: {
 		},
 		enable: "phaseUse",
 		filter(event, player) {
-			return game.hasPlayer((target) => target !== player && player.canCompare(target));
+			// 已拒绝拼点的目标挂了 ban（本回合不能再"确定"），再选它必然被强制取消；
+			// phaseUse 无次数限制，AI 会反复选中本技能并空结算 → 无限发动
+			return game.hasPlayer((target) => target !== player && !target.hasSkill("wending_beixuan_ban") && player.canCompare(target));
 		},
 		filterTarget(card, player, target) {
-			return target !== player && player.canCompare(target);
+			return target !== player && !target.hasSkill("wending_beixuan_ban") && player.canCompare(target);
 		},
 		async content(event, trigger, player) {
 			const target = event.target;
@@ -5194,6 +5239,8 @@ zhuoming_weigong: {
 			},
 		},
 		ai: {
+			// 无懈窗口的转化技：没有 order 时 get.order 返回 -1，AI 永远不会点
+			order: 5,
 			basic: {
 				useful: [6, 4, 3],
 				value: [6, 4, 3],
@@ -5755,7 +5802,7 @@ shanhe_fuzhu: {
 			selectCard: [2, 2],
 			forced: true,
 			prompt: "选择两张牌交给" + get.translation(target),
-		}).set("ai", card => get.value(card)).forResult();
+		}).set("ai", card => 6 - get.value(card, target)).forResult();
 		if (result.cards?.length) {
 			await player.give(result.cards, target);
 		}
@@ -6955,6 +7002,12 @@ shanhe_zhuguang: {
 		},
 	},
 	ai: {
+		// 响应/使用共用一个技能：没有 order 时 AI 不会在任何窗口点它
+		order(item, player) {
+			const evt = _status.event;
+			if (evt?.name === "chooseToRespond" || (typeof evt?.type == "string" && evt.type.startsWith("respond"))) return 9;
+			return 4;
+		},
 		respondSha: true,
 		respondShan: true,
 		save: true,
@@ -7115,6 +7168,8 @@ shanhe_zijiu: {
 	audio: 2,
 	locked: true,
 	forced: true,
+	// 主人死亡后，鸠的掉血/弃标记逻辑仍需生效（标记与封技都留在其他角色身上）
+	forceDie: true,
 	init(player) {
 		if (!game.filterPlayer(current => current.countMark("shanhe_zijiu_jiu") > 0).length) {
 			player.addMark("shanhe_zijiu_jiu", 1, false);
@@ -7126,6 +7181,8 @@ shanhe_zijiu: {
 	filter(event, player, name) {
 		const target = event.player;
 		if (name == "gainAfter") {
+			// forceDie 下死者仍会派发，但死人不再发鸠
+			if (player.isDead()) return false;
 			if (event.giver != player && event.source != player) return false;
 			if (!event.cards?.some(card => get.color(card) == "black")) return false;
 			if (game.filterPlayer(current => current.countMark("shanhe_zijiu_jiu") > 0).length >= 3) return false;
@@ -7136,7 +7193,7 @@ shanhe_zijiu: {
 			return target.countMark("shanhe_zijiu_jiu") > 0 && event.hs?.some(card => get.color(card) == "black");
 		}
 		if (name == "loseAsyncAfter") {
-			if (game.hasGlobalHistory("cardMove", evt => evt.name == "lose" && evt.getParent() == trigger && evt.type == "gain")) return false;
+			if (game.hasGlobalHistory("cardMove", evt => evt.name == "lose" && evt.getParent() == event && evt.type == "gain")) return false;
 			return game.filterPlayer(current => current.countMark("shanhe_zijiu_jiu") > 0 && event.getl(current)?.hs?.some(card => get.color(card) == "black")).length > 0;
 		}
 		return target.countMark("shanhe_zijiu_jiu") > 0;
@@ -7168,7 +7225,7 @@ shanhe_zijiu: {
 			target.removeSkillBlocker("shanhe_zijiu_jiu");
 			target.removeTip("shanhe_zijiu_jiu");
 		}
-		if (!game.filterPlayer(current => current.countMark("shanhe_zijiu_jiu") > 0).length) {
+		if (player.isIn() && !game.filterPlayer(current => current.countMark("shanhe_zijiu_jiu") > 0).length) {
 			player.addMark("shanhe_zijiu_jiu", 1);
 		}
 	},
@@ -7261,8 +7318,20 @@ zizi_anshu: {
 
 zizi_baisi: {
 	audio: 2,
-	enable: ["chooseToUse", "chooseToRespond"],
+	// 描述只写"当【杀】/【闪】**打出**" ⇒ 只挂 chooseToRespond（引擎里"打出"= chooseToRespond）。
+	// ⚠️ 不要为"被杀时的闪响应窗"加 chooseToUse：那个窗是 chooseToUse(type:"respondShan")、
+	//    提示语是"请**使用**一张闪响应杀" —— 属于**使用**，不是打出；借刀杀人的"对X使用一张杀"同理。
+	//    两者都由 enable 天然排除。
+	enable: ["chooseToRespond"],
 	usable: 1,
+	// hiddenCard：喂"打出"预检（缺了它打出窗根本不开）。
+	// 门 = `next.autochoose = !hasSha/hasShan("respond")`（万箭 card/standard.js:1638；
+	// 决斗 :2069；南蛮 :1289）。enable 只有 chooseToRespond ⇒ hasUsableCard 里只有
+	// evtNames=["chooseToRespond"] 那一路能命中，使用窗天然不算数
+	hiddenCard(player, name) {
+		if (name != "sha" && name != "shan") return false;
+		return game.hasPlayer((current) => current.countCards("h") > 0);
+	},
 	filter(event, player) {
 		return game.hasPlayer(current => current.countCards("h") > 0);
 	},
@@ -7294,8 +7363,14 @@ zizi_baisi: {
 				viewAs: { name: links[0][2], isCard: true },
 				popname: true,
 				async precontent(event, trigger, player) {
+					// enable 只挂 chooseToRespond ⇒ 本 precontent 只在"打出"窗里跑。
+					// 直接把 vcard 写回 result.card/cards：chooseToRespond 收尾步会走
+					// `player.respond(result.cards, result.card, …)`（content.js:5090 附近），
+					// 由引擎的 respond 链按牌主归属移牌——这就是"打出"的正路。
+					// ⚠️ 不要再写 `isRespond` 分支：precontent 的 event 是引擎新建的 `pre_<技能>_backup`
+					//    事件（其 getParent() 才是 chooseToUse/chooseToRespond，见道转 potdaozhuan 的用法），
+					//    它身上没有 name=="chooseToRespond"/type/respondTo，判定恒假、会掉进"手动 respond"的错路。
 					const name = event.result.card.name;
-					const isRespond = event.name == "chooseToRespond" || event.respondTo || (typeof event.type == "string" && event.type.startsWith("respond"));
 					const targetResult = await player.chooseTarget(`败嗣：选择一名角色，将其一张手牌当【${get.translation(name)}】打出`, (card, player2, target) => target.countCards("h") > 0)
 						.set("ai", target => -get.attitude(get.event().player, target))
 						.forResult();
@@ -7312,18 +7387,16 @@ zizi_baisi: {
 						return;
 					}
 					const card = cardResult.cards[0];
-					const vcard = get.autoViewAs({ name: name, isCard: true, storage: { zizi_baisi: true } }, [card]);
-					if (isRespond) {
-						// 响应窗口：素材进常规链（use/respond 链按牌主归属移牌）
-						event.result.card = vcard;
-						event.result.cards = [card];
-					} else {
-						// 自主窗口：取消本次使用，手动打出
-						event.result.cancel = true;
-						await player.respond({ card: vcard, cards: [card] });
+					event.result.card = get.autoViewAs({ name: name, isCard: true, storage: { zizi_baisi: true } }, [card]);
+					event.result.cards = [card];
+					// 败嗣在响应窗内发动，触发它的那张牌的 useCard 事件尚未结束；其 useCardAfter
+					// 晚于本技能结算，不能算作"下一次使用牌"，故记录该事件供 watch_use 跳过。
+					const useEvt = event.getParent("useCard");
+					if (useEvt?.name == "useCard") {
+						player.storage.zizi_baisi_watch_use_skip = useEvt;
 					}
-					player.addTempSkill("zizi_baisi_watch", "phaseAfter");
-					player.storage.zizi_baisi_watch = { out: true, use: true };
+					player.addTempSkill("zizi_baisi_watch_out", "phaseAfter");
+					player.addTempSkill("zizi_baisi_watch_use", "phaseAfter");
 				},
 			};
 		},
@@ -7332,68 +7405,68 @@ zizi_baisi: {
 		},
 	},
 	subSkill: {
-		watch: {
+		watch_out: {
 			charlotte: true,
 			mark: true,
 			marktext: "嗣",
-			intro: {
-				name: "败嗣",
-				content(storage) {
-					const list = [];
-					if (storage?.out) {
-						list.push("下次有角色打出牌后，其弃置两张牌");
-					}
-					if (storage?.use) {
-						list.push("下次有角色使用牌后，其摸两张牌");
-					}
-					return list.length ? list.join("；") : "无待结算效果";
-				},
-			},
-			onremove: true,
+			intro: { name: "败嗣", content: "下次有角色打出牌后，其弃置两张牌" },
 			forced: true,
 			silent: true,
 			popup: false,
-			trigger: { global: ["respondAfter", "useCardAfter"] },
+			trigger: { global: "respondAfter" },
 			filter(event, player) {
-				const storage = player.storage.zizi_baisi_watch;
-				if (!storage) {
-					return false;
-				}
-				if (event.name == "respond") {
-					return storage.out && event.card?.storage?.zizi_baisi !== true;
-				}
-				return storage.use;
+				return event.card?.storage?.zizi_baisi !== true;
 			},
 			async content(event, trigger, player) {
-				const storage = player.storage.zizi_baisi_watch;
 				const target = trigger.player;
-				if (trigger.name == "respond") {
-					storage.out = false;
-					if (target.isIn()) {
-						const num = Math.min(2, target.countCards("he"));
-						if (num > 0) {
-							await target.chooseToDiscard("he", true, num, `败嗣：请弃置${num > 1 ? "两张" : "一张"}牌`).forResult();
-						}
-					}
-				} else {
-					storage.use = false;
-					if (target.isIn()) {
-						await target.draw(2);
+				if (target.isIn()) {
+					const num = Math.min(2, target.countCards("he"));
+					if (num > 0) {
+						await target.chooseToDiscard("he", true, num, `败嗣：请弃置${num > 1 ? "两张" : "一张"}牌`).forResult();
 					}
 				}
-				if (!storage.out && !storage.use) {
-					player.removeSkill("zizi_baisi_watch");
+				player.removeSkill("zizi_baisi_watch_out");
+			},
+		},
+		watch_use: {
+			charlotte: true,
+			mark: true,
+			marktext: "嗣",
+			intro: { name: "败嗣", content: "下次有角色使用牌后，其摸两张牌" },
+			onremove(player) {
+				delete player.storage.zizi_baisi_watch_use_skip;
+			},
+			forced: true,
+			silent: true,
+			popup: false,
+			trigger: { global: "useCardAfter" },
+			filter(event, player) {
+				return player.storage.zizi_baisi_watch_use_skip !== event;
+			},
+			async content(event, trigger, player) {
+				if (trigger.player.isIn()) {
+					await trigger.player.draw(2);
 				}
+				player.removeSkill("zizi_baisi_watch_use");
 			},
 		},
 	},
 	ai: {
 		order(item, player) {
 			const evt = _status.event;
-			if (typeof evt.type == "string" && evt.type.startsWith("respond")) {
+			// enable 只挂 chooseToRespond ⇒ 打出窗的 event.type 是 undefined，故同时认 event.name
+			if (evt?.name === "chooseToRespond" || (typeof evt?.type == "string" && evt.type.startsWith("respond"))) {
 				return 9;
 			}
 			return 3;
+		},
+		// 打出型技能：respond* 标签必须拒掉 arg==="use"（那是"使用"窗口，本技能不覆盖），
+		// 否则 hasShan("use") 会为真、把"被杀时的闪响应窗（使用闪）"也打开。另补 usable:1 的次数门。
+		respondSha: true,
+		respondShan: true,
+		skillTagFilter(player, tag, arg) {
+			if (arg === "use") return false;
+			return get.skillCount("zizi_baisi", player) < 1 && game.hasPlayer((current) => current.countCards("h") > 0);
 		},
 	},
 },
@@ -7464,9 +7537,11 @@ zizi_bofeng: {
 		}
 		const duelTarget = duelTargetResult.targets[0];
 		game.log(loser, "视为对", duelTarget, "使用了", duel);
-		const duelEvent = await loser.useCard(duel, [], [duelTarget]);
+		// 先持有事件对象再 await：GameEvent 的 then 解析值不是事件本身
+		const duelEvent = loser.useCard(duel, [], [duelTarget]);
+		await duelEvent;
 		// 决斗中受到伤害的一方即输者；无伤害（含被无懈）则无输者，不结算
-		const duelDamages = game.getGlobalHistory("damage").filter(evt => evt.getParent("useCard") === duelEvent);
+		const duelDamages = game.getGlobalHistory("everything", evt => evt.name === "damage" && evt.getParent("useCard") === duelEvent);
 		if (!duelDamages.length) {
 			return;
 		}
@@ -7605,7 +7680,9 @@ zizi_ezhen: {
 			}
 			const cardInfo = lib.card[info[2]];
 			return cardInfo && !cardInfo.notarget && !(cardInfo.selectTarget && cardInfo.selectTarget !== 1);
-		}).filter(info => player.hasValueTarget(new lib.element.VCard({ name: info[2] })));
+			// 描述：扼阵的印牌**无距离限制** ⇒ 探测候选也要跳过距离（hasValueTarget 第 2 参 false），
+			// 否则"全场都在范围外"时连牌名都不列出来
+		}).filter(info => player.hasValueTarget(new lib.element.VCard({ name: info[2] }), false));
 		if (!list.length) {
 			event.result = { bool: false };
 			return;
@@ -7619,7 +7696,9 @@ zizi_ezhen: {
 		}
 		const name = buttonResult.links[0][2];
 		const card = new lib.element.VCard({ name: name, isCard: true });
-		const targetResult = await player.chooseTarget(`选择${get.translation(card)}的目标`, (c, me, target) => me.canUse(card, target))
+		// ⚠️ 距离其实卡在**这一步**：canUse 的第 3 参传 false = 跳过距离（无距离限制）。
+		// useCard 自身不查距离，所以漏了这里会表现为"牌用出去了但选不到远处的人"
+		const targetResult = await player.chooseTarget(`选择${get.translation(card)}的目标`, (c, me, target) => me.canUse(card, target, false))
 			.set("ai", target => {
 				const me = get.event().player;
 				return get.effect(target, card, me, me);
@@ -7634,24 +7713,22 @@ zizi_ezhen: {
 	async content(event, trigger, player) {
 		const { name, target } = event.cost_data;
 		const card = new lib.element.VCard({ name: name, isCard: true });
-		await player.useCard(card, [], [target]);
+		// 描述：扼阵的印牌**不计次数**（addCount:false ⇒ content.js:9179 不累加 stat.card）
+		await player.useCard(card, [], [target]).set("addCount", false);
 		const turnPlayer = trigger.player;
 		if (!turnPlayer.isIn()) {
 			return;
 		}
-		const ctrl = await turnPlayer.chooseControl(["本回合不能使用牌", "本回合只能对其使用牌"])
+		const ctrl = await turnPlayer.chooseControl(["本回合不能对其使用牌", "本回合只能对其使用牌，且无距离次数限制"])
 			.set("prompt", `扼阵：请选择一项（${get.translation(card)}的目标为${get.translation(target)}）`)
-			.set("ai", () => {
-				const me = get.player();
-				return get.attitude(me, get.event().ziziTarget) < 0 ? "本回合只能对其使用牌" : "本回合不能使用牌";
-			})
-			.set("ziziTarget", target)
+			.set("ai", () => get.attitude(get.player(), target) < 0 ? 1 : 0)
 			.forResult();
 		if (!ctrl?.control) {
 			return;
 		}
 		if (ctrl.index == 0) {
 			turnPlayer.addTempSkill("zizi_ezhen_block", "phaseAfter");
+			turnPlayer.storage.zizi_ezhen_block = [target];
 		} else {
 			turnPlayer.addTempSkill("zizi_ezhen_lock", "phaseAfter");
 			turnPlayer.storage.zizi_ezhen_lock = [target];
@@ -7662,9 +7739,24 @@ zizi_ezhen: {
 			charlotte: true,
 			mark: true,
 			marktext: "扼",
-			intro: { name: "扼阵", content: "本回合不能使用牌" },
+			onremove: true,
+			intro: {
+				name: "扼阵",
+				nocount: true,
+				content(storage) {
+					return `本回合不能对${get.translation(storage || [])}使用牌`;
+				},
+			},
 			mod: {
-				cardEnabled: () => false,
+				playerEnabled(card, player, target) {
+					const storage = player.storage.zizi_ezhen_block;
+					if (!Array.isArray(storage) || !storage.length) {
+						return;
+					}
+					if (storage.includes(target)) {
+						return false;
+					}
+				},
 			},
 		},
 		lock: {
@@ -7674,14 +7766,29 @@ zizi_ezhen: {
 			onremove: true,
 			intro: {
 				name: "扼阵",
+				nocount: true,
 				content(storage) {
 					return `本回合只能对${get.translation(storage || [])}使用牌，且无距离次数限制`;
 				},
 			},
 			mod: {
-				targetEnabled(card, player2, target) {
-					const storage = player2.storage.zizi_ezhen_lock;
-					return storage && storage.includes(target) ? true : false;
+				playerEnabled(card, player, target) {
+					const storage = player.storage.zizi_ezhen_lock;
+					if (!Array.isArray(storage) || !storage.length) {
+						return;
+					}
+					if (!storage.includes(target)) {
+						return false;
+					}
+				},
+				targetInRange(card, player, target) {
+					const storage = player.storage.zizi_ezhen_lock;
+					if (!Array.isArray(storage) || !storage.length) {
+						return;
+					}
+					if (storage.includes(target)) {
+						return true;
+					}
 				},
 				cardUsable: () => Infinity,
 			},
@@ -7692,39 +7799,81 @@ zizi_ezhen: {
 zizi_heye: {
 	audio: 2,
 	usable: 1,
-	init(player, skill) {
-		player.storage.zizi_heye_count = player.countCards("e");
-	},
+	group: ["zizi_heye_pay"],
+	// 装备区变化口径同原生清政（dcqingzheng）：自己失去装备区牌（getl().es），
+	// 或本人触发的 equip 事件；手牌/判定区等其它区域的变化（hs/js/xs）不算装备区变化
 	trigger: {
-		player: ["equipAfter", "loseAfter", "loseAsyncAfter"],
+		player: ["loseAfter"],
+		global: ["gainAfter", "equipAfter", "loseAsyncAfter", "addToExpansionAfter", "addJudgeAfter"],
 	},
 	filter(event, player) {
 		if (!player.isIn()) {
 			return false;
 		}
-		return player.countCards("e") !== player.storage.zizi_heye_count;
+		const evt = event.getl?.(player);
+		return !!(evt?.es?.length || (event.name == "equip" && event.player == player));
 	},
 	async content(event, trigger, player) {
-		player.storage.zizi_heye_count = player.countCards("e");
-		const card = new lib.element.VCard({ name: "tiesuolianhuan", isCard: true });
+		const card = new lib.element.VCard({ name: "tiesuo", isCard: true });
 		const result = await player.chooseUseTarget(card, false).forResult();
 		if (!result?.bool || !result.targets?.length) {
 			return;
 		}
 		const neighbors = [player, player.getPrevious(), player.getNext()];
 		if (result.targets.every(target => neighbors.includes(target))) {
-			player.addTempSkill("zizi_heye_free", "phaseAfter");
+			if (!player.hasSkill("zizi_heye_free")) {
+				player.addTempSkill("zizi_heye_free", "phaseAfter");
+			}
+			player.storage.zizi_heye_free = (player.storage.zizi_heye_free || 0) + 1;
+			player.markSkill("zizi_heye_free");
 			game.log(player, "获得了视为使用【杀】或【闪】的机会");
 		}
 	},
 	subSkill: {
+		// 实际用出才扣：选完技能后取消目标/取消使用都不扣次数
+		pay: {
+			charlotte: true,
+			forced: true,
+			silent: true,
+			popup: false,
+			trigger: { player: "useCardAfter" },
+			filter(event, player) {
+				return event.card?.storage?.zizi_heye_free === true;
+			},
+			content(event, trigger, player) {
+				const count = player.storage.zizi_heye_free || 0;
+				if (count <= 1) {
+					player.removeSkill("zizi_heye_free");
+				} else {
+					player.storage.zizi_heye_free = count - 1;
+					player.markSkill("zizi_heye_free");
+				}
+			},
+		},
 		free: {
 			charlotte: true,
-			enable: ["chooseToUse", "chooseToRespond"],
+			mark: true,
+			marktext: "野",
+			intro: {
+				name: "合野",
+				content(storage) {
+					return `本回合可视为使用【杀】或【闪】的次数：${storage || 0}`;
+				},
+				markcount: storage => storage || 0,
+			},
+			onremove: true,
+			// 描述是"需要使用【杀】或【闪】"（使用，不含打出）
+			enable: "chooseToUse",
 			hiddenCard(player2, name) {
-				return player2.hasSkill("zizi_heye_free") && (name == "sha" || name == "shan");
+				return (player2.storage.zizi_heye_free || 0) > 0 && (name == "sha" || name == "shan");
 			},
 			filter(event, player) {
+				if (event.skill == "zizi_heye_free" || event._skill == "zizi_heye_free") {
+					return true;
+				}
+				if (!(player.storage.zizi_heye_free > 0)) {
+					return false;
+				}
 				if (event.type == "wuxie" || event.type == "dying") {
 					return false;
 				}
@@ -7762,11 +7911,8 @@ zizi_heye: {
 					return {
 						filterCard: () => false,
 						selectCard: -1,
-						viewAs: { name: links[0][2], isCard: true },
+						viewAs: { name: links[0][2], isCard: true, storage: { zizi_heye_free: true } },
 						popname: true,
-						async precontent(event, trigger, player) {
-							player.removeSkill("zizi_heye_free");
-						},
 					};
 				},
 				prompt(links, player) {
@@ -7780,7 +7926,7 @@ zizi_heye: {
 					if (arg === "respond") {
 						return false;
 					}
-					return player2.hasSkill("zizi_heye_free");
+					return player2.hasSkill("zizi_heye_free") && (player2.storage.zizi_heye_free || 0) > 0;
 				},
 				order(item, player2) {
 					const evt = _status.event;
@@ -7822,12 +7968,15 @@ zizi_lianju: {
 	},
 	selectTarget: [1, Infinity],
 	complexTarget: true,
+	// 多目标主动技：不写 multitarget 时引擎会按目标各执行一次 content，
+	// content 再遍历 targets 会把每个目标摸成 N 次；这里让 content 只执行一次。
+	multitarget: true,
+	multiline: true,
 	filterOk() {
 		return ui.selected.targets.reduce((sum, target) => sum + target.countCards("h"), 0) == 4;
 	},
 	async content(event, trigger, player) {
 		const targets = event.targets.sortBySeat();
-		player.line(targets);
 		for (const target of targets) {
 			if (target.isIn()) {
 				await target.draw(1);
@@ -7842,7 +7991,15 @@ zizi_lianju: {
 			target.addTempSkill("zizi_lianju_mark", "phaseAfter");
 		}
 	},
-	group: ["zizi_lianju_clear"],
+	// clear 不能只挂在 group 上：自己成为目标后主技能被 fengyin 封印，
+	// getSkills() 不再包含 zizi_lianju，expandSkills 也就展开不出 clear，
+	// createTrigger 会判定「没有该技能」而跳过。独立挂载才能在主技能失效时继续监听。
+	init(player) {
+		player.addSkill("zizi_lianju_clear");
+	},
+	onremove(player) {
+		player.removeSkill("zizi_lianju_clear");
+	},
 	subSkill: {
 		mark: {
 			charlotte: true,
@@ -7854,16 +8011,23 @@ zizi_lianju: {
 			silent: true,
 			popup: false,
 			trigger: {
-				global: ["equipAfter", "addJudgeAfter", "loseAfter", "gainAfter", "loseAsyncAfter", "addToExpansionAfter"],
+				player: ["loseAfter", "discardAfter"],
+				global: ["loseAsyncAfter", "equipAfter", "addJudgeAfter", "addToExpansionAfter"],
 			},
 			filter(event, player) {
-				const evt = event.getl(player);
-				// 基本牌只可能从手牌区（hs）或武将牌上（ss）失去
-				const lost = [...(evt?.hs || []), ...(evt?.ss || [])];
-				if (!lost.some(card => get.type(card) == "basic")) {
-					return false;
+				const cards = [];
+				if (event.name == "lose") {
+					// 直读 lose 分类字段：尾部无条件挂载（content.js:11063），getlx=false 也存在；
+					// getl() 在 getlx=false 时返回空 map（红线 13），不能用在 loseAfter 上
+					// 基本牌只可能从手牌区（hs，含明置 ss）或武将牌上（xs）失去
+					cards.push(...(event.hs || []), ...(event.ss || []), ...(event.xs || []));
+				} else if (event.name == "discard") {
+					cards.push(...(event.cards || []));
+				} else {
+					const l = event.getl?.(player);
+					if (l) cards.push(...(l.hs || []), ...(l.ss || []), ...(l.xs || []));
 				}
-				return game.hasPlayer(current => current.hasSkill("zizi_lianju_mark"));
+				return cards.some(card => get.type(card) == "basic") && game.hasPlayer(current => current.hasSkill("zizi_lianju_mark"));
 			},
 			async content(event, trigger, player) {
 				game.filterPlayer(current => {
@@ -7872,6 +8036,7 @@ zizi_lianju: {
 						current.removeSkill("zizi_lianju_mark");
 					}
 				});
+				game.log(player, "失去了基本牌，", "#g【连裾】", "恢复有效");
 			},
 		},
 	},
@@ -7898,7 +8063,9 @@ zizi_qianji: {
 	},
 	trigger: { player: "useCardAfter" },
 	filter(event, player) {
-		if (!get.tag(event.card, "damage")) {
+		// 伤害牌 = get.is.damageCard（= get.tag "damage" 且排除延时锦囊），
+		// 否则使用【闪电】也会被算作"使用伤害牌"（shandian type:"delay" 但 ai.tag.damage=0.16）
+		if (!get.is.damageCard(event.card)) {
 			return false;
 		}
 		const last = player.storage.zizi_qianji_last;
@@ -7911,14 +8078,9 @@ zizi_qianji: {
 		}
 		return game.hasPlayer(current2 => current2.isIn() && last.inRange(current2) && current.inRange(current2));
 	},
-	check(event, player) {
-		const last = player.storage.zizi_qianji_last;
-		const current = _status.currentPhase;
-		if (!last || !current) {
-			return false;
-		}
-		return game.hasPlayer(current2 => current2.isIn() && last.inRange(current2) && current.inRange(current2) && get.damageEffect(current2, player, player) > 0);
-	},
+	// 不写 check：带 cost 的触发技引擎不读 info.check（content.js:3619 走 cost 分支，
+	// 只有无 cost 的 chooseBool 路径 3673 与 frequent=="check" 才读）。「没有正收益目标就不发动」
+	// 由 cost 内 chooseTarget 的 ai 兜住（ai/basic.js:214 最优目标 effect<=0 且未 forced → 取消）。
 	async cost(event, trigger, player) {
 		const last = player.storage.zizi_qianji_last;
 		const current = _status.currentPhase;
@@ -7932,7 +8094,9 @@ zizi_qianji: {
 		event.result = { bool: true, targets: [result.targets[0]] };
 	},
 	async content(event, trigger, player) {
-		await event.targets[0].damage(1);
+		// 描述「你可以对……造成1点伤害」→ 伤害来源必须是技能持有者；damage(1) 不带 source
+		// （引擎 damage content 全程 if (source) 守卫）会让战报不显示来源、且「你造成伤害后」类技能不触发
+		await event.targets[0].damage(1, player);
 	},
 	group: ["zizi_qianji_record"],
 	subSkill: {
@@ -7945,7 +8109,7 @@ zizi_qianji: {
 			lastDo: true,
 			trigger: { player: "useCardAfter" },
 			filter(event, player) {
-				return get.tag(event.card, "damage") && _status.currentPhase;
+				return get.is.damageCard(event.card) && _status.currentPhase;
 			},
 			async content(event, trigger, player) {
 				player.storage.zizi_qianji_last = _status.currentPhase;
@@ -8006,52 +8170,43 @@ zizi_yinggong: {
 	forced: true,
 	mark: true,
 	marktext: "宫",
-	intro: {
-		name: "萦宫",
-		markcount(storage) {
-			return (storage || []).length;
-		},
-		content(storage) {
-			const list = storage || [];
-			if (!list.length) {
-				return "尚未因此弃置过牌";
-			}
-			const instants = list.filter(card => get.type(card) != "delay");
-			const last = instants[instants.length - 1];
-			return `因此弃置的牌：${list.map(card => get.translation(card)).join("、")}<br>上一张因此弃置的即时牌：${last ? get.translation(last) : "无"}`;
-		},
-	},
+	// 悬浮只渲染最新一张即时牌的牌面（intro "cards" → storageintro cards 分支 dialog.addAuto，get/index.js:4844）
+	intro: { content: "cards" },
 	trigger: { player: "phaseJieshuBegin" },
 	filter(event, player) {
 		return player.isIn();
 	},
 	async content(event, trigger, player) {
+		// 即时牌 = 基本牌或普通锦囊牌（get.type：basic/trick；延时锦囊是 delay、装备是 equip，都不算）
 		let discarded = null;
-		if (player.countCards("he", card => get.name(card) == "sha")) {
+		if (player.countDiscardableCards(player, "he", card => get.name(card) == "sha") > 0) {
 			const result = await player.chooseToDiscard("he", true, 1, card => get.name(card) == "sha", "萦宫：请弃置一张【杀】").forResult();
 			discarded = result?.cards?.[0] || null;
-		} else if (player.countCards("he", card => get.color(card) == "red")) {
+		} else if (player.countDiscardableCards(player, "he", card => get.color(card) == "red") > 0) {
 			const result = await player.chooseToDiscard("he", true, 1, card => get.color(card) == "red", "萦宫：请弃置一张红色牌").forResult();
 			discarded = result?.cards?.[0] || null;
 		} else {
 			await player.loseHp(1);
+			// 失去体力可能致死，死亡则后续全部跳过
+			if (!player.isIn()) return;
 			await player.draw();
 		}
-		if (discarded) {
-			if (!Array.isArray(player.storage.zizi_yinggong)) {
-				player.storage.zizi_yinggong = [];
-			}
-			player.storage.zizi_yinggong.push(discarded);
+		if (discarded && (get.type(discarded) == "basic" || get.type(discarded) == "trick")) {
+			// storage 只保留最新一张因此弃置的即时牌（悬浮展示用，无历史需求）
+			player.storage.zizi_yinggong = discarded;
 			player.markSkill("zizi_yinggong");
 		}
-		// 视为使用上一张因此弃置的即时牌（查距离、不查次数），没有则为【桃】
-		const instants = (player.storage.zizi_yinggong || []).filter(card => get.type(card) != "delay");
-		const last = instants[instants.length - 1];
-		if (last) {
+		// 视为使用上一张因此弃置的即时牌（查距离不查次数，与 addCount:false 一致）；
+		// 没有或无法使用（闪/无懈这类不能主动使用的即时牌）则为【桃】；不能使用【桃】则摸四张牌
+		const last = player.storage.zizi_yinggong;
+		const tao = new lib.element.VCard({ name: "tao", isCard: true });
+		if (get.itemtype(last) == "card" && player.hasUseTarget(last, true)) {
 			game.log(player, "视为使用了", last);
 			await player.chooseUseTarget({ card: last, forced: true, addCount: false });
+		} else if (player.hasUseTarget(tao, true)) {
+			await player.chooseUseTarget({ card: tao, forced: true, addCount: false });
 		} else {
-			await player.chooseUseTarget({ card: new lib.element.VCard({ name: "tao", isCard: true }), forced: true, addCount: false });
+			await player.draw(4);
 		}
 	},
 },

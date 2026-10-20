@@ -101,6 +101,23 @@ const dynamicTranslates = {
 		}
 		return `锁定技，你的回合开始时，按以下三条规则重新排列阶段顺序：${rules.join("；")}。`;
 	},
+	// 辟易：「」里显示当前所有辟易实例的牌名（按牌名去重聚合 ×N；初始是两个【无懈可击】）
+	// ⚠️ 锚点必须与 xiaobai_piyi_info 里的字面量完全一致；对不上时走兜底追加，不静默失效
+	xiaobai_piyi(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		const slots = player?.storage?.xiaobai_piyi_slots || [];
+		const counts = {};
+		for (const slot of slots) counts[slot.name] = (counts[slot.name] || 0) + 1;
+		const names = Object.keys(counts);
+		const text = names.length
+			? names.map((name) => `【${get.translation(name)}】${counts[name] > 1 ? `×${counts[name]}` : ""}`).join("、")
+			: "无";
+		const anchor = "「【无懈可击】」";
+		if (base.includes(anchor)) {
+			return base.replace(anchor, `「${blue(text)}」`);
+		}
+		return `${base}（当前“辟易”：${blue(text)}）`;
+	},
 	xiaobai_julan(player) {
 		const cond = player.storage.xiaobai_julan_condition || ["basic"];
 		const typeText = { basic: "基本牌", trick: "锦囊牌", equip: "装备牌" };
@@ -165,7 +182,13 @@ const dynamicTranslates = {
 			timing += "/你回复体力后";
 		}
 		const act = cond1 && cond2 ? "使用" : "弃置";
-		return `${timing}，你可以${act}一张牌；然后若你手牌数差X成为手牌数最多，你摸X张牌，此阶段此技能失效，且你使用牌均无次数、距离限制（X为本回合弃牌堆中伤害牌数）。若你装备牌的牌数不少于一号位，你受到伤害后也可发动；若一号位体力值不多于你，你回复体力后也可发动。若两项条件均满足，“弃置”改为“使用”。`;
+		let text = `${timing}，你可以${act}一张牌；然后若你手牌数差X成为手牌数最多，你摸X张牌，此阶段此技能失效，且你使用牌均无次数、距离限制（X为本回合弃牌堆中伤害牌数）。`;
+		// 条件行与正文同处技能浮窗：已满足的条件标蓝，未满足置灰
+		const cond = (str, on) => (on ? blue(str) : `<span style="color:#888">${str}</span>`);
+		const c1 = "若你装备牌的牌数不少于一号位，你受到伤害后也可发动";
+		const c2 = "若一号位体力值不多于你，你回复体力后也可发动";
+		const c3 = "若两项条件均满足，“弃置”改为“使用”";
+		return `${text}<br>${cond(c1, cond1)}；${cond(c2, cond2)}；${cond(c3, cond1 && cond2)}。`;
 	},
 	zhuoming_fengqi(player) {
 		const state = player.storage.zhuoming_fengqi || 0;
@@ -347,7 +370,7 @@ qunyou_qiongji(player) {
 		}
 		return base;
 	},
-	// 先略：失效期间（进入濒死前）整段描述置灰（字段改写型）
+	// 先略：失效期间（有角色进入濒死前）整段描述置灰（字段改写型）
 	xingyu_xianlue(player, skill) {
 		const base = lib.translate[`${skill}_info`] || "";
 		if (player.storage?.xingyu_xianlue_off) {
@@ -363,8 +386,8 @@ qunyou_qiongji(player) {
 		return lib.translate[`${skill}_info`] || "";
 	},
 	// 犷勇：转换技——描述中的当前态（①/②）标蓝（原生 clandongxu 同款 bluetext）
-	qunyou_kuangyong(player, skill) {
-		const second = Boolean(player?.storage?.qunyou_kuangyong);
+	qunyou_guangyong(player, skill) {
+		const second = Boolean(player?.storage?.qunyou_guangyong);
 		const items = ["①你", "②你使用的上张有目标的牌的所有目标"];
 		const text = items
 			.map((item, index) => {
@@ -398,20 +421,13 @@ qunyou_qiongji(player) {
 	// 约定：base 取 lib.translate[skill+"_info"]，动态状态行用 blue/red 追加（妙喻/诂守同款）
 	maokuo_raolue(player) {
 		const base = lib.translate.maokuo_raolue_info || "";
-		if (player.hasSkill("maokuo_raolue_used")) {
-			return `${base}<br>${red("本回合已发动")}`;
-		}
-		const ready = player.storage?.maokuo_raolue_ready;
-		return ready ? `${base}<br>${blue(`已就绪：可视为使用或打出【${get.translation(ready)}】`)}` : base;
+		// 限次由引擎托管（usable: 1），只显示"本回合已发动"；不再有跨窗口的"就绪"状态
+		return get.skillCount("maokuo_raolue", player) >= 1 ? `${base}<br>${red("本回合已发动")}` : base;
 	},
 	maokuo_bolan(player) {
 		const base = lib.translate.maokuo_bolan_info || "";
 		const card = player.storage?.maokuo_bolan_card;
 		return card ? `${base}<br>${blue(`本回合亮出：${get.translation(card.suit)}${get.translation(card.name)}（点数${card.num}）`)}` : base;
-	},
-	maokuo_songjiu(player) {
-		const base = lib.translate.maokuo_songjiu_info || "";
-		return player.hasSkill("maokuo_songjiu_jin") ? `${base}<br>${red("“颂酒”当前失效")}` : base;
 	},
 	maokuo_xunyi(player) {
 		const base = lib.translate.maokuo_xunyi_info || "";
@@ -425,16 +441,8 @@ qunyou_qiongji(player) {
 	},
 	maokuo_nishui(player) {
 		const base = lib.translate.maokuo_nishui_info || "";
-		const cards = player.getExpansions("maokuo_nishui");
-		const ban = player.getStorage("maokuo_nishui_ban") || [];
-		let str = base;
-		if (cards.length) {
-			str += `<br>${blue(`剩余“逆水”牌：${cards.map(c => `【${get.translation(c.name)}】`).join("、")}`)}`;
-		}
-		if (ban.length) {
-			str += `<br>${red(`不能再使用或打出：${ban.map(n => `【${get.translation(n)}】`).join("、")}`)}`;
-		}
-		return str;
+		const times = player.storage?.maokuo_nishui_times || 0;
+		return times ? `${base}<br>${blue(lib.skill.maokuo_nishui.leftText(player))}<br>${blue(`已发动 ${times} 次`)}` : base;
 	},
 	maokuo_qingxuan(player) {
 		const base = lib.translate.maokuo_qingxuan_info || "";
@@ -452,15 +460,11 @@ qunyou_qiongji(player) {
 		const st = player.storage?.maokuo_shameng_streak;
 		return st?.target ? `${base}<br>${blue(`本轮连击：${get.translation(st.target)} 已被连续指定${st.count}次（再指定其摸${st.count + 1}张）`)}` : base;
 	},
-	maokuo_canlie(player) {
-		const base = lib.translate.maokuo_canlie_info || "";
-		const n = player.getStorage("maokuo_canlie_count") || 0;
-		return n ? `${base}<br>${blue(`本回合已发动${n}次`)}` : `${base}<br>${blue("本回合尚未发动（首次发动时回复1点体力）")}`;
-	},
 	maokuo_siqian(player) {
 		const base = lib.translate.maokuo_siqian_info || "";
-		const ban = player.getStorage("maokuo_siqian_ban") || [];
-		return ban.length ? `${base}<br>${red(`本回合不能再对${ban.map(s => get.translation(s)).join("、")}色牌发动`)}` : base;
+		// storage 存的是具体牌，花色从牌面取
+		const suits = [...new Set((player.getStorage("maokuo_siqian_ban") || []).map(card => get.suit(card)))];
+		return suits.length ? `${base}<br>${red(`本回合成为${suits.map(suit => get.translation(suit)).join("、")}色牌的目标时，不能发动“思虔”`)}` : base;
 	},
 	maokuo_kuolue(player) {
 		const base = lib.translate.maokuo_kuolue_info || "";
@@ -618,6 +622,38 @@ qunyou_qiongji(player) {
 			return base.replace(y2, `<span class='bluetext'>${y2}</span>`);
 		}
 		return base.replace("阳：你可以视为使用【酒】", `<span class='firetext'>阳：你可以视为使用【酒】</span>`);
+	},
+	// 巧工：本体按预选的无视项删字段；蓄力句固定灰色，不再追加其他描述
+	xingyu_qiaogong(player, skill) {
+		const pending = player?.storage?.xingyu_qiaogong_ignore || [];
+		const ignoreEquip = pending.includes("equip");
+		const ignoreHand = pending.includes("hand");
+		const ignoreLimit = pending.includes("limit");
+		let text = `出牌阶段${ignoreLimit ? "" : "限一次"}，你可以令一名`;
+		if (!ignoreEquip) text += "装备区有牌";
+		if (!ignoreEquip && !ignoreHand) text += "且";
+		if (!ignoreHand) text += "手牌数小于你的";
+		text += "角色摸一张牌。";
+		const charge =
+			"出牌阶段，你可以弃置一至三张装备牌并摸等量牌，并令下次发动此技能无视等量项：「装备区有牌的」「手牌数小于你的」「限一次」";
+		return `${text}<br><span style="color:#888">${charge}</span>`;
+	},
+	// 独步：限次与额外效果随当前体力上限/装备栏数变化；额外效果直接接在伤害句后
+	xingyu_dubu(player, skill) {
+		if (!player) return lib.translate[`${skill}_info`] || "";
+		const hpLow = player.maxHp <= 2;
+		const slotLow = player.countEnabledSlot() <= 2;
+		const limit = lib.skill.xingyu_dubu?.getLimit?.(player) ?? (hpLow || slotLow ? 2 : 1);
+		let text = `每回合限${limit === 2 ? "两" : "一"}次，出牌阶段或当你受到伤害后，你可以减1点体力上限或废除一个装备栏，对你攻击范围内的一名角色造成1点伤害`;
+		const extra = [];
+		if (hpLow) extra.push("扣减一名你距离1以内的角色的1点体力上限");
+		if (slotLow) extra.push("废除一名你距离1以内的角色的一个装备栏");
+		if (extra.length) text += `，${extra.join("，")}`;
+		// 条件行与正文同处技能浮窗：已满足的条件标蓝，未满足置灰
+		const cond = (str, on) => (on ? blue(str) : `<span style="color:#888">${str}</span>`);
+		const hpCond = "若你的体力上限不大于2，改为每回合限两次，并追加扣减体力上限";
+		const slotCond = "若你的装备栏数不大于2，改为每回合限两次，并追加废除装备栏";
+		return `${text}。<br>${cond(hpCond, hpLow)}；${cond(slotCond, slotLow)}。`;
 	},
 };
 

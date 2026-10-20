@@ -5,17 +5,11 @@ export const qunyouTranslate = {
 	qunyou_aoyue: "翱月",
 	qunyou_aoyue_info:
 			"<b>限定技</b>，出牌阶段，或当你进入濒死状态时，你可以减1点体力上限并将体力回复至体力上限，然后你可获得至多两名角色各一张牌。若如此做，则你可将等量张牌依次当任意【杀】或【决斗】使用。若以此法使用的牌造成过伤害，你重置此技能。",
-	qunyou_bianyi: "辩义",
-	qunyou_bianyi_info:
-			`受到伤害后，你可以重铸任意张牌，然后${get.poptip("qunyou_muxin")}拥有者回复1点体力，你失去此技能。`,
 	qunyou_bingde: "秉德",
 	qunyou_bingde_info: "出牌阶段，你可以弃置三张牌，然后摸两张牌。",
 	qunyou_cairuo: "才若",
 	qunyou_cairuo_info:
 			"<b>锁定技</b>，当你使用非锦囊牌后，若你下一张使用的牌为同类型牌或锦囊牌，你的手牌上限+1，否则-1；当你使用牌后，若此牌名于本轮内未被使用过且为锦囊牌，你的手牌上限+1，否则-1。",
-	qunyou_cangxiao: "苍霄",
-	qunyou_cangxiao_info:
-			`当你不因技能受到伤害时，你可以发动${get.poptip("qunyou_muxin")}；当你不因技能获得牌时，你可以加1点体力上限；当你失去技能时，你可以视为使用一种${get.poptip("qunyou_muxin")}牌。`,
 	qunyou_chengzhi: "诚质",
 	qunyou_chengzhi_info: "你失去过牌的回合结束时，你可以令当前回合角色检索一张锦囊牌，然后其获得亮出牌中点数唯一最大的牌，你获得剩余亮出的牌，否则你须将检索的锦囊牌当【无中生有】使用，然后此技能本轮失效。",
 	qunyou_chitu: "赤途",
@@ -80,9 +74,6 @@ export const qunyouTranslate = {
 	qunyou_fuan: "覆暗",
 	qunyou_fuan_info:
 			"锁定技，一名横置角色受到属性伤害时，若你横置，你重置并翻面；背面朝上的你成为基本牌或锦囊牌的目标时，须为之额外指定一名角色为目标。",
-	qunyou_fudui: "伏对",
-	qunyou_fudui_info:
-			`需要使用牌时，你可以进行一次判定，若点数不大于${get.poptip("qunyou_muxin")}记录数，你视为使用一张${get.poptip("qunyou_muxin")}牌并删去此牌在记录中的一项，你失去此技能；判定未成功时，你也可选择如此做。`,
 	qunyou_fufeng: "扶风",
 	qunyou_fufeng_info:
 			"<b>锁定技</b>，你的手牌上限增加后，你摸一张牌；你的手牌上限变为1/2/3后，你下一张使用的牌无次数无距离限制/下一次造成伤害后摸两张牌/获得一张未以此法获得过的中央区的牌。",
@@ -103,6 +94,9 @@ export const qunyouTranslate = {
 	qunyou_gongqing_info:"锁定技，当你受到伤害时，若伤害来源的攻击范围：小于3且你不是本回合首次受到伤害，防止此伤害；大于3，此伤害+1。",
 	qunyou_gouxian: "构陷",
 	qunyou_gouxian_info: "你每回合首次使用一种牌名的基本牌或普通锦囊牌指定了其他角色为目标时，若此牌为：伤害牌，你可以交给一名其他角色；非伤害牌，你可以令此牌效果改为展示一名此牌的目标角色全部手牌并对其使用其中所有伤害牌或弃置其中所有非伤害牌。",
+	qunyou_guanhai: "观海",
+	qunyou_guanhai_info:
+			"结束阶段，你可以观看牌堆顶的X张牌，获得其中一种颜色的牌。（X为此技能发动次数）",
 	qunyou_guanwei:"观微",
 	qunyou_guanwei_info:"每回合各花色限一次，一名角色的出牌阶段结束后，若其此阶段使用过至少两张牌且这些牌花色均相同，你可以弃置一张牌，令其摸两张牌并立即执行一个额外的出牌阶段；其此回合结束时，你摸X张牌。(X为其本回合执行出牌阶段数-1）",
 	qunyou_guchou: "龟酬",
@@ -194,11 +188,14 @@ export const qunyouTranslate = {
 	qunyou_junming: "隽鸣",
 	qunyou_junming_info:
 			"每回合各限一次，当你于摸牌阶段外获得牌后，你可令一名体力值不大于你的角色回复1点体力；当你于回合外回复体力后，你可令一名体力值不大于你的角色摸一张牌。",
+	qunyou_kaige: "慨歌",
+	qunyou_kaige_info:
+			"每回合限一次，一名角色受伤后，你可以与伤害来源同时选择弃置一种颜色的手牌，若你弃置的牌数不小于其，令受伤角色回复1点体力。",
 	qunyou_kongsheng: "箜声",
 	qunyou_kongsheng_info:
 			"你的体力值或你装备区内牌的花色数变化时，你可以将当前回合角色的任意张牌扣置于其武将牌上。若如此做，当前回合的结束阶段，你观看这些牌并可以使用其中一张，然后令当前回合角色获得其余牌。",
-	qunyou_kuangyong: "犷勇",
-	qunyou_kuangyong_info:
+	qunyou_guangyong: "犷勇",
+	qunyou_guangyong_info:
 			"转换技，当你使用牌指定目标时，你可以将此牌目标改为①你②你使用的上张有目标的牌的所有目标，以获得原目标中除你外所有目标的各一张牌；若改后目标含你，你摸一张牌。",
 	qunyou_lanshe: "滥奢",
 	qunyou_lanshe_info:
@@ -224,6 +221,13 @@ export const qunyouTranslate = {
 	qunyou_longjue: "龙绝",
 	qunyou_longjue_info:
 			"<b>蓄力技（1/7）</b>，当你体力值变化时，你获得1点蓄力点。每回合限X次，你可以消耗1点蓄力点，视为使用或打出一张基本牌。当你蓄力点已满时，你使用基本牌的回复值或伤害值+1。（X为你的体力上限-1）",
+	qunyou_longpei: "龙辔",
+	qunyou_longpei_info:
+			"<b>锁定技</b>，若你手牌数全场第五/四/三/二大，你跳过判定/摸牌/出牌/弃牌阶段并令一名角色摸一张牌。本局不再可能因此被跳过的主要阶段，于你的每个回合额外执行一次。",
+	qunyou_longpei_append:
+			'<span style="font-family: yuanli"><li>名次按手牌数降序去重后计：并列手牌数共享同一名次，下一个名次不跳号（手牌数 5、5、3、2、1 中，两个 5 同为第一大，3 为第二大）。四个阶段各查各的名次，互不影响。<li>「不再可能」按人数判定：某一档名次至少需要那么多名角色（第五大需 5 人）。为避免把「暂时离场、之后还会回来」的角色算漏，这里数的是场上与离场角色之和，只有连他们都不足该档才算本局永不可达。达成判定发生在游戏开始时与每次有角色阵亡后，一旦达成便本局永久有效。此后你的每个回合，该阶段在正常结算结束后会紧接着再执行一次；每个阶段每回合至多额外执行一次。</span>',
+	qunyou_longpei_track: "龙辔",
+	qunyou_longpei_again: "龙辔",
 	qunyou_longwei: "龙威",
 	qunyou_longwei_info:
 			"每回合限一次，当与你距离不大于1的角色需要使用或打出【杀】或【闪】，或处于濒死状态需要使用【桃】或【酒】时（不含出牌阶段的空闲用牌），你可以将一张牌当此牌替其使用或打出，然后你可以弃置攻击范围内的一名角色的一张牌，若为装备牌则你可以使用之。",
@@ -240,10 +244,6 @@ export const qunyouTranslate = {
 	qunyou_mingce_info:
 			"你可以明置手牌中一种类型的所有牌视为使用本回合未以此法使用过的一张普通锦囊牌。当你有明置牌，成为牌的目标时，若此牌的类别与明置牌相同，你失去一点体力；否则你回复一点体力。你使用明置牌无距离和次数限制。",
 	visible_qunyou_mingce: "明策",
-	qunyou_muxin: "暮心",
-	qunyou_muxin_info:
-			"游戏开始时，你可以与至多X名有手牌的其他角色展示一张牌并记录这些牌，然后你与这些角色同时选择：⒈令你失去1点体力上限，然后其获得“争行”；⒉令你视为使用一张【决斗】，然后其获得“辩义”；⒊令你受到1点无来源伤害，然后其获得“伏对”。（X为你的体力值）",
-	qunyou_muxin_mark: "暮心",
 	qunyou_pianyi: "翩仪",
 	qunyou_pianyi_info:
 			"出牌阶段限一次，你可令一名本回合未成为过此技能目标的角色将所有手牌当一张【酒】使用并抉择：摸其中非♠牌的数量张牌；依次使用其中的♠牌。然后你执行另一项。",
@@ -386,6 +386,10 @@ export const qunyouTranslate = {
 	qunyou_xianzhan: "险战",
 	qunyou_xianzhan_info:
 			"<b>锁定技</b>，<b>转换技</b>，每轮你使用第奇数张牌结算后：阳：回复本回合你已使用牌的花色数点体力；阴：失去本回合你已使用牌的花色数点体力。你回复体力溢出时，你摸溢出值张牌；你因失去体力进入濒死状态时，你摸场上已受伤角色数张牌。",
+	qunyou_xiangtui: "相推",
+	qunyou_xiangtui_info: "你或其他角色摸牌后，可分配至少一张手牌至另一方，若上次如此做的角色此时手牌数全场最大，则必须分配。",
+	qunyou_xiangtui_append:
+			'<span style="font-family: yuanli"><li>两方恒为「摸牌者」与「相推拥有者」：其他角色摸牌后，由该角色决定是否交给你至少一张手牌；你自己摸牌后，由你选一名其他角色并交给其至少一张手牌。<li>交牌张数不限（至多交出全部手牌），每次分配后都会更新「上次如此做的角色」。必须分配时窗口没有取消项；并列最大也算全场最大。</span>',
 	qunyou_xiemin: "挟民",
 	qunyou_xiemin_info:
 			"连招技（【杀】），你可以将【杀】加入连招条件并获得目标角色一张牌。",
@@ -405,6 +409,13 @@ export const qunyouTranslate = {
 	qunyou_xuezhen_bg: "贞",
 	qunyou_xutian: "续天",
 	qunyou_xutian_info: "锁定技，一张牌进入弃牌堆时，若与上一张牌花色或类别相同，你令你武将牌上第x个技能视为未发动过（x为此技能发动次数除以3的余数）。",
+	qunyou_yanbi: "延跸",
+	qunyou_yanbi_info:
+			"<b>主公技</b>，每轮开始时，你可将你的一个技能交给一名其他晋势力角色，其选择立即或本轮结束时交还之。",
+	qunyou_yanbi_append:
+			'<span style="font-family: yuanli"><li>可交出的技能为你拥有的技能（含锁定技、限定技、觉醒技等），不含〖延跸〗自身与其交还标记；受方已经拥有该技能时不能选它。交出时连同该技能的群组与子技能一起移动，交还时一并收回。<li>选择「本轮结束时交还」的技能会在本轮结束时回到你手里；若受方在此之前阵亡或离场，则该技能不再交还。限定技/觉醒技的「已发动」状态记在原来的拥有者身上，不随技能迁移。</span>',
+	qunyou_yanbi_mark: "延跸",
+	qunyou_yanbi_back: "延跸",
 	qunyou_yangxi: "養隙",
 	qunyou_yangxi_info: "攻击范围内包含你且手牌数大于你的角色的回合开始时，你可获得其一张手牌，若为伤害牌其对你使用之且你无法响应。",
 	qunyou_yaobing: "曜兵",
@@ -475,9 +486,6 @@ export const qunyouTranslate = {
 			"出牌阶段限一次，你可以与一名已受伤角色拼点。若你赢，你交给其一张手牌，然后其将其手牌中所有与此牌颜色相同的牌交给你。回合结束时，你将手牌中以此法获得的牌交给该角色。",
 	qunyou_zhengjue: "争绝",
 	qunyou_zhengjue_info: "锁定技，你的手牌均视为【杀】。你造成伤害时，失去此技能。",
-	qunyou_zhengxing: "争行",
-	qunyou_zhengxing_info:
-			`造成伤害后，你可以视为使用或打出一张【杀】，然后${get.poptip("qunyou_muxin")}拥有者加1点体力上限，你失去此技能。`,
 	qunyou_zhenxiang: "震襄",
 	qunyou_zhenxiang_info:
 			"连招技（锦囊牌+红色牌），你使用牌时，若此牌有目标角色，你可令其摸一张牌，然后弃置其区域内一张牌并对其造成一点雷电伤害，若没有，你摸两张牌。",
@@ -493,11 +501,6 @@ export const qunyouTranslate = {
 	qunyou_zhihu: "纸虎",
 	qunyou_zhihu_info:
 			"<b>锁定技</b>，当你本轮使用的第X张未造成伤害的牌结算结束后，你选择令手牌数恒为1张，或恒为全场第X大的手牌数（X为你本轮未造成伤害的用牌数）。",
-	qunyou_zhijue: "智绝",
-	qunyou_zhijue_info:
-			"你可将本轮未转化过【无懈可击/火攻】花色的一张牌当【火攻/无懈可击】使用；或于需要使用牌/出牌阶段卜算X，然后令其中一种花色视为【无懈可击】与【火攻】均已转化过（X为上述两牌均未转化过的花色数）。",
-	qunyou_zhijue_phase: "智绝（卜算）",
-	qunyou_zhijue_phase_info: "出牌阶段，你可以卜算X，然后令其中一种花色视为【无懈可击】与【火攻】均已转化过（X为本轮两者均未转化过的花色数）。",
 	qunyou_zhitian: "知天",
 	qunyou_zhitian_info:
 			"当你指定或成为伤害类牌的唯一目标时，你可令目标角色发动“天命”。其中“天命”中的“体力值唯一最大的其他角色也可以如此做”改为“手牌数唯一最小的其他角色也可以如此做”。",
@@ -513,6 +516,9 @@ export const qunyouTranslate = {
 	qunyou_zhouxuan: "周旋",
 	qunyou_zhouxuan_info:
 			"<b>锁定技</b>，<b>转换技</b>，你使用装备牌或牌名字数不小于体力值的牌后：阳：弃一半的手牌（向下取整）；阴：摸一半的手牌（向上取整）。若你的手牌因此变为全场最大或最小，你对一名角色造成1点伤害。",
+	qunyou_zhuangxin: "壮心",
+	qunyou_zhuangxin_info:
+			`锁定技，若你的手牌颜色均为：红色，你视为拥有${get.poptip("spolxixiang")}；黑色，你视为拥有${get.poptip("spolzhubei")}。否则你视为拥有${get.poptip("rejianxiong")}。`,
 	qunyou_zhuhui: "逐辉",
 	qunyou_zhuhui_info: "锁定技，出牌阶段结束时，你的手牌数、体力值、同势力角色数每有一项为1，你便视为使用一张火【杀】。然后你可以回复本回合以此法造成的总伤害值点体力并将你的下个阶段改为出牌阶段。",
 	qunyou_zhulianbihe_mark: "珠联璧合",
@@ -531,4 +537,12 @@ export const qunyouTranslate = {
 	qunyou_zuobao: "作保",
 	qunyou_zuobao_info:
 			"每回合限一次，你受伤时，若你的手牌数与体力值相等，你可摸一张牌并防止此伤害。",
+	qunyou_yipo: "毅魄",
+	qunyou_yipo_info: `当你使用或打出手牌时，你可以失去1点体力并摸一张牌；每回合结束，你发动X次${get.poptip("yinghun")}。（X为本回合你拒绝发动此技能的次数）`,
+	qunyou_xiongni: "凶逆",
+	qunyou_xiongni_info:
+			"锁定技，游戏开始时，你进入五层横置状态。每解除一层，你失去1点体力上限，你的额定摸牌数和攻击范围+1，然后若仍有剩余层数，你再次进入横置状态。五层均解除后，你可以指定属性伤害的传递顺序。",
+	qunyou_guanbian: "观变",
+	qunyou_guanbian_info:
+			"每轮结束时，你与一名其他角色依次执行一个额外回合（你先，再该角色）。此期间所有角色的非锁定技失效，造成的伤害均视为火焰伤害。两个额外回合结束后，造成伤害较少的角色、未造成伤害的角色与你分别失去1点体力。",
 };

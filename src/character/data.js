@@ -6,10 +6,10 @@ export const characterData = {
 	qunyou_caocao: {
 		sex: "male",
 		group: "wei",
-		hp: 3,
+		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["qunyou_muxin", "qunyou_cangxiao"],
+		skills: ["qunyou_guanhai", "qunyou_kaige", "qunyou_zhuangxin"],
 	},
 	qunyou_caoshuang: {
         sex: "male",
@@ -353,6 +353,14 @@ export const characterData = {
 		hujia: 0,
 		skills: ["qunyou_chongzhen", "qunyou_longwei"],
 	},
+	qunyou_sb_dongzuo: {
+		sex: "male",
+		group: "qun",
+		hp: 8,
+		maxHp: 8,
+		hujia: 0,
+		skills: ["qunyou_xiongni", "qunyou_guanbian"],
+	},
 	qunyou_sb_guohuai: {
 		sex: "male",
 		group: "wei",
@@ -384,6 +392,14 @@ export const characterData = {
 		maxHp: 4,
 		hujia: 0,
 		skills: ["qunyou_cuisheng"],
+	},
+	qunyou_simarui: {
+		sex: "male",
+		group: "jin",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["qunyou_longpei", "qunyou_xiangtui", "qunyou_yanbi"],
 	},
 	qunyou_simayi: {
 		sex: "male",
@@ -432,6 +448,14 @@ export const characterData = {
 		maxHp: 4,
 		hujia: 0,
 		skills: ["qunyou_lanshe", "qunyou_funve", "qunyou_fushui"],
+	},
+	qunyou_sunjian: {
+		sex: "male",
+		group: "wu",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["qunyou_yipo"],
 	},
 	qunyou_sunjiao: {
 		sex: "male",
@@ -519,7 +543,7 @@ export const characterData = {
 		hp: 5,
 		maxHp: 5,
 		hujia: 0,
-		skills: ["qunyou_kuangyong"],
+		skills: ["qunyou_guangyong"],
 	},
 	qunyou_wenyang: {
 		sex: "male",
@@ -805,7 +829,7 @@ export const characterData = {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["zishu_jiaoxie","zishu_jieshuo"],
+		skills: ["zishu_jiaoxia","zishu_jieshuo"],
 	},
 	zishu_zangba: {
 		sex: "male",
@@ -1043,7 +1067,7 @@ export const characterData = {
 	},
 	xingyu_dingfuren: {
 		sex: "female",
-		group: "qun",
+		group: "wei",
 		hp: 3,
 		maxHp: 3,
 		hujia: 0,
@@ -2020,7 +2044,9 @@ export const characterData = {
 		hp: 3,
 		maxHp: 3,
 		hujia: 0,
-		skills: ["xiaobai_guajie", "xiaobai_yaozheng"],
+		// xiaobai_piyi（辟易）由〖卦解〗开局发放辟易、并作为真技能显示在面板上；
+		// 它此前只定义未挂载（不在本表、也没 addSkill）→ 辟易永远用不了，故在此补上
+		skills: ["xiaobai_guajie", "xiaobai_piyi", "xiaobai_yaozheng"],
 	},
 	xiaobai_wangjunx: {
 		sex: "male",

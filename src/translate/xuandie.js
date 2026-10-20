@@ -12,7 +12,7 @@ export const xuandieTranslate = {
 			"你可以将【杀/酒/铁索连环】、【闪/桃/过河拆桥】当另一侧一张牌使用并将两者移至同侧。任意侧唯一需要使用的牌名改为【无中生有】。",
 	xuandie_xiangfu: "相赴",
 	xuandie_xiangfu_info:
-			"出牌阶段，每轮各限一次，你可以与一名其他角色将手牌向彼此调整一张（手牌少者摸一张，多者弃一张，相等则不变），按差值变化视为使用一张基本牌：<br><span style=\"color:#e0566b\">相思</span>·正负性不变，【杀】；<br><span style=\"color:#d69a2d\">相逢</span>·变为0，【酒】；<br><span style=\"color:#7c9cc4\">相失</span>·变为相反数，【闪】；<br><span style=\"color:#f0a3b8\">相守</span>·未变化，【桃】。",
+			"每轮各限一次，你可以与一名其他角色将手牌向彼此调整一张（手牌少者摸一张，多者弃一张，相等则不变），按差值变化视为使用一张基本牌：<br><span style=\"color:#e0566b\">相思</span>·正负性不变，【杀】；<br><span style=\"color:#d69a2d\">相逢</span>·变为0，【酒】；<br><span style=\"color:#7c9cc4\">相失</span>·变为相反数，【闪】；<br><span style=\"color:#f0a3b8\">相守</span>·未变化，【桃】。",
 	xuandie_yixin: "一心",
 	xuandie_yixin_info: `锁定技，唯一参与${get.poptip("xuandie_xiangfu")}的其他角色视为拥有之。`,
 	xuandie_yixin_append:

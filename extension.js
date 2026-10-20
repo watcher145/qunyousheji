@@ -2,6 +2,7 @@ import { getPackage } from "./src/package.js";
 import { precontent } from "./src/precontent.js";
 import { setupCharacterReplace } from "./src/character/replace.js";
 import { setupIdentityYe } from "./src/skill/identityYe.js";
+import { setupVisiblePile } from "./src/skill/visiblePile.js";
 
 export const type = "extension";
 
@@ -13,6 +14,7 @@ export default function () {
 		arenaReady() {
 			setupCharacterReplace();
 			setupIdentityYe();
+			setupVisiblePile();
 		},
 		content(config, pack) {},
 		prepare() {},
@@ -33,7 +35,7 @@ export default function () {
 		},
 		package: getPackage(),
 		intro: "群友投稿扩展：在 src/character、src/skill、src/card、src/translate 中按模块添加内容。",
-		author: "无名玩家",
+		author: "欢愉与希望",
 		diskURL: "",
 		forumURL: "",
 		version: "1.0",

@@ -2,11 +2,20 @@ import { lib, game, get, _status } from "noname";
 import dynamicTranslates from "./translate/dynamicTranslate.js";
 import { getXiaobaiPack } from "./package.js";
 import { qunyou_longwei_tagFilter } from "./skill/sanshe.js";
+import { qunyou_clearVisiblePile, qunyou_getVisiblePileTop, qunyou_hasVisiblePile, qunyou_isPileCardVisible, qunyou_markPileVisible } from "./skill/visiblePile.js";
 
 /**
  * 扩展加载时执行：可在此注册 lib.namePrefix、合并 lib.dynamicTranslate 等
  */
 export function precontent() {
+	// 牌堆可见牌：供本扩展及外部扩展统一读写（数据在 _status，每局重建）
+	lib.qunyouVisiblePile = {
+		getVisibleTop: qunyou_getVisiblePileTop,
+		hasAnyVisible: qunyou_hasVisiblePile,
+		isVisible: qunyou_isPileCardVisible,
+		markVisible: qunyou_markPileVisible,
+		clear: qunyou_clearVisiblePile,
+	};
 	lib.namePrefix.set("群友", {
 		getSpan: () => {
 			const span = document.createElement("span"), style = span.style;

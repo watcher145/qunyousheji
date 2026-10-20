@@ -1,4 +1,5 @@
 import { lib, game, get, ui, _status } from "noname";
+import { qunyou_clearVisiblePile, qunyou_getVisiblePileTop, qunyou_hasVisiblePile, qunyou_markPileVisible, qunyou_pruneVisiblePile, qunyou_visiblePileSet } from "./visiblePile.js";
 
 // ==================== 一蛋展示（猫咪大院包）：11 名武将 ====================
 // 来源：《一蛋展示》提取结果（李春香/卫温&诸葛直/王蕃/刘伶/黄崇/曹衮/夏侯徽/杨戏/臧洪/何晏/笮融）。
@@ -36,10 +37,13 @@ maokuo_bolan: {
 		event.result = { bool: !!res?.bool };
 	},
 	async content(event, trigger, player) {
-		const card = get.cards(1, true)[0];
+		// 「亮出」而非「展示」：先把牌堆顶的牌移入处理区（ordering），再展示；
+		// 直接 get.cards(1, true) + showCards 只是展示牌堆顶，牌仍留在牌堆
+		const card = get.cards(1)[0];
 		if (!card) {
 			return;
 		}
+		await game.cardsGotoOrdering(card);
 		await player.showCards([card], get.translation(player) + "亮出了牌堆顶的牌");
 		player.storage.maokuo_bolan_card = { num: get.number(card), name: get.name(card), suit: get.suit(card) };
 		player.addTempSkill("maokuo_bolan_flag", "phaseAfter");
@@ -52,10 +56,28 @@ maokuo_bolan_jieshu: {
 	filter(event, player) {
 		return (player.storage.maokuo_bolan_card?.num || 0) > 0 && player.countCards("hejsx") > 0;
 	},
+	// 点数和恰为 num 的可行子集：非手牌优先（展示手牌有信息代价），手牌负责补齐
+	findSubset(player, num) {
+		if (!num) return null;
+		const all = player.getCards("hejsx");
+		const sorted = all.filter((card) => get.position(card) != "h").concat(all.filter((card) => get.position(card) == "h"));
+		const dp = new Map([[0, []]]);
+		for (const card of sorted) {
+			const value = get.number(card) || 0;
+			if (!value) continue;
+			for (const [sum, list] of [...dp.entries()]) {
+				const next = sum + value;
+				if (next > num || dp.has(next)) continue;
+				dp.set(next, list.concat([card]));
+			}
+		}
+		return dp.get(num) || null;
+	},
 	async cost(event, trigger, player) {
 		const num = player.storage.maokuo_bolan_card?.num || 0;
+		const can = !!lib.skill.maokuo_bolan_jieshu.findSubset(player, num);
 		const res = await player.chooseBool(`博览：是否选择你区域内的至少一张牌（点数之和为${num}时摸等量的牌）？`)
-			.set("ai", () => Math.random() < 0.8)
+			.set("ai", () => can)
 			.forResult();
 		event.result = { bool: !!res?.bool };
 	},
@@ -64,8 +86,9 @@ maokuo_bolan_jieshu: {
 		if (!num) {
 			return;
 		}
+		const pick = lib.skill.maokuo_bolan_jieshu.findSubset(player, num);
 		const res = await player.chooseCard("hejsx", [1, player.countCards("hejsx")], `博览：选择你区域内的至少一张牌（若为手牌则展示之，点数之和为${num}时摸等量的牌）`, "allowChooseAll")
-			.set("ai", card => Math.random())
+			.set("ai", card => (pick ? (pick.includes(card) ? 10 : -1) : 0))
 			.forResult();
 		if (!res?.bool || !res.cards?.length) {
 			return;
@@ -90,15 +113,6 @@ maokuo_bolan_jieshu: {
 maokuo_canlie: {
 	audio: 2,
 	forced: true,
-	mark: true,
-	marktext: "猎",
-	intro: {
-		name: "残猎",
-		content(storage, player) {
-			const n = player.getStorage("maokuo_canlie_count") || 0;
-			return n ? `本回合已发动${n}次` : "本回合尚未发动（首次发动时回复1点体力）";
-		},
-	},
 	trigger: { global: "gainAfter" },
 	filter(event, player) {
 		return _status.currentPhase == player && event.player && event.player != player && event.player.isIn();
@@ -107,7 +121,6 @@ maokuo_canlie: {
 		await trigger.player.damage(player, 1);
 		const count = (player.getStorage("maokuo_canlie_count") || 0) + 1;
 		player.storage.maokuo_canlie_count = count;
-		player.markSkill("maokuo_canlie");
 		if (count == 1) {
 			await player.recover(1);
 			game.log(player, "于此回合内首次发动【残猎】，回复了1点体力");
@@ -139,88 +152,155 @@ maokuo_chiyan: {
 	},
 	async content(event, trigger, player) {
 		player.awakenSkill(event.name);
+		// 额外回合先入队：此刻仍在 phase 事件链内，insertPhase 才会把它挂到本回合之后
+		player.insertPhase("maokuo_chiyan");
 		if (player.hp == 1 && player.countCards("h")) {
 			await player.discard(player.getCards("h"));
+			game.log(player, "弃置了所有手牌");
 		} else if (!player.countCards("h") && player.hp > 1) {
 			await player.loseHp(player.hp - 1);
+			game.log(player, "将体力值减至1");
 		}
-		player.addSkill("maokuo_canlie");
-		game.log(player, "获得了技能“残猎”");
-		player.insertPhase("maokuo_chiyan");
+		if (!player.hasSkill("maokuo_canlie")) {
+			player.addSkill("maokuo_canlie");
+			game.log(player, "获得了技能“残猎”");
+		}
 		game.log(player, "执行一个额外的回合");
 	},
 },
 // === 浮饰 ===
+// 参照奇臣传〖倚树〗：把满足条件的牌堆可见牌做成「假手牌」（glows + gaintag），
+// 可以像手牌一样正常使用/打出；实际用牌时展示所有手牌，再把假牌换回牌堆里的实体牌。
+// 条件：对每种花色，X=该花色手牌数（≥1），牌堆顶第 X 张可见。
 maokuo_fushi: {
 	audio: 2,
-	enable: ["chooseToUse", "chooseToRespond"],
-	filter(event, player) {
-		return !!get.info("maokuo_qingxuan").findFushi(event, player);
-	},
-	viewAs(cards, player) {
-		const card = get.info("maokuo_qingxuan").findFushi(get.event(), player);
-		if (card) {
-			return { name: get.name(card), isCard: true };
+	group: ["maokuo_fushi_view", "maokuo_fushi_sync", "maokuo_fushi_clear"],
+	init(player) {
+		lib.translate.maokuo_fushi_tag = "invisible";
+		if (!Array.isArray(player.storage.maokuo_fushi_cards)) {
+			player.storage.maokuo_fushi_cards = [];
 		}
-		return { name: "sha", isCard: true };
+		lib.skill.maokuo_fushi.syncFushi(player);
 	},
-	filterCard() {
-		return false;
+	onremove(player) {
+		lib.skill.maokuo_fushi.clearFushi(player);
+		delete player.storage.maokuo_fushi_cards;
 	},
-	selectCard: -1,
-	prompt: "浮饰：展示所有手牌，使用牌堆顶的可见牌",
-	async precontent(event, trigger, player) {
-		const info = get.info("maokuo_qingxuan");
-		const card = info.findFushi(event.getParent(), player);
-		if (!card) {
-			return;
-		}
-		await player.showCards(player.getCards("h"), get.translation(player) + "发动了【浮饰】");
-		await game.cardsGotoOrdering([card]);
-		// 把结算的牌换成牌堆顶那张实体牌
-		event.result.card = card;
-		event.result.cards = [card];
+	getFakes(player) {
+		return player.getCards("s", card => card.hasGaintag("maokuo_fushi_tag"));
 	},
-	async content(event, trigger, player) {
-		// AI/托管路径兜底：自行完成展示与使用（正常对话框路径已由 precontent 换牌，不会走到这里）
-		const info = get.info("maokuo_qingxuan");
-		const card = info.findFushi(null, player);
-		if (!card) {
-			return;
-		}
-		await player.showCards(player.getCards("h"), get.translation(player) + "发动了【浮饰】");
-		await game.cardsGotoOrdering([card]);
-		const name = get.name(card);
-		const vcard = get.autoViewAs({ name: name, isCard: true }, [card]);
-		if (name == "sha") {
-			await player.chooseUseTarget(vcard, true);
-		} else {
-			await player.useCard(vcard, [card], "maokuo_fushi");
-		}
-	},
-	hiddenCard(player, name) {
-		const card = get.info("maokuo_qingxuan").findFushi(null, player);
-		return !!card && get.name(card) == name;
-	},
-	ai: {
-		order: 4,
-		respondSha: true,
-		respondShan: true,
-		skillTagFilter(player, tag) {
-			const card = get.info("maokuo_qingxuan").findFushi(null, player);
-			if (!card) {
-				return false;
+	// 当前应以假手牌形式存在的实体牌（同一张牌可能被不同花色同时命中，按 cardid 去重）
+	getFushiCards(player) {
+		const set = qunyou_pruneVisiblePile();
+		const result = [];
+		for (const suit of ["spade", "heart", "club", "diamond"]) {
+			const x = player.countCards("h", card => get.suit(card) == suit);
+			if (x <= 0) {
+				continue;
 			}
-			if (tag == "respondSha") {
-				return get.name(card) == "sha";
+			const card = ui.cardPile.childNodes[x - 1];
+			if (!card || !set.has(card)) {
+				continue;
 			}
-			if (tag == "respondShan") {
-				return get.name(card) == "shan";
+			if (!result.some(cardx => cardx.cardid == card.cardid)) {
+				result.push(card);
 			}
-			return false;
+		}
+		return result;
+	},
+	syncFushi(player) {
+		const desired = lib.skill.maokuo_fushi.getFushiCards(player);
+		const desiredIds = desired.map(card => card.cardid);
+		const current = player.storage.maokuo_fushi_cards || [];
+		const staleIds = current.filter(card => !desiredIds.includes(card.cardid)).map(card => card.cardid);
+		if (staleIds.length) {
+			game.deleteFakeCards(lib.skill.maokuo_fushi.getFakes(player).filter(card => staleIds.includes(card._cardid)));
+		}
+		const add = desired.filter(card => !current.some(cardx => cardx.cardid == card.cardid));
+		if (add.length) {
+			game.addCardKnower(add, player);
+			player.directgains(game.createFakeCards(add), null, "maokuo_fushi_tag");
+		}
+		player.storage.maokuo_fushi_cards = desired;
+	},
+	clearFushi(player) {
+		game.deleteFakeCards(lib.skill.maokuo_fushi.getFakes(player));
+		player.storage.maokuo_fushi_cards = [];
+	},
+	subSkill: {
+		view: {
+			charlotte: true,
+			forced: true,
+			popup: false,
+			firstDo: true,
+			trigger: { player: ["useCardBefore", "respondBefore"] },
+			filter(event, player) {
+				const fakes = lib.skill.maokuo_fushi.getFakes(player);
+				return !!event.cards?.some(card => fakes.includes(card));
+			},
+			async content(event, trigger, player) {
+				const fakes = lib.skill.maokuo_fushi.getFakes(player);
+				const storage = player.storage.maokuo_fushi_cards || [];
+				const usedFakes = [];
+				const usedIds = [];
+				trigger.cards = trigger.cards.map(card => {
+					if (!fakes.includes(card)) {
+						return card;
+					}
+					const real = storage.find(cardx => cardx.cardid == card._cardid);
+					if (!real) {
+						return card;
+					}
+					usedFakes.push(card);
+					usedIds.push(real.cardid);
+					return real;
+				});
+				if (trigger.card?.cards) {
+					trigger.card.cards = trigger.cards;
+				}
+				if (!usedIds.length) {
+					return;
+				}
+				player.storage.maokuo_fushi_cards = storage.filter(card => !usedIds.includes(card.cardid));
+				game.deleteFakeCards(usedFakes);
+				const hand = player.getCards("h");
+				if (hand.length) {
+					await player.showCards(hand, get.translation(player) + "发动了【浮饰】");
+				}
+				await game.cardsGotoOrdering(trigger.cards.filter(card => usedIds.includes(card.cardid) && get.position(card, true) == "c"));
+				lib.skill.maokuo_fushi.syncFushi(player);
+			},
 		},
-		result: {
-			player: 1,
+		sync: {
+			charlotte: true,
+			forced: true,
+			silent: true,
+			popup: false,
+			trigger: {
+				player: ["drawAfter", "gainAfter", "loseAfter", "loseAsyncAfter"],
+				global: ["drawAfter", "gainAfter", "loseAfter", "loseAsyncAfter", "cardsGotoPileAfter", "cardsGotoOrderingAfter", "cardsDiscardAfter", "loseToDiscardpile"],
+			},
+			filter(event, player, name) {
+				// 自己的手牌变化会改变 X；摸牌/往牌堆放牌/把牌移出牌堆会改变第 X 张是哪张。
+				// loseAsync 的宿主没有 player 字段，直接放行（代价只是一次廉价重算）
+				if (name == "loseAfter") {
+					return event.player == player;
+				}
+				return true;
+			},
+			content(event, trigger, player) {
+				lib.skill.maokuo_fushi.syncFushi(player);
+			},
+		},
+		clear: {
+			charlotte: true,
+			forced: true,
+			silent: true,
+			popup: false,
+			trigger: { player: "dieBefore" },
+			content(event, trigger, player) {
+				lib.skill.maokuo_fushi.clearFushi(player);
+			},
 		},
 	},
 },
@@ -240,12 +320,8 @@ maokuo_huifo: {
 	marktext: "佛",
 	intro: {
 		name: "会佛",
-		content(storage, player) {
-			return `扣置着${player.getExpansions("maokuo_huifo").length}张“会佛”牌`;
-		},
-		markcount(storage, player) {
-			return player.getExpansions("maokuo_huifo").length;
-		},
+		content: "expansion",
+		markcount: "expansion",
 	},
 	filterCard() {
 		return false;
@@ -257,7 +333,16 @@ maokuo_huifo: {
 	},
 	async content(event, trigger, player) {
 		const res = await player.chooseTarget("会佛：与一名其他角色同时展示一张手牌", (card, p, t) => t != p && t.isIn() && t.countCards("h") > 0)
-			.set("ai", target => Math.random())
+			.set("ai", target => {
+				// 只对敌人发动；优先沿用上一次的目标（换目标会直接结束回合，攒不了牌）
+				const prev = player.getStorage("maokuo_huifo_targets") || [];
+				const last = prev[prev.length - 1];
+				if (last?.isIn() && last != player && last.countCards("h") > 0) {
+					return target == last ? 20 : get.attitude(player, target) < 0 ? 5 : -1;
+				}
+				if (get.attitude(player, target) >= 0) return -1;
+				return 10 + Math.min(2, target.countCards("h")) * 0.1 - target.hp * 0.2;
+			})
 			.forResult();
 		if (!res?.bool || !res.targets?.length) {
 			return;
@@ -265,30 +350,29 @@ maokuo_huifo: {
 		const target = res.targets[0];
 		// 双方私下各选一张，选完同时亮出（保持"同时展示"语义）
 		const res1 = await player.chooseCard("h", true, `会佛：请选择你展示的一张手牌`)
-			.set("ai", card => Math.random())
+			.set("ai", card => 6 - get.value(card))
 			.forResult();
 		if (!res1?.bool || !res1.cards?.length) {
 			return;
 		}
 		const myCard = res1.cards[0];
 		const res2 = await target.chooseCard("h", true, `会佛：请${get.translation(target)}选择展示的一张手牌`)
-			.set("ai", card => Math.random())
+			// 同时展示：目标不该知道对方选了什么，按自己损失最小（低价值）来选
+			.set("ai", card => 6 - get.value(card, target))
 			.forResult();
 		if (!res2?.bool || !res2.cards?.length) {
 			return;
 		}
 		const tCard = res2.cards[0];
 		await player.showCards([myCard, tCard], get.translation(player) + "发动了【会佛】");
+		const sameColor = get.color(myCard) == get.color(tCard);
+		// 「对另一名角色发动」＝本次目标与上一次不同（首次发动没有"上一次"，不算）
 		const prevTargets = player.getStorage("maokuo_huifo_targets") || [];
-		const isNewTarget = !prevTargets.includes(target);
+		const isNewTarget = prevTargets.length > 0 && !prevTargets.includes(target);
 		player.storage.maokuo_huifo_targets = prevTargets.concat([target]);
-		if (get.color(myCard) != get.color(tCard)) {
-			// 颜色不同：按序（己先彼后）扣置于武将牌上，不结束回合
-			await player.addToExpansion([myCard, tCard], "giveAuto").set("gaintag", ["maokuo_huifo"]);
-			player.markSkill("maokuo_huifo");
-			game.log(player, "将两张牌扣置于武将牌上");
-		} else {
-			// 颜色相同：展示牌留在手里，轮流从存量“会佛”牌中随机获得，直到没有为止
+		let endTurn = false;
+		if (sameColor) {
+			// 颜色相同：你与其轮流获得一张"会佛"牌，直到没有"会佛"牌为止
 			const pile = player.getExpansions("maokuo_huifo").slice().randomSort();
 			let i = 0;
 			for (const c of pile) {
@@ -299,11 +383,32 @@ maokuo_huifo: {
 			}
 			player.markSkill("maokuo_huifo");
 			game.log(player, "与", target, "分完了所有“会佛”牌");
+			// 「……然后你结束此回合」
+			endTurn = true;
+		} else {
+			// 颜色不同：将你与其展示的牌按序扣置于你的武将牌上
+			await player.addToExpansion([myCard, tCard], "giveAuto").set("gaintag", ["maokuo_huifo"]);
+			player.markSkill("maokuo_huifo");
+			game.log(player, "将两张牌扣置于武将牌上");
 		}
-		// 结束回合的两个条件：①同色分支结束；②对另一名角色发动过
-		if (get.color(myCard) == get.color(tCard) || isNewTarget) {
-			event.getParent("phase").finish();
-			game.log(player, "的回合结束了");
+		// 「当你于此阶段内对另一名角色发动"会佛"后，你结束此回合」
+		if (isNewTarget) {
+			endTurn = true;
+		}
+		if (endTurn) {
+			// 结束此回合：照原生写法（jsrgdailao/oldmingjian/pszhonghu）——把本回合的 phase 事件
+			// 直接跳到收尾步（num 置满 + goto(11)），并停掉出牌阶段的用牌循环。
+			// ⚠ 只调 phase.finish() 不够：phaseUse 的循环会继续询问用牌，回合不会结束。
+			const phaseUseEvt = event.getParent("phaseUse", true);
+			if (phaseUseEvt) {
+				phaseUseEvt.skipped = true;
+			}
+			const phaseEvt = event.getParent("phase", true);
+			if (phaseEvt) {
+				game.log(player, "结束了回合");
+				phaseEvt.num = phaseEvt.phaseList.length;
+				phaseEvt.goto(11);
+			}
 		}
 	},
 	group: ["maokuo_huifo_reset"],
@@ -383,17 +488,20 @@ maokuo_kaodu: {
 	},
 	selectCard: -1,
 	filter(event, player) {
-		return player.countCards("h") > 0;
+		return player.countCards("hes") > 0;
 	},
 	async content(event, trigger, player) {
-		const res1 = await player.chooseCard("h", "考度：你可以重铸一张牌")
+		// 重铸/弃置都看自己的 hes 区域；只有「获得场上的一张牌」才限定 ej
+		const res1 = await player.chooseCard("hes", "考度：你可以重铸一张牌")
+			.set("filterCard", lib.filter.cardRecastable)
 			.set("ai", card => 6 - get.value(card))
 			.forResult();
-		if (!res1?.bool || !res1.cards?.length) {
-			return;
+		// 重铸是「可以」，不重铸也可以继续弃置
+		if (res1?.bool && res1.cards?.length) {
+			await player.recast(res1.cards);
 		}
-		await player.recast(res1.cards);
-		const res2 = await player.chooseCard("he", "考度：是否弃置一张牌？")
+		const res2 = await player.chooseCard("hes", "考度：是否弃置一张牌？")
+			.set("filterCard", card => lib.filter.cardDiscardable(card, player))
 			.set("ai", card => 5 - get.value(card))
 			.forResult();
 		if (!res2?.bool || !res2.cards?.length) {
@@ -481,13 +589,13 @@ maokuo_kunguan: {
 	},
 },
 // === 阔略 ===
-// 阔略：一名角色的结束阶段，若你于此回合内未成为过黑色牌的目标，你可以亮出一张手牌：
-//       当你的手牌均可见时，你令手牌均不可见，摸一张牌。
+// 阔略：一名角色的结束阶段，若你于此回合内未成为过黑色牌的目标，你可以明置一张手牌：
+//       当你的手牌均明置时，你令你的手牌均暗置，摸一张牌。
 // 著贊：当一名角色使用【杀】时，你可以将一张牌置于武将牌上。当此【杀】结算后，若此【杀】没造成过伤害，
 //       你可以将至少一张"著贊"牌置入弃牌堆，其摸等量的牌。
 maokuo_kuolue: {
 	audio: 2,
-	group: ["maokuo_kuolue_hit"],
+	group: ["maokuo_kuolue_hit", "maokuo_kuolue_show"],
 	subSkill: {
 		hitmark: {
 			charlotte: true,
@@ -496,10 +604,12 @@ maokuo_kuolue: {
 	},
 	trigger: { global: "phaseJieshuBegin" },
 	filter(event, player) {
-		return player.isIn() && player.countCards("h") > 0 && !(player.getStorage("maokuo_kuolue_hitmark") || []).length;
+		// 要有「未明置的手牌」可明置（已明置的牌不能再明置，按文档口径用 get.is.shownCard 排除）
+		return player.isIn() && player.countCards("h", card => !get.is.shownCard(card)) > 0 && !(player.getStorage("maokuo_kuolue_hitmark") || []).length;
 	},
 	async cost(event, trigger, player) {
-		const res = await player.chooseCard("h", "阔略：亮出一张手牌")
+		const res = await player.chooseCard("h", "阔略：明置一张手牌")
+			.set("filterCard", card => !get.is.shownCard(card))
 			.set("ai", card => 6 - get.value(card))
 			.forResult();
 		if (!res?.bool || !res.cards?.length) {
@@ -509,24 +619,41 @@ maokuo_kuolue: {
 		event.result = { bool: true, cost_data: { card: res.cards[0] } };
 	},
 	async content(event, trigger, player) {
-		const card = event.cost_data.card;
-		await player.addShownCards([card], "visible_maokuo_kuolue");
-		if (player.getShownCards().length >= player.countCards("h")) {
-			// 手牌均可见：全部暗置并摸一张牌（清掉所有来源的明置标签）
-			const shown = player.getShownCards();
-			const tags = [];
-			shown.forEach(c => c.gaintag.forEach(t => {
-				if (t.startsWith("visible_") && !tags.includes(t)) {
-					tags.push(t);
-				}
-			}));
-			await player.hideShownCards(shown, ...tags);
-			await player.draw(1);
-			game.log(player, "的手牌均已可见，全部暗置并摸了一张牌");
-		}
+		// 明置：第二个参数就是牌 tag。引擎 addShownCards 内部执行 player.addGaintag(cards, tag)（content.js:453-455），
+		// 牌留在手牌里不移动，牌面渲染 get.translation("visible_maokuo_kuolue") → 「阔略」（translate/maokuo.js:35）
+		await player.addShownCards([event.cost_data.card], "visible_maokuo_kuolue");
+		// 「手牌均明置」是持续状态条件，兑现交给 maokuo_kuolue_show 持续监听：
+		// 明置变化、手牌数变化（如著贊把牌移上武将牌）都会重新判定，不能在这里做一次性判断。
 	},
 	ai: {
 		threaten: 1.1,
+	},
+},
+// === 阔略 ===
+// 「当你的手牌均明置时」是持续状态条件：明置状态变化、手牌数变化都可能让它成立，
+// 因此必须常驻监听，而不是只在阔略自己明置完那一刻判一次。
+maokuo_kuolue_show: {
+	charlotte: true,
+	forced: true,
+	silent: true,
+	popup: false,
+	trigger: {
+		player: ["addShownCardsAfter", "loseAfter", "gainAfter", "addToExpansionAfter"],
+		global: ["loseAsyncAfter"],
+	},
+	filter(event, player) {
+		if (!player.isIn()) {
+			return false;
+		}
+		const num = player.countCards("h");
+		return num > 0 && player.countShownCards() >= num;
+	},
+	async content(event, trigger, player) {
+		// 暗置：这里「不传 gaintag」是刻意的，不是漏加——引擎 hideShownCards 在不传 tag 时走默认分支，
+		// 会摘掉这批牌上所有 visible_ 标签（含其他技能明置的），并保留 eternal_visible_，正好对应「手牌均暗置」
+		await player.hideShownCards(player.getShownCards());
+		await player.draw(1);
+		game.log(player, "的手牌均已明置，将手牌均暗置并摸了一张牌");
 	},
 },
 // === 阔略 ===
@@ -617,11 +744,19 @@ maokuo_luomo: {
 			})
 			.set("complexSelect", true)
 			.set("ai", (button) => {
+				// 先选材料：♠只能变锦囊、♣只能变基本牌，取该类别里可用价值最高的一种来比较
 				if (ui.selected.buttons.length == 0) {
-					return Math.random();
+					const suit = get.suit(button.link);
+					let best = 0;
+					for (const info of vcards) {
+						const type = get.type(info[2]);
+						if (suit == "spade" ? type != "trick" : type != "basic") continue;
+						best = Math.max(best, player.getUseValue(get.autoViewAs({ name: info[2], nature: info[3] }, []), true, true));
+					}
+					return best;
 				}
 				const cardx = get.autoViewAs({ name: button.link[2], nature: button.link[3] });
-				return get.player().getUseValue(cardx, true, true);
+				return player.getUseValue(cardx, true, true);
 			})
 			.forResult();
 		if (!result?.bool) {
@@ -660,102 +795,168 @@ maokuo_luomo: {
 	},
 },
 // === 逆水 ===
+// 逆水：你可以视为使用一张基本牌；此牌名称你本局游戏不能再使用或打出。
+//       你的牌被其他角色获得后，你摸「逆水」的发动次数张牌。
+// 状态：player.storage.maokuo_nishui_ban（已禁用的基本牌名）+ player.storage.maokuo_nishui_times（发动次数）。
+//       标记挂在 maokuo_nishui 上：markcount 读 times，intro.mark 读 ban 的补集＝本次还能使用的基本牌。
+// ⚠ 发动技在下方 maokuo_nishui_use（印牌技写法，原生〖烈志〗pot_liezhi 同款）。
 maokuo_nishui: {
 	audio: 2,
-	forced: true,
 	mark: true,
 	marktext: "逆",
+	init(player, skill) {
+		// 主动挂标记：markcount / intro.mark 要有挂载点才会显示（光有 mark:true 不会自己出现）
+		player.markSkill(skill);
+	},
 	intro: {
 		name: "逆水",
+		markcount(storage, player) {
+			return player.storage.maokuo_nishui_times || 0;
+		},
+		// 标记文本＝本次还能使用的基本牌
+		mark(dialog, storage, player) {
+			return lib.skill.maokuo_nishui.leftText(player);
+		},
 		content(storage, player) {
-			const cards = player.getExpansions("maokuo_nishui");
-			const ban = player.getStorage("maokuo_nishui_ban") || [];
-			let str = cards.length ? "武将牌上有“逆水”牌：" + cards.map(c => `【${get.translation(c.name)}】`).join("、") : "武将牌上没有“逆水”牌";
-			if (ban.length) {
-				str += "<br>不能再使用或打出：" + ban.map(n => `【${get.translation(n)}】`).join("、");
-			}
-			return str;
+			const times = player.storage.maokuo_nishui_times || 0;
+			return `${lib.skill.maokuo_nishui.leftText(player)}<br>逆水已发动 ${times} 次；你的牌被其他角色获得后，你摸 ${times} 张牌。`;
 		},
 	},
-	trigger: { player: "enterGame" },
-	filter(event, player) {
-		return player.getExpansions("maokuo_nishui").length == 0;
-	},
-	async content(event, trigger, player) {
-		const cards = [];
-		for (const name of ["sha", "shan", "tao", "jiu"]) {
-			const card = get.cardPile(c => c.name == name);
-			cards.push(card || game.createCard(name));
-		}
-		await player.addToExpansion(cards, "giveAuto").set("gaintag", ["maokuo_nishui"]);
-		game.log(player, "将【杀】【闪】【桃】【酒】各一张置于武将牌上");
-	},
-	// 直到游戏结束不能使用或打出已用过的名称（使用/打出/濒死求桃三条链都要拦）
+	// 本局不能再使用/打出已用过的名称（使用、打出、濒死求桃三条链都要拦）
 	mod: {
 		cardEnabled(card, player) {
-			if (get.info("maokuo_nishui").isBanned(card, player)) {
+			if (lib.skill.maokuo_nishui.isBanned(card, player)) {
 				return false;
 			}
 		},
 		cardRespondable(card, player) {
-			if (get.info("maokuo_nishui").isBanned(card, player)) {
+			if (lib.skill.maokuo_nishui.isBanned(card, player)) {
 				return false;
 			}
 		},
 		cardSavable(card, player) {
-			if (get.info("maokuo_nishui").isBanned(card, player)) {
+			if (lib.skill.maokuo_nishui.isBanned(card, player)) {
 				return false;
 			}
 		},
 	},
 	isBanned(card, player) {
-		return (player.getStorage("maokuo_nishui_ban") || []).includes(get.name(card.cards && card.cards[0] || card));
+		// 取实体牌名：vcard 本身不带牌名，要从 cards[0] 上取
+		return lib.skill.maokuo_nishui.banList(player).includes(get.name(card.cards && card.cards[0] || card));
 	},
-	group: ["maokuo_nishui_use"],
-},
-// === 逆水 ===
-maokuo_nishui_use: {
-	audio: "maokuo_nishui",
-	enable: "phaseUse",
-	filterCard() {
-		return false;
+	banList(player) {
+		return player.getStorage("maokuo_nishui_ban") || [];
 	},
-	selectCard: -1,
-	filter(event, player) {
-		return player.getExpansions("maokuo_nishui").length > 0;
+	// 本次还能使用/打出的基本牌名（全部基本牌 − 已禁用的）
+	leftNames(player) {
+		const ban = lib.skill.maokuo_nishui.banList(player);
+		return ["sha", "tao", "shan", "jiu"].filter(name => !ban.includes(name));
 	},
-	async content(event, trigger, player) {
-		const cards = player.getExpansions("maokuo_nishui");
-		const res = await player.chooseButton(["逆水：移出一张“逆水”牌，视为使用之", cards], true)
-			.set("ai", button => player.getUseValue({ name: get.name(button.link) }))
-			.forResult();
-		if (!res?.bool || !res.links?.length) {
-			return;
-		}
-		const card = res.links[0];
+	// 某个牌名现在还能不能作为逆水的"视为使用"对象
+	canPrint(player, name) {
+		return lib.skill.maokuo_nishui.leftNames(player).includes(name);
+	},
+	// 当前这个询问框里能印的牌面：候选 ∩ event.filterCard。
+	// 引擎是唯一权威：出牌阶段放行杀/桃/酒，濒死求桃框只放行桃，
+	// 【杀】的闪应答框（chooseToUse，type:"respondShan"）只放行闪，无懈框只放行无懈——
+	// 所以【闪】不需要任何特判，该出现的时候引擎自己会放行。
+	// docs/印牌类技能标准 §二 B1 要点③
+	printList(player, event) {
+		return lib.skill.maokuo_nishui.leftNames(player)
+			.filter(name => event.filterCard(new lib.element.VCard({ name: name, isCard: true }), player, event))
+			.map(name => [get.type2(name, false), "", name]);
+	},
+	// 代价：本次使用/打出的基本牌名本局不能再使用或打出 + 发动次数 +1（各子技能的 precontent 调用）
+	banOnce(player, name) {
 		if (!player.storage.maokuo_nishui_ban) {
 			player.storage.maokuo_nishui_ban = [];
 		}
-		player.storage.maokuo_nishui_ban.push(get.name(card));
-		player.markSkill("maokuo_nishui");
-		await game.cardsGotoSpecial([card]);
-		game.log(player, "将", card, "移出了游戏");
-		const name = get.name(card);
-		const vcard = get.autoViewAs({ name: name, isCard: true }, [card]);
-		if (name == "shan") {
-			// 闪没有常规使用目标，直接结算（无目标使用）
-			await player.useCard(vcard, [card], "maokuo_nishui_use");
-		} else {
-			const next = player.chooseUseTarget(vcard, true);
-			next.set("logSkill", "maokuo_nishui_use");
-			await next;
-		}
+		player.storage.maokuo_nishui_ban.push(name);
+		player.storage.maokuo_nishui_times = (player.storage.maokuo_nishui_times || 0) + 1;
+		player.updateMarks(); // 刷新「逆」标记的 markcount（发动次数）与标记文本
+		game.log(player, "发动了", "#g【逆水】", "，本局不能再使用或打出", get.translation(name));
+	},
+	leftText(player) {
+		const left = lib.skill.maokuo_nishui.leftNames(player);
+		return `本次还能使用的基本牌：${left.length ? left.map(name => `【${get.translation(name)}】`).join("、") : "无"}`;
+	},
+	group: ["maokuo_nishui_use", "maokuo_nishui_gain"],
+},
+// === 逆水（发动技：印牌技） ===
+// 结构同原生〖烈志〗pot_liezhi / 〖清严〗potqingyan / 〖道转〗potdaozhuan：enable 式 chooseButton + backup，
+//   牌面运行时才定 → 顶层**不能**挂静态 viewAs；目标选择与次数一律交给引擎（filterTarget / addCount），
+//   自己既不写 useCard 也不写 chooseUseTarget。代价放在 backup.precontent（无素材印牌可用 precontent，红线 23②）。
+//
+// ⚠ 只需要 enable: "chooseToUse"，**不要**加 chooseToRespond —— 描述只写「视为使用」。
+//   【闪】也不需要任何特例：【杀】的闪应答框本身就是 chooseToUse 事件（type:"respondShan"，
+//   card/standard.js:157-168），它的 filterCard 用 cardEnabled(card, player, "forceEnable") 绕过了
+//   闪缺失的 enable 字段，所以 event.filterCard(闪) 在那个框里天然为真、在普通出牌阶段天然为假。
+//   文档 §二 B1 要点③「询问时机过滤不用写，引擎按 event.filterCard 自动筛」说的就是这个。
+maokuo_nishui_use: {
+	audio: "maokuo_nishui",
+	enable: "chooseToUse",
+	filter(event, player) {
+		return lib.skill.maokuo_nishui.printList(player, event).length > 0;
+	},
+	// 响应预检三件套之一：告诉引擎本技能还能提供哪些牌名（同〖烈志〗pot_liezhi.hiddenCard）
+	hiddenCard(player, name) {
+		return ["sha", "tao", "shan", "jiu"].includes(name) && lib.skill.maokuo_nishui.canPrint(player, name);
+	},
+	chooseButton: {
+		dialog(event, player) {
+			return ui.create.dialog("逆水", [lib.skill.maokuo_nishui.printList(player, event), "vcard"]);
+		},
+		check(button) {
+			const evt = get.event().getParent();
+			if (evt.type != "phase") return 1; // 濒死求桃 / 闪应答等框一律值得发动
+			return get.player().getUseValue(new lib.element.VCard({ name: button.link[2], isCard: true }));
+		},
+		backup(links, player) {
+			return {
+				audio: "maokuo_nishui",
+				cardname: links[0][2], // precontent 从 lib.skill.maokuo_nishui_use_backup 上取（同〖逼入〗potnizun）
+				// 凭空印牌三件套（红线 21）：filterCard + selectCard:-1 + viewAs
+				filterCard: () => false,
+				selectCard: -1,
+				viewAs: { name: links[0][2], isCard: true },
+				async precontent(event, trigger, player2) {
+					event.getParent().addCount = false; // 描述没写次数限制 → 不消耗出牌次数（〖烈志〗同款）
+					lib.skill.maokuo_nishui.banOnce(player2, lib.skill.maokuo_nishui_use_backup.cardname);
+				},
+			};
+		},
+		prompt(links) {
+			return `###逆水###<div class="text center">视为使用一张【${get.translation(links[0][2])}】，此后你本局不能再使用或打出此基本牌</div>`;
+		},
 	},
 	ai: {
 		order: 5,
+		respondShan: true, // 响应预检三件套之二：AI 在闪应答框里会考虑用本技能
+		skillTagFilter(player, tag) {
+			return lib.skill.maokuo_nishui.canPrint(player, tag);
+		},
 		result: {
 			player: 1,
 		},
+	},
+},
+// === 逆水（被动：牌被别人获得后摸牌） ===
+maokuo_nishui_gain: {
+	name: "逆水",
+	charlotte: true,
+	trigger: { global: "gainEnd" },
+	forced: true,
+	popup: false,
+	silent: true,
+	filter(event, player) {
+		if (player == event.player) return false; // 自己获得自己的牌不算
+		if (!player.storage.maokuo_nishui_times) return false; // 一次都没发动过就没有次数可摸
+		// getl(player).cards2 = 本事件中我失去的手牌/装备牌（自己获得时 cards2 为空）
+		const evt = event.getl(player);
+		return evt?.cards2?.length > 0;
+	},
+	async content(event, trigger, player) {
+		await player.draw(player.storage.maokuo_nishui_times);
 	},
 },
 // === 迁阵 ===
@@ -879,9 +1080,9 @@ maokuo_qianzhen: {
 // === 清玄 ===
 // 清玄：一名角色的回合开始时，若牌堆里没有可见牌，你可以弃置一张牌，观看牌堆顶与该牌点数等量的牌，
 //       选择一项：获得其中一张点数大于该牌的牌；或令这些牌可见。
-// 浮饰：若牌堆顶的第X张牌可见（X为你某一种花色手牌的数量），当你需要使用该牌时，你可以展示所有手牌，使用之。
-// “牌堆可见牌”为自建系统：数据在 _status.maokuo_visiblePile（card 集合），
-// 可见性按位置动态判定（牌被摸走/埋深/洗走自动失效），无需监听清理。
+// 浮饰：若牌堆顶的第X张牌可见（X为你某一种花色手牌的数量），你可以展示所有手牌，将其如手牌般使用或打出。
+// “牌堆可见牌”为全局共享系统（visiblePile.js，数据在 _status.qunyou_visiblePile），
+// 念嗣/清玄都可写入，浮饰读取；可见性按位置动态判定（牌被摸走/埋深/洗走自动失效）。
 maokuo_qingxuan: {
 	audio: 2,
 	mark: true,
@@ -901,7 +1102,7 @@ maokuo_qingxuan: {
 		return player.isIn() && !get.info("maokuo_qingxuan").hasAnyVisible() && player.countCards("he") > 0;
 	},
 	group: ["maokuo_qingxuan_reset"],
-	// ---- “牌堆可见牌”系统 ----
+	// ---- “牌堆可见牌”系统（全局共享） ----
 	getPileCards() {
 		return Array.from(ui.cardPile.childNodes);
 	},
@@ -909,58 +1110,16 @@ maokuo_qingxuan: {
 		return this.getPileCards().slice(0, k);
 	},
 	getVisibleSet() {
-		if (!_status.maokuo_visiblePile) {
-			_status.maokuo_visiblePile = new Set();
-		}
-		return _status.maokuo_visiblePile;
+		return qunyou_visiblePileSet();
 	},
 	hasAnyVisible() {
-		const set = _status.maokuo_visiblePile;
-		if (!set) {
-			return false;
-		}
-		for (const card of set) {
-			if (card.parentNode == ui.cardPile) {
-				return true;
-			}
-		}
-		return false;
+		return qunyou_hasVisiblePile();
 	},
 	getVisibleTop() {
-		const pile = this.getPileCards();
-		const set = _status.maokuo_visiblePile;
-		const list = [];
-		if (set) {
-			pile.forEach((card, i) => {
-				if (set.has(card)) {
-					list.push({ pos: i + 1, card: card });
-				}
-			});
-		}
-		return list;
-	},
-	isTopVisible(k) {
-		const card = this.getPileCards()[k - 1];
-		return !!(card && _status.maokuo_visiblePile && _status.maokuo_visiblePile.has(card));
+		return qunyou_getVisiblePileTop();
 	},
 	markVisible(cards) {
-		const set = this.getVisibleSet();
-		// 只进 Set 不打 gaintag：牌被摸走后标签会残留在手牌上，明牌逻辑按位置动态判定已足够
-		cards.forEach(card => set.add(card));
-		game.log(`牌堆顶的${cards.length}张牌被置为可见`);
-	},
-	// 浮饰判定：存在某花色 s，其手牌数 X≥1 且牌堆顶第 X 张可见，返回那张牌（event 用于校验"需要使用"的牌名）
-	findFushi(event, player) {
-		for (const suit of ["spade", "heart", "club", "diamond"]) {
-			const x = player.countCards("h", c => get.suit(c) == suit);
-			if (x > 0 && this.isTopVisible(x)) {
-				const card = this.getPileCards()[x - 1];
-				if (!event || event.filterCard({ name: get.name(card), isCard: true }, player, event)) {
-					return card;
-				}
-			}
-		}
-		return null;
+		qunyou_markPileVisible(cards);
 	},
 	// ---- 技能本体 ----
 	async cost(event, trigger, player) {
@@ -1026,7 +1185,7 @@ maokuo_qingxuan_reset: {
 	popup: false,
 	trigger: { global: "gameStart" },
 	async content(event, trigger, player) {
-		_status.maokuo_visiblePile = new Set();
+		qunyou_clearVisiblePile();
 	},
 },
 // === 穷守 ===
@@ -1095,169 +1254,120 @@ maokuo_qusu: {
 	},
 },
 // === 娆掠 ===
+// 结构（docs/印牌类技能标准.md §0.3 决策树）：
+//   轴① 素材 = 无 → 虚拟印三件套（backup 里 viewAs + filterCard:()=>false + selectCard:-1）
+//   轴② 入口 = enable 式（玩家在技能按钮上自己选时机）
+//   轴③ 牌面 = 运行时（杀/闪由玩家选）→ chooseButton + backup
+//   轴④ 牌型 = 基本牌，零特例
+//   轴⑤ 用途 = 使用或打出 → 两个 enable 窗口
+// 范本：原生 dcdanying（character/huicui.js:18113，运行时选杀/闪）、zhenshan（character/tw.js:23438，
+//       每回合限一次 + precontent 付费/取消）。展示与"视为使用"在**同一个窗口内**一次完成。
 maokuo_raolue: {
 	audio: 2,
-	group: ["maokuo_raolue_sha", "maokuo_raolue_shan", "maokuo_raolue_flow"],
-	subSkill: {
-		// 就绪标记：flow 成功（她与一名男性都已展示）后挂上，enable 子技能凭此在询问框出现
-		ready: {
-			charlotte: true,
-			onremove: true,
-			mark: true,
-			marktext: "掠",
-			intro: {
-				name: "娆掠",
-				content(storage, player) {
-					const name = player.storage.maokuo_raolue_ready;
-					return name ? `已就绪：可视为使用或打出【${get.translation(name)}】` : "就绪标记";
-				},
-			},
-		},
-		used: {
-			charlotte: true,
-		},
-	},
-	// 判断本次询问需要【杀】还是【闪】：两种都合法时按【杀】处理
-	getNeedName(event) {
-		const ok = [];
-		for (const name of ["sha", "shan"]) {
-			if (event.filterCard({ name: name, isCard: true }, event.player, event)) {
-				ok.push(name);
-			}
-		}
-		if (!ok.length) {
-			return null;
-		}
-		return ok[0];
-	},
-},
-// === 娆掠 ===
-maokuo_raolue_flow: {
-	audio: "maokuo_raolue",
-	direct: true,
-	trigger: { global: ["chooseToUseBefore", "chooseToRespondBefore"] },
-	filter(event, player) {
-		if (event.player != player || !player.isIn()) {
-			return false;
-		}
-		if (player.hasSkill("maokuo_raolue_used") || player.storage.maokuo_raolue_ready) {
-			return false;
-		}
-		const name = get.info("maokuo_raolue").getNeedName(event);
-		if (!name) {
-			return false;
-		}
-		// 自己有同名牌 + 存在其他男性角色有同名牌，才值得发起询问
-		return player.countCards("h", card => get.name(card) == name) > 0 &&
-			game.hasPlayer(cur => cur != player && cur.isIn() && cur.sex == "male" && cur.countCards("h", card => get.name(card) == name) > 0);
-	},
-	async content(event, trigger, player) {
-		const name = get.info("maokuo_raolue").getNeedName(trigger);
-		if (!name) {
-			return;
-		}
-		const males = game.filterPlayer(cur => cur != player && cur.isIn() && cur.sex == "male" && cur.countCards("h", card => get.name(card) == name) > 0);
-		if (!males.length) {
-			return;
-		}
-		const res1 = await player.chooseCard("h", `娆掠：你可以展示一张【${get.translation(name)}】`, card => get.name(card) == name)
-			.set("ai", card => 6 - get.value(card))
-			.forResult();
-		if (!res1?.bool || !res1.cards?.length) {
-			return;
-		}
-		await player.showCards(res1.cards, get.translation(player) + "发动了【娆掠】");
-		for (const male of males) {
-			const res2 = await male.chooseBool(`娆掠：是否展示一张【${get.translation(name)}】（响应${get.translation(player)}）`)
-				.set("ai", () => Math.random() < 0.7)
-				.forResult();
-			if (!res2?.bool) {
-				continue;
-			}
-			const res3 = await male.chooseCard("h", true, `娆掠：请展示一张【${get.translation(name)}】`, card => get.name(card) == name)
-				.set("ai", card => Math.random())
-				.forResult();
-			if (res3?.bool && res3.cards?.length) {
-				await male.showCards(res3.cards, get.translation(male) + "展示了牌");
-				player.storage.maokuo_raolue_ready = name;
-				player.addTempSkill("maokuo_raolue_ready", "phaseAfter");
-				return;
-			}
-		}
-		game.log("没有男性角色响应【娆掠】");
-	},
-},
-// === 娆掠 ===
-maokuo_raolue_sha: {
-	audio: "maokuo_raolue",
 	enable: ["chooseToUse", "chooseToRespond"],
-	filter(event, player) {
-		if (player.hasSkill("maokuo_raolue_used") || player.storage.maokuo_raolue_ready != "sha") {
-			return false;
-		}
-		return event.filterCard({ name: "sha", isCard: true }, player, event);
+	// 每回合限一次由引擎托管：filterEnable（library/index.js:10924）与
+	// hasUsableCard（player.js:2995）都会查 get.skillCount，不要再自造 used 子技能
+	// （docs/呈现与可视化标准.md §0.2）。
+	usable: 1,
+	// 开窗预检（F2）：轴③=运行时形态**必须**写 hiddenCard，否则杀/闪窗口静默不开。
+	// 按牌名收窄，避免为出不了的【无懈】开窗（§6 / §7.7）。
+	hiddenCard(player, name) {
+		if (name != "sha" && name != "shan") return false;
+		if (!player.countCards("h", (card) => get.name(card) == name)) return false;
+		return game.hasPlayer((cur) => cur != player && cur.isIn() && cur.sex == "male" && cur.countCards("h", (card) => get.name(card) == name));
 	},
-	viewAs: { name: "sha", isCard: true },
-	filterCard() {
+	filter(event, player) {
+		// 技能已点选后 event.filterCard 已被 backup 接管，不能再拿它判（§0.4 首行放行）
+		if (event.skill == "maokuo_raolue" || event._skill == "maokuo_raolue") return true;
+		// 无懈窗不是本技能覆盖的窗口
+		if (event.type == "wuxie") return false;
+		for (const name of ["sha", "shan"]) {
+			if (!event.filterCard({ name, isCard: true }, player, event)) continue;
+			if (!player.countCards("h", (card) => get.name(card) == name)) continue;
+			if (game.hasPlayer((cur) => cur != player && cur.isIn() && cur.sex == "male" && cur.countCards("h", (card) => get.name(card) == name))) {
+				return true;
+			}
+		}
 		return false;
 	},
-	selectCard: -1,
-	prompt: "娆掠：视为使用或打出一张【杀】",
-	async precontent(event, trigger, player) {
-		// 展示流程已在 flow 中完成，这里只消耗就绪标记并记录每回合限一次
-		player.removeSkill("maokuo_raolue_ready");
-		player.addTempSkill("maokuo_raolue_used", "phaseAfter");
-	},
-	hiddenCard(player, name) {
-		return name == "sha" && !player.hasSkill("maokuo_raolue_used") && player.storage.maokuo_raolue_ready == "sha";
+	chooseButton: {
+		dialog(event, player) {
+			// 只列本次窗口真正能印、且自己手里有同名牌可展示的牌名
+			const list = [];
+			for (const name of ["sha", "shan"]) {
+				if (!event.filterCard({ name, isCard: true }, player, event)) continue;
+				if (!player.countCards("h", (card) => get.name(card) == name)) continue;
+				list.push(["基本", "", name]);
+			}
+			const dialog = ui.create.dialog("娆掠", [list, "vcard"], "hidden");
+			dialog.direct = true;
+			return dialog;
+		},
+		check(button) {
+			// 候选框已按窗口过滤，多数窗口只有一个牌名；出牌阶段两个都在时优先【杀】
+			return button.link[2] == "sha" ? 2 : 1;
+		},
+		backup(links) {
+			const name = links[0][2];
+			return {
+				filterCard: () => false,
+				selectCard: -1,
+				viewAs: { name, isCard: true },
+				popname: true,
+				async precontent(event, trigger, player) {
+					// ⚠️ 中止一律用 event.result.cancel = true（= 重开窗口）；
+					//    event.result.bool = false 的语义是"结束出牌阶段"（§7.0），不能用。
+					// ① 展示一张同名牌；取消即放弃本次印牌（不消耗每回合次数）
+					const self = await player
+						.chooseCard("h", `娆掠：展示一张【${get.translation(name)}】`, (card) => get.name(card) == name)
+						.set("ai", (card) => 6 - get.value(card))
+						.forResult();
+					if (!self?.bool || !self.cards?.length) {
+						event.result.cancel = true;
+						return;
+					}
+					player.logSkill("maokuo_raolue");
+					await player.showCards(self.cards, `${get.translation(player)}发动了【娆掠】`);
+					// ② 依次询问其他男性角色；第一个展示同名牌者即响应成功，视为你使用或打出
+					for (const male of game.filterPlayer((cur) => cur != player && cur.isIn() && cur.sex == "male" && cur.countCards("h", (card) => get.name(card) == name))) {
+						const go = await male
+							.chooseBool(`娆掠：是否展示一张【${get.translation(name)}】响应${get.translation(player)}？`)
+							.set("ai", () => get.attitude(male, player) > 0)
+							.forResult();
+						if (!go?.bool) continue;
+						const res = await male
+							.chooseCard("h", true, `娆掠：请展示一张【${get.translation(name)}】`, (card) => get.name(card) == name)
+							.set("ai", (card) => 6 - get.value(card))
+							.forResult();
+						if (res?.bool && res.cards?.length) {
+							await male.showCards(res.cards, `${get.translation(male)}展示了牌`);
+							return;
+						}
+					}
+					game.log("没有男性角色响应【娆掠】");
+					event.result.cancel = true;
+				},
+			};
+		},
+		prompt(links) {
+			return `娆掠：展示一张【${get.translation(links[0][2])}】，视为使用或打出之`;
+		},
 	},
 	ai: {
 		order() {
-			return get.order({ name: "sha" }) + 0.5;
+			const evt = _status.event;
+			// 打出窗（chooseToRespond）的 event.type 是 undefined，必须认 event.name（§4）
+			if (evt?.name === "chooseToRespond" || (typeof evt?.type == "string" && evt.type.startsWith("respond"))) return 9;
+			return 3;
 		},
 		respondSha: true,
-		skillTagFilter(player, tag) {
-			if (tag != "respondSha") {
-				return false;
-			}
-			return !player.hasSkill("maokuo_raolue_used") && player.storage.maokuo_raolue_ready == "sha";
-		},
-		result: {
-			player: 1,
-		},
-	},
-},
-// === 娆掠 ===
-maokuo_raolue_shan: {
-	audio: "maokuo_raolue",
-	enable: ["chooseToUse", "chooseToRespond"],
-	filter(event, player) {
-		if (player.hasSkill("maokuo_raolue_used") || player.storage.maokuo_raolue_ready != "shan") {
-			return false;
-		}
-		return event.filterCard({ name: "shan", isCard: true }, player, event);
-	},
-	viewAs: { name: "shan", isCard: true },
-	filterCard() {
-		return false;
-	},
-	selectCard: -1,
-	prompt: "娆掠：视为使用或打出一张【闪】",
-	async precontent(event, trigger, player) {
-		player.removeSkill("maokuo_raolue_ready");
-		player.addTempSkill("maokuo_raolue_used", "phaseAfter");
-	},
-	hiddenCard(player, name) {
-		return name == "shan" && !player.hasSkill("maokuo_raolue_used") && player.storage.maokuo_raolue_ready == "shan";
-	},
-	ai: {
-		order: 5,
 		respondShan: true,
+		// 使用与打出都覆盖 ⇒ 不拒 arg（§4）；只用次数门 + "有可展示的牌且有男性可响应" 收窄
 		skillTagFilter(player, tag) {
-			if (tag != "respondShan") {
-				return false;
-			}
-			return !player.hasSkill("maokuo_raolue_used") && player.storage.maokuo_raolue_ready == "shan";
+			if (get.skillCount("maokuo_raolue", player) >= 1) return false;
+			const name = tag == "respondSha" ? "sha" : "shan";
+			if (!player.countCards("h", (card) => get.name(card) == name)) return false;
+			return game.hasPlayer((cur) => cur != player && cur.isIn() && cur.sex == "male" && cur.countCards("h", (card) => get.name(card) == name));
 		},
 		result: {
 			player: 1,
@@ -1309,7 +1419,12 @@ maokuo_shameng_btn: {
 		if (!game.hasPlayer(cur => cur.isIn() && cur.hasSkill("maokuo_shameng"))) {
 			return false;
 		}
-		return player.hasUseTarget(get.autoViewAs({ name: "sha", isCard: true }, []));
+		const vcard = get.autoViewAs({ name: "sha", isCard: true }, []);
+		// 视为使用的【杀】同样受出牌阶段的次数限制（useCard 自身走 updateUsable: "phaseUse"）
+		if (!lib.filter.cardUsable(vcard, player, event)) {
+			return false;
+		}
+		return player.hasUseTarget(vcard);
 	},
 	prompt: "歃盟：声明一项，视为使用一张【杀】",
 	async content(event, trigger, player) {
@@ -1326,13 +1441,17 @@ maokuo_shameng_btn: {
 				if (button.link == 0) {
 					return player.countCards("h") >= 3 ? 0.5 : 2;
 				}
-				return 1;
+				// 选项二只有在臧洪会同意时才选：敌方/残血臧洪必拒绝，改选选项一
+				return get.attitude(zang, player) > 1 && zang.hp > 1 ? 1 : 0.4;
 			})
 			.forResult();
 		if (!res?.bool) {
 			return;
 		}
 		const choice = res.links[0];
+		// 每阶段限一次：声明即消耗，被拒绝也不能在同一阶段再次发动
+		//（否则 phaseUse 会反复选中本技能，臧洪每拒绝一次就多一次询问）
+		player.addTempSkill("maokuo_shameng_used", "phaseUseAfter");
 		const consent = await zang.chooseBool(`歃盟：是否同意${get.translation(player)}的声明（${choice == 0 ? "其弃置所有手牌" : "你失去1点体力"}）？`)
 			.set("ai", () => {
 				if (choice == 0) {
@@ -1345,8 +1464,6 @@ maokuo_shameng_btn: {
 			game.log(zang, "拒绝了声明");
 			return;
 		}
-		// 同意才消耗每阶段限一次
-		player.addTempSkill("maokuo_shameng_used", "phaseUseAfter");
 		if (choice == 0) {
 			const cards = player.getCards("h");
 			if (cards.length) {
@@ -1578,33 +1695,28 @@ maokuo_simen: {
 	},
 },
 // === 思虔 ===
-// 思虔：当你成为【杀】的目标后，你可以摸一张牌并展示之，若你的武将牌上：没有此花色的牌，你须将之置于武将牌上；
-//       有此花色的牌，你于此回合内再次成为此花色牌的目标时，你不能发动"思虔"。
+// 思虔：当你成为牌的目标后，你可以摸一张牌并展示之，若你的武将牌上：
+//       没有此花色的牌，你须将之置于武将牌上；有此花色的牌，你于此回合内再次成为此花色牌的目标时，你不能发动"思虔"。
+//       "此花色"取展示牌的花色：没有同花色 → 置牌；已有同花色 → 本回合该花色失效。
 // 遂志：当你受到伤害后，你可以获得装备区里、判定区里和武将牌上的所有牌，然后翻面；
 //       若你的武将牌背面朝上，防止你受到的伤害。
 maokuo_siqian: {
 	audio: 2,
 	mark: true,
 	marktext: "虔",
+	// 武将牌上的牌用引擎标准 expansion mark 展示：悬浮直接给出具体牌面（get.storageintro "expansion"）
 	intro: {
 		name: "思虔",
-		content(storage, player) {
-			const cards = player.getExpansions("maokuo_siqian");
-			const ban = player.getStorage("maokuo_siqian_ban") || [];
-			let str = cards.length
-				? "武将牌上有“思虔”牌（" + cards.length + "张）：" +
-					cards.map(c => `${get.translation(get.suit(c))}${get.translation(c.name)}`).join("、")
-				: "武将牌上没有“思虔”牌";
-			if (ban.length) {
-				str += `<br>本回合不能再对${ban.map(s => get.translation(s)).join("、")}色牌发动`;
-			}
-			return str;
-		},
+		content: "expansion",
+		markcount: "expansion",
 	},
-	trigger: { target: "useCardToTarget" },
+	trigger: { target: "useCardToTargeted" },
 	filter(event, player) {
-		return event.card?.name == "sha" && player.isIn() &&
-			!(player.getStorage("maokuo_siqian_ban") || []).includes(get.suit(event.card));
+		if (!player.isIn() || !event.card) {
+			return false;
+		}
+		const suit = get.suit(event.card);
+		return !(player.getStorage("maokuo_siqian_ban") || []).some(card => get.suit(card) == suit);
 	},
 	async cost(event, trigger, player) {
 		const res = await player.chooseBool("思虔：是否摸一张牌并展示之？")
@@ -1613,17 +1725,19 @@ maokuo_siqian: {
 		event.result = { bool: !!res?.bool };
 	},
 	async content(event, trigger, player) {
-		const suit = get.suit(trigger.card);
-		const drawEvt = await player.draw(1);
-		const card = drawEvt?.result?.cards?.[0] || drawEvt?.cards?.[0];
+		const draw = await player.draw(1).forResult();
+		const card = draw?.cards?.[0];
 		if (!card) {
 			return;
 		}
 		await player.showCards([card], get.translation(player) + "发动了【思虔】");
-		if (player.getExpansions("maokuo_siqian").some(c => get.suit(c) == suit)) {
-			// 武将牌上已有此花色：本回合内不能再对同花色的杀发动
-			player.addTempSkill("maokuo_siqian_ban", "phaseAfter");
-			player.markAuto("maokuo_siqian_ban", [suit]);
+		// 以展示牌的花色为准判断武将牌上是否已有同花色
+		const suit = get.suit(card);
+		const same = player.getExpansions("maokuo_siqian").find(c => get.suit(c) == suit);
+		if (same) {
+			// 武将牌上已有此花色：本回合内再次成为此花色牌的目标时不能发动
+			player.addTempSkill("maokuo_siqian_ban", "phaseEnd");
+			player.markAuto("maokuo_siqian_ban", [same]);
 			game.log(player, "于此回合内不能再对", `#${get.translation(suit)}`, "色牌发动【思虔】");
 		} else {
 			await player.addToExpansion([card], "giveAuto").set("gaintag", ["maokuo_siqian"]);
@@ -1631,9 +1745,24 @@ maokuo_siqian: {
 	},
 },
 // === 思虔 ===
+// 本回合失效的花色（storage 存对应的“思虔”牌）；mark 悬浮直接显示该牌牌面 + 失效说明
 maokuo_siqian_ban: {
 	charlotte: true,
 	onremove: true,
+	mark: true,
+	marktext: "禁",
+	intro: {
+		name: "思虔",
+		mark(dialog, storage, player) {
+			const cards = storage || [];
+			if (!cards.length) {
+				return "本回合没有失效的花色";
+			}
+			const suits = [...new Set(cards.map(card => get.suit(card)))];
+			dialog.addText(`本回合内成为${suits.map(suit => get.translation(suit)).join("、")}色牌的目标时，不能发动【思虔】`);
+			dialog.addAuto(cards);
+		},
+	},
 },
 // === 颂酒 ===
 // 颂酒：一名角色的出牌阶段开始时，你可以展示任一角色的一张手牌（死亡后改为观看一名角色的手牌并展示其中一张），
@@ -1643,15 +1772,25 @@ maokuo_songjiu: {
 	audio: 2,
 	forceDie: true,
 	trigger: { global: "phaseUseBegin" },
-	group: ["maokuo_songjiu_restore_jiu", "maokuo_songjiu_restore_round"],
+	// ⚠️ 恢复触发器绝不能进 group：失效改用 disableSkill 实现（描述变灰，写法 A），
+	//    而 disableSkill 会沿 group 级联禁用子技能（player.js:11262-11265）→ 连恢复触发器
+	//    一起被禁掉、本轮永远不恢复（wending_miaoyu / xiaobai_zhuanshu 踩过同款坑）。
+	//    改由 init 动态挂载，主技能移除时 onremove 级联清理。
+	init(player) {
+		player.addSkill("maokuo_songjiu_restore_jiu");
+		player.addSkill("maokuo_songjiu_restore_round");
+	},
+	onremove(player) {
+		player.removeSkill("maokuo_songjiu_restore_jiu");
+		player.removeSkill("maokuo_songjiu_restore_round");
+	},
 	subSkill: {
+		// 失效载体：不挂 mark（失效已由「技能描述变灰」表达，再挂 mark 属多余呈现），
+		// 只承载 onremove → enableSkill 的统一恢复入口。
 		jin: {
 			charlotte: true,
-			mark: true,
-			marktext: "眠",
-			intro: {
-				name: "颂酒",
-				content: "“颂酒”失效：本轮结束或【酒】被使用时恢复",
+			onremove(player) {
+				player.enableSkill("maokuo_songjiu_jin");
 			},
 		},
 	},
@@ -1661,13 +1800,15 @@ maokuo_songjiu: {
 	async cost(event, trigger, player) {
 		const dead = player.isDead();
 		const prompt = dead ? "颂酒：观看一名角色的手牌并展示其中一张（该牌视为【酒】）" : "颂酒：展示一名角色的一张手牌（该牌视为【酒】）";
-		const res = await player.chooseTarget(prompt, true, (card, p, t) => t.isIn() && t.countCards("h") > 0)
+		const res = await player.chooseTarget(prompt, (card, p, t) => t.isIn() && t.countCards("h") > 0)
 			.set("ai", target => {
 				if (dead) {
 					return get.attitude(player, target) > 0 ? 10 : 1; // 死后把酒送给队友
 				}
 				return get.attitude(player, target) < 0 ? 10 : 1; // 活着时干扰敌人的手牌预期
 			})
+			// 醉世：死亡后仍要能发起选择（死亡角色的子事件需显式 forceDie）
+			.set("forceDie", true)
 			.forResult();
 		if (!res?.bool || !res.targets?.length) {
 			event.result = { bool: false };
@@ -1676,10 +1817,11 @@ maokuo_songjiu: {
 		const target = res.targets[0];
 		let card;
 		if (dead) {
-			// 醉世死亡形态：观看其手牌并自选其中一张
-			await player.viewCards(`颂酒：${get.translation(target)}的手牌`, target.getCards("h"));
+			// 醉世死亡形态：观看其手牌并自选其中一张（死亡角色需显式 forceDie）
+			await player.viewCards(`颂酒：${get.translation(target)}的手牌`, target.getCards("h")).set("forceDie", true);
 			const res2 = await player.chooseButton([`颂酒：展示其中一张牌（视为【酒】）`, target.getCards("h")], true)
 				.set("ai", button => get.value(button.link))
+				.set("forceDie", true)
 				.forResult();
 			if (!res2?.bool || !res2.links?.length) {
 				event.result = { bool: false };
@@ -1696,7 +1838,11 @@ maokuo_songjiu: {
 		const card = event.cost_data.card;
 		await target.showCards([card], get.translation(player) + "发动了【颂酒】");
 		card.addGaintag("maokuo_songjiu_tag");
-		target.addTempSkill("maokuo_songjiu_v", "roundEnd");
+		// 「该牌视为酒」跟随牌本身：给所有角色挂转化技，牌被交给谁都能当【酒】使用
+		game.countPlayer((cur) => cur.addTempSkill("maokuo_songjiu_v", "roundEnd"));
+		// 失效呈现：disableSkill 让「颂酒」描述变灰（引擎自动渲染，见 docs/坑-技能失效与标记显示.md）。
+		// jin 子技能承载恢复（addTempSkill 到 roundEnd，过期 removeSkill → onremove 里 enableSkill）。
+		player.disableSkill("maokuo_songjiu_jin", "maokuo_songjiu");
 		player.addTempSkill("maokuo_songjiu_jin", "roundEnd");
 		game.log("“颂酒”失效直到本轮结束或【酒】被使用");
 	},
@@ -1710,11 +1856,18 @@ maokuo_songjiu_restore_jiu: {
 	forced: true,
 	silent: true,
 	popup: false,
+	// 醉世：死后仍能发动「颂酒」→ 恢复触发器也必须能在死亡状态下结算（红线 22）
+	forceDie: true,
 	trigger: { global: "useCardAfter" },
 	filter(event, player) {
+		// 任意角色使用【酒】都恢复颂酒（用户确认口径）
 		return event.card?.name == "jiu" && player.hasSkill("maokuo_songjiu_jin");
 	},
 	async content(event, trigger, player) {
+		// 用掉的转化牌清掉标签，避免弃牌堆/后续颂酒残留
+		for (const card of trigger.cards || []) {
+			if (card.hasGaintag?.("maokuo_songjiu_tag")) card.removeGaintag("maokuo_songjiu_tag");
+		}
 		player.removeSkill("maokuo_songjiu_jin");
 		game.log(player, "的“颂酒”恢复了");
 	},
@@ -1725,6 +1878,8 @@ maokuo_songjiu_restore_round: {
 	forced: true,
 	silent: true,
 	popup: false,
+	// 同上：死亡状态也要能到本轮结束恢复
+	forceDie: true,
 	trigger: { global: "roundEnd" },
 	async content(event, trigger, player) {
 		player.removeSkill("maokuo_songjiu_jin");
@@ -1746,6 +1901,15 @@ maokuo_songjiu_v: {
 	position: "h",
 	selectCard: 1,
 	prompt: "颂酒：将展示的牌当【酒】使用",
+	// 本轮结束技能过期时清掉所有残留的「酒」tag（牌可能已被交给别人/弃置）
+	onremove() {
+		const cards = [];
+		game.countPlayer((cur) => cards.push(...cur.getCards("hejsx")));
+		cards.push(...Array.from(ui.discardPile.childNodes));
+		for (const card of cards) {
+			if (card.hasGaintag?.("maokuo_songjiu_tag")) card.removeGaintag("maokuo_songjiu_tag");
+		}
+	},
 	ai: {
 		order: 6,
 		result: {
@@ -1763,7 +1927,12 @@ maokuo_suizhi: {
 	},
 	async cost(event, trigger, player) {
 		const res = await player.chooseBool("遂志：是否获得你装备区、判定区和武将牌上的所有牌，然后翻面？")
-			.set("ai", () => player.getExpansions("maokuo_siqian").length > 0 || player.getCards("e").length > 0)
+			.set("ai", () => {
+				// 翻面=下回合整回合跳过；武将牌上的“思虔”牌要攒到 3-4 张再收才不亏
+				const mats = player.getExpansions("maokuo_siqian").length;
+				const ej = player.getCards("ej").length;
+				return mats >= 3 || (mats == 2 && ej >= 2) || (player.hp <= 1 && mats + ej >= 2);
+			})
 			.forResult();
 		event.result = { bool: !!res?.bool };
 	},
@@ -1806,12 +1975,63 @@ maokuo_tianqian: {
 	filter(event, player) {
 		return player.isIn();
 	},
+	// 所有相邻且存活的座位对
+	aiPairs() {
+		const seen = new Set();
+		const pairs = [];
+		for (const p of game.filterPlayer()) {
+			const q = p.getNext();
+			if (!q || q == p || !q.isIn()) continue;
+			const key = [p.playerid, q.playerid].sort((a, b) => a - b).join("_");
+			if (seen.has(key)) continue;
+			seen.add(key);
+			pairs.push({ a: p, b: q });
+		}
+		return pairs;
+	},
+	// 山=目标摸牌（帮目标），泽=使用者拆目标牌（帮使用者）
+	aiScore(owner, pair, face) {
+		const fake = { storage: { maokuo_tianqian_gap: { a: pair.a, b: pair.b } } };
+		let score = 0;
+		for (const user of game.filterPlayer()) {
+			const weight = 1 + user.countCards("he") * 0.1;
+			for (const target of game.filterPlayer()) {
+				if (user == target) continue;
+				if (!lib.skill.maokuo_zhidi.crossed(user, target, fake)) continue;
+				if (face == "shan") {
+					score += weight * get.sgn(get.attitude(owner, target));
+				} else {
+					score += weight * (get.sgn(get.attitude(owner, user)) - get.sgn(get.attitude(owner, target)));
+				}
+			}
+		}
+		return score;
+	},
+	aiBest(owner) {
+		let best = null;
+		for (const pair of lib.skill.maokuo_tianqian.aiPairs()) {
+			for (const face of ["shan", "ze"]) {
+				const score = lib.skill.maokuo_tianqian.aiScore(owner, pair, face);
+				if (!best || score > best.score) best = { pair, face, score };
+			}
+		}
+		return best;
+	},
 	async cost(event, trigger, player) {
 		const curFace = player.storage.maokuo_tianqian_face;
+		const first = !player.storage.maokuo_tianqian_gap;
+		const best = lib.skill.maokuo_tianqian.aiBest(player);
+		// 首次必须落位；已有标记时只有正收益才重摆，否则取消保持原间隙
+		const useBest = best && (first || best.score > 0);
 		// 选落点：先选一名角色，再选其相邻角色之一；第一步可取消 = 保持原间隙不变
 		const anchorRes = await player
 			.chooseTarget("天堑：选择一名角色（“地势”标记将置于其与相邻角色的座位之间）；取消则间隙保持不变", (card, p, t) => t.isIn())
-			.set("ai", (target) => Math.random())
+			.set("ai", (target) => {
+				if (!useBest) return 0;
+				if (target == best.pair.a) return 10;
+				if (target == best.pair.b) return 9;
+				return -1;
+			})
 			.forResult();
 		const anchor = anchorRes?.targets?.[0];
 		let newPair = null;
@@ -1820,7 +2040,11 @@ maokuo_tianqian: {
 			if (neighbors.length) {
 				const nbRes = await player
 					.chooseTarget(`天堑：选择${get.translation(anchor)}的相邻角色（标记置于两者座位之间）`, true, (card, p, t) => neighbors.includes(t))
-					.set("ai", (target) => Math.random())
+					.set("ai", (target) => {
+						if (!useBest) return -1;
+						const other = anchor == best.pair.a ? best.pair.b : best.pair.a;
+						return target == other ? 10 : -1;
+					})
 					.forResult();
 				const neighbor = nbRes?.targets?.[0];
 				if (neighbor?.isIn()) newPair = { a: anchor, b: neighbor };
@@ -1831,7 +2055,10 @@ maokuo_tianqian: {
 		const faceRes = await player
 			.chooseControl(faceOptions)
 			.set("prompt", "天堑：以哪种形式放置“地势”标记？")
-			.set("ai", () => (Math.random() < 0.5 ? (curFace ? "保持现状" : "山") : "泽"))
+			.set("ai", () => {
+				if (!useBest) return curFace ? "保持现状" : best?.face == "ze" ? "泽" : "山";
+				return best.face == "shan" ? "山" : "泽";
+			})
 			.forResult();
 		let face = curFace;
 		if (faceRes?.control == "山") face = "shan";
@@ -1912,11 +2139,15 @@ maokuo_wuci: {
 		await target.give([card], player);
 		await player.showCards([card], get.translation(player) + "发动了【婺辞】");
 		const type = get.type(card);
-		// 基本牌或普通锦囊牌：视为使用之，目标强制改为该角色
-		if (type == "basic" || (type == "trick" && get.type(card, "trick") != "delay")) {
+		const info = get.info(card);
+		const usableType = type == "basic" || (type == "trick" && get.type(card, "trick") != "delay");
+		// 描述是「视为使用之并将此牌的使用目标改为其」：强制把目标改成该角色。
+		// 因此多目标牌（南蛮/万箭）只对其结算，自身目标牌（酒/无中/桃）也改为对其使用。
+		// 只有闪/无懈这类 notarget、本来就不能主动使用的牌才直接保留。
+		if (usableType && !info.notarget) {
 			await player.useCard(card, [card], [target], "maokuo_wuci");
 		} else {
-			game.log("婺辞获得的牌不是基本牌或普通锦囊牌，不结算使用");
+			game.log(player, "获得的", card, "无法主动使用，只获得而不使用");
 		}
 	},
 	ai: {
@@ -2465,7 +2696,9 @@ maokuo_xuezheng: {
 		return game.hasPlayer((current) => current.countCards("h") > 0);
 	},
 	check(event, player) {
-		return true;
+		// 只给自己或手牌很多的队友用；场上只有敌人有牌时放弃发动
+		if (player.countCards("h") >= 2) return true;
+		return game.hasPlayer((cur) => cur != player && cur.isIn() && get.attitude(player, cur) > 0 && cur.countCards("h") >= 3);
 	},
 	async content(event, trigger, player) {
 		const result = await player
@@ -2474,10 +2707,10 @@ maokuo_xuezheng: {
 			})
 			.set("ai", (target) => {
 				const current = get.player();
-				if (target == current) {
-					return 10 + target.countCards("h");
-				}
-				return get.attitude(current, target) > 0 ? 5 : 1;
+				if (target == current) return 6 + Math.min(6, target.countCards("h") * 0.5);
+				// 完全不对敌使用；队友手牌越多越值得
+				if (get.attitude(current, target) <= 0) return -999;
+				return 1 + target.countCards("h");
 			})
 			.forResult();
 		if (!result?.bool || !result.targets?.length) {
@@ -2598,8 +2831,8 @@ maokuo_xunyi_up: {
 // === 预谋 ===
 // 预谋：其他角色的出牌阶段开始时，你可以展示两张不同颜色的手牌，然后其选择一项：
 //       1.获得黑色牌，其摸一张牌；2.获得红色牌，你摸一张牌。
-// 逆水：游戏开始时，你将【杀】、【闪】、【桃】、【酒】各一张置于武将牌上。
-//       你可以将一张"逆水"牌移出游戏，视为使用之，然后直到游戏结束，你不能使用或打出相同名称的牌。
+// 逆水：你可以视为使用一张基本牌，然后你本局游戏不能再使用或打出此基本牌；
+//       你的牌被其他角色获得后，你摸此技能的发动次数张牌。（实现见文件前面的 逆水 段）
 maokuo_yumou: {
 	audio: 2,
 	trigger: { global: "phaseUseBegin" },
@@ -2615,7 +2848,8 @@ maokuo_yumou: {
 			}
 			return true;
 		})
-			.set("ai", card => 6 - get.value(card))
+			// 展示出去的牌会被对方拿走，所以挑自己最不值钱的（带 player 上下文：自己缺桃时【桃】就不该展示）
+			.set("ai", card => 6 - get.value(card, player))
 			.forResult();
 		if (!res?.bool || !res.cards?.length) {
 			event.result = { bool: false };
@@ -2632,13 +2866,19 @@ maokuo_yumou: {
 			`获得黑色牌（${get.translation(black)}），然后你摸一张牌`,
 			`获得红色牌（${get.translation(red)}），然后${get.translation(player)}摸一张牌`,
 		];
+		// 选择的一方（trigger.player）按「收益最大化」挑：
+		//   选项0 拿黑牌 + 自己摸一张；选项1 拿红牌 + 技能持有者摸一张。
+		// 牌本身取 max(牌值, 现在用掉它的价值) —— 后者能识别「关键牌」（该救的桃、该挡的闪、该用的无中生有），
+		// 关键牌估值明显高于对方那手，才会去选黑。
+		// 两边摸牌的估值不同：自己摸（DRAW_VALUE）低于让队友摸（ALLY_DRAW_BONUS），
+		// 所以队友一般选红（把补牌让给持有者、留住更好的牌），敌对则反过来（不让对方补牌 → 选黑）。
+		const me = trigger.player;
+		const cardScore = card => Math.max(get.value(card, me), me.getUseValue(card));
+		const DRAW_VALUE = 1.5; // 自己摸一张牌的估值
+		const ALLY_DRAW_BONUS = 2.4; // 让同伴摸一张牌（含正态度）或让敌对摸一张牌（含负态度）的估值
+		const scores = [cardScore(black) + DRAW_VALUE, cardScore(red) + get.sgn(get.attitude(me, player)) * ALLY_DRAW_BONUS];
 		const res2 = await trigger.player.chooseButton([`预谋：请${get.translation(trigger.player)}选择一项`, [options.map((item, i) => [i, item]), "textbutton"]], true)
-			.set("ai", button => {
-				if (button.link == 0) {
-					return get.value(black) + get.attitude(trigger.player, trigger.player) * 0.5;
-				}
-				return get.value(red) + get.attitude(trigger.player, player) * 0.5;
-			})
+			.set("ai", button => scores[button.link] || 0)
 			.forResult();
 		if (!res2?.bool) {
 			return;
@@ -2854,7 +3094,6 @@ maokuo_zhuzan: {
 // === 著贊 ===
 maokuo_zhuzan_after: {
 	charlotte: true,
-	forced: true,
 	trigger: { global: "useCardAfter" },
 	filter(event, player) {
 		return (event._maokuo_zhuzan || []).includes(player) &&
@@ -2863,8 +3102,10 @@ maokuo_zhuzan_after: {
 	},
 	async cost(event, trigger, player) {
 		const cards = player.getExpansions("maokuo_zhuzan");
+		// 让使用者摸牌：只帮自己/队友；牌选价值最低的
+		const friendly = trigger.player == player || get.attitude(player, trigger.player) > 0;
 		const res = await player.chooseButton([`著贊：将至少一张“著贊”牌置入弃牌堆，${get.translation(trigger.player)}摸等量的牌`, cards], [1, cards.length])
-			.set("ai", button => get.value(button.link))
+			.set("ai", button => (friendly ? 6 - get.value(button.link) : -1))
 			.forResult();
 		if (!res?.bool || !res.links?.length) {
 			event.result = { bool: false };
