@@ -14,6 +14,7 @@ import { xuandieTranslate } from "./xuandie.js";
 import { maokuoTranslate } from "./maokuo.js";
 import { xiaobaiTranslate } from "./xiaobai.js";
 import { ziziTranslate } from "./zizi.js";
+import { chashuiTranslate } from "./chashui.js";
 import { clanTranslate } from "./clan.js";
 import { miscTranslate } from "./misc.js";
 
@@ -31,6 +32,7 @@ export const skillTranslate = {
 	...maokuoTranslate,
 	...xiaobaiTranslate,
 	...ziziTranslate,
+	...chashuiTranslate,
 	...clanTranslate,
 	...miscTranslate,
 };

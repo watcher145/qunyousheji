@@ -36,8 +36,6 @@ export const maokuoTranslate = {
 	maokuo_kuolue_hit: "阔略",
 	maokuo_kuolue_hitmark: "阔略",
 	maokuo_kuolue_show: "阔略",
-	maokuo_lukang: "陆抗",
-	maokuo_lukang_prefix: "猫咪",
 	maokuo_luomo: "落墨",
 	maokuo_luomo_info:
 			"每轮每种花色限一次，一名角色的弃牌阶段结束时，你可以将其于此阶段内弃置过的一张♠/♣牌当普通锦囊牌/基本牌使用。",
@@ -145,4 +143,122 @@ export const maokuoTranslate = {
 	maokuo_zuishi: "醉世",
 	maokuo_zuishi_info:
 			"锁定技，你使用【酒】后，摸一张牌；你死亡后，你依然能以发动“颂酒”的形式参与游戏，且将消耗改为“观看一名角色的手牌并展示其中一张”。",
+	// ==================== 二蛋展示（15 名武将） ====================
+	maokuo_taohu: "讨护",
+	maokuo_taohu_info:
+			"当你使用黑色基本牌或黑色普通锦囊牌选择目标后，你可令一名体力／手牌最多的角色也成为此牌的目标。此牌结算后，若生效过，你可以令体力最少的一名角色回复1点体力／手牌最少的一名角色摸一张牌。",
+	maokuo_taohu_after: "讨护",
+	maokuo_niaoniao: "袅袅",
+	maokuo_niaoniao_info:
+			`每轮开始时，你可以咏唱“<span class='firetext'>柔音</span>”或“<span class="bluetext">烈音</span>”。若你选择：<span class='firetext'>柔音，本轮内${get.poptip("maokuo_posuo")}描述中标红部分生效</span>；<span class="bluetext">烈音，本轮内${get.poptip("maokuo_posuo")}描述中标蓝部分生效</span>。若你的体力值等于手牌数，本轮内两者均生效。`,
+	maokuo_niaoniao_flag: "袅袅",
+	maokuo_posuo: "婆娑",
+	maokuo_posuo_damage: "婆娑",
+	maokuo_posuo_discard: "婆娑",
+	maokuo_posuo_end: "婆娑",
+	maokuo_posuo_info:
+			`当你<span class='firetext'>受到伤害时</span>/<span class="bluetext">弃置牌时</span>，你可以判定。若结果：不为【杀】，<span class='firetext'>此伤害-1</span>/<span class="bluetext">你获得此次弃置的一张牌</span>；不为♥，你<span class='firetext'>弃置一张牌</span>/<span class="bluetext">受到1点伤害</span>。此回合结束时，你<span class='firetext'>可以摸X张牌</span>/<span class="bluetext">令至多X名已受伤的角色各回复1点体力</span>（X为你此回合发动${get.poptip("maokuo_posuo")}的次数）。`,
+	maokuo_mengqi: "梦启",
+	maokuo_mengqi_info:
+			`每轮结束时，你可以令所有其他玩家闭眼，声明你未声明过且有对应存活角色的一种身份，该身份玩家同时睁眼，共同选择一名（若为内奸，改为零至两名）角色。选择完成后，所有玩家睁眼，你公布被选择的角色，若声明身份为：忠臣：其摸三张牌，并可使用一张牌；反贼：其弃置一至三名角色区域里共计至多三张牌；内奸：这些角色各受到1点无来源的伤害。然后若除主公外的存活角色均被声明过身份，重置此技能并公布${get.poptip("maokuo_jueming")}是否已发动。`,
+	maokuo_jueming: "揭命",
+	maokuo_jueming_info:
+			`限定技，公布因${get.poptip("maokuo_mengqi")}而被选择的角色前，你可以暗中发动此技能，重新选择角色。`,
+	maokuo_jiejing: "截径",
+	maokuo_jiejing_info:
+			"出牌阶段开始时，你可以选择一名有手牌的其他角色，令其将至少一张手牌交给另一名其他角色，若如此做，你于此阶段内：可多使用等量张【杀】；可将等量的牌当【杀】对此次失去牌的角色使用，再令此次得到牌的角色也成为此牌的目标。",
+	maokuo_jiejing_extra: "截径",
+	maokuo_jiejing_sha: "截径",
+	maokuo_jiejing_sha_extra: "截径",
+	maokuo_jieji: "戒急",
+	maokuo_jieji_info:
+			"每轮限一次，当其他角色使用牌时，若其本回合未对另一名角色使用牌，你可令其摸与其本回合使用牌数等量的牌。",
+	maokuo_jieji_record: "戒急",
+	maokuo_shenhao: "慎好",
+	maokuo_shenhao_info:
+			"当你每回合第一次使用红色牌时，你可选择弃牌堆里本回合置入的每种花色牌各一张，将这些牌交给至少一名角色。",
+	maokuo_xiaohuai: "啸怀",
+	maokuo_xiaohuai_info:
+			"每回合限一次，你可将一张你不是合法目标的牌当基本牌或普通锦囊牌使用，若你未对其他角色使用此牌，你可于当前阶段结束时发动此技能。",
+	maokuo_xiaohuai_again: "啸怀",
+	maokuo_jieyin: "阶音",
+	maokuo_jieyin_info:
+			`你的一个阶段开始时，你可以将手牌摸或弃置至1／2／3／5／6张，每回合每个值限一次；此阶段结束时，若你的手牌数不为该值，你不能发动${get.poptip("maokuo_jieyin")}直到回合结束。`,
+	maokuo_jieyin_check: "阶音",
+	maokuo_jieyin_ban: "阶音",
+	maokuo_dengjie: "登阶",
+	maokuo_dengjie_info:
+			"锁定技，你的手牌上限为0。当你受到伤害时，若你是手牌上限最小的角色，改为令你的手牌上限+1。",
+	maokuo_weigu: "维谷",
+	maokuo_weigu_info:
+			"锁定技，当你使用【杀】指定一个目标后或成为其他角色使用【杀】的目标后，你们各选择此次未被选择过的一项（若其中有手牌多的角色，从其开始）：1.选择此项，再将一半（向下取整）的手牌移出游戏。2.将装备区里的武器或防具牌移出游戏。此【杀】结算后，若对该目标造成过伤害，目标角色获得这些牌，否则使用者获得这些牌。",
+	maokuo_weigu_after: "维谷",
+	maokuo_wenfeng: "闻风",
+	maokuo_wenfeng_info:
+			"当一名角色使用【诸葛连弩】时，其可以观看你的手牌，令你与一名其他角色交换手牌。",
+	maokuo_cunsi: "存思",
+	maokuo_cunsi_info:
+			"当你得到手牌或起始手牌后，你将牌堆顶等量的牌以背对背的方式贴附于这些牌的背面，然后你选择一面朝上作为你的手牌。",
+	maokuo_cunsi_split: "存思",
+	maokuo_cunsi_init: "存思",
+	maokuo_cunsi_append:
+			"（官方释义：贴附牌离开手牌区后自动拆分为两张，朝下面的牌进入弃牌堆，朝上面的牌进入结算流程；“守一”弃置的牌拆分后可获得这两张牌并再次触发“存思”。）",
+	maokuo_huadao: "化道",
+	maokuo_huadao_info:
+			"出牌阶段限一次，你可以翻转至少一张“存思”牌。若此次翻转的牌中有至少三张牌改变了颜色／没有改变颜色，你可以令一名角色回复1点体力／摸两张牌。",
+	maokuo_shouyi: "守一",
+	maokuo_shouyi_info:
+			"结束阶段或当你受到1点伤害时，你可以弃置一张“存思”牌，从弃牌堆获得此次置入的两张牌。",
+	maokuo_caocao: "草草",
+	maokuo_caocao_info:
+			"每回合限一次，当你造成或受到伤害时，你可以展示所有手牌。若黑色牌多，此伤害+1；若红色牌多，此伤害-1。",
+	maokuo_chichi: "蚩蚩",
+	maokuo_chichi_info:
+			"准备阶段，你可以令你此回合摸牌阶段额定摸牌数+X，出牌阶段可以多使用Y张【杀】，手牌上限为Z（X、Y、Z为自然数；X+Y+Z为体力多于你的角色数）。",
+	maokuo_chichi_draw: "蚩蚩",
+	maokuo_chichi_sha: "蚩蚩",
+	maokuo_chichi_limit: "蚩蚩",
+	maokuo_qiongtu: "穷途",
+	maokuo_qiongtu_info:
+			"锁定技，弃牌阶段结束时，若你于此阶段内未弃置过牌或弃置过多于两张牌，你下次受到伤害时伤害值改为2，否则改为0。",
+	maokuo_qiongtu_effect: "穷途",
+	maokuo_qishi: "启事",
+	maokuo_qishi_info:
+			"出牌阶段限一次，你可令至少一名角色各选择一项：1.将其区域里的一张牌交给你；2.与你交换手牌。",
+	maokuo_chejing: "澈境",
+	maokuo_chejing_info:
+			"判定或弃牌阶段开始前，你可展示所有手牌，若其中两种颜色的牌数量相等，你可跳过此阶段，否则你可重铸一或两张牌。",
+	maokuo_duhai: "妒害",
+	maokuo_duhai_info:
+			"一名角色的结束阶段，你可以对失去或展示过与你本回合失去或展示过的牌牌名相同的牌的其他角色各造成1点伤害。",
+	maokuo_yihuo: "遗祸",
+	maokuo_yihuo_info:
+			"出牌阶段，你可以展示一张红桃牌并将之置入一名角色的判定区，视为【闪电】。“遗祸”牌移至另一名角色的判定区前，取消之。一名角色的准备阶段，若其判定区里有“遗祸”牌，其相邻角色须弃置一张牌或令你摸一张牌。",
+	maokuo_yihuo_ready: "遗祸",
+	maokuo_yihuo_tag: "遗祸",
+	maokuo_yihuo_judge: "遗祸",
+	maokuo_helai: "何来",
+	maokuo_helai_info:
+			"以你为目标的牌被使用时，若处理区没有“何来”牌，你可以中止该牌的结算。出牌阶段，你可以继续结算之。",
+	maokuo_helai_resume: "何来",
+	maokuo_wuwang: "吾往",
+	maokuo_wuwang_info:
+			"你的回合内，开始处理基本牌或普通锦囊牌的使用结算之前，你可以令之改为对除所有目标角色外的角色结算。",
+	maokuo_zhuxuan: "注玄",
+	maokuo_zhuxuan_info:
+			"每回合限一次，当黑色基本牌或黑色普通锦囊牌指定除你外的角色时，你可成为此牌的第一个目标；对你的结算过程之后，你可令一名其他角色获得此牌和此期间内你置入弃牌堆的牌。",
+	maokuo_zhuxuan_after: "注玄",
+	maokuo_zhanming: "瞻明",
+	visible_maokuo_zhanming: "瞻明",
+	maokuo_zhanming_info:
+			"当其他角色对你／你对其他角色使用牌时，你可以令该目标角色明置至少一张不能响应此牌的手牌。除非使用者明置等量的手牌，否则此牌对其无效。",
+	maokuo_fushen: "浮沈",
+	maokuo_fushen_info:
+			"其他角色的回合结束时，若其明置牌：比你多，你可以选择其中一张令其使用；比你少，你可以重铸至少一张明置牌；与你相等，交换你与其的明置牌。",
+	maokuo_fangyin: "放饮",
+	maokuo_fangyin_info:
+			"你摸两张牌后，须明置这些牌，令之视为【酒】；若在你的回合内或你的明置牌数为2，所有角色可以如手牌般使用你的明置【酒】。",
+	maokuo_fangyin_v: "放饮",
+	maokuo_fangyin_use: "放饮",
+	visible_maokuo_fangyin: "放饮",
 };

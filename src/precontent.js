@@ -1,6 +1,6 @@
 import { lib, game, get, _status } from "noname";
 import dynamicTranslates from "./translate/dynamicTranslate.js";
-import { getXiaobaiPack } from "./package.js";
+import { getXiaobaiPack, getChashuiPack } from "./package.js";
 import { qunyou_longwei_tagFilter } from "./skill/sanshe.js";
 import { qunyou_clearVisiblePile, qunyou_getVisiblePileTop, qunyou_hasVisiblePile, qunyou_isPileCardVisible, qunyou_markPileVisible } from "./skill/visiblePile.js";
 
@@ -236,6 +236,32 @@ export function precontent() {
 			return span.outerHTML;
 		},
 	});
+	// 茶水贤设：🍵 单 emoji 前缀。
+	// 为什么不走「换字体+配色」：本扩已有 15 个二字文字前缀，「茶水」有单 emoji 可直读（🍵），
+	// 在选将列表里能和其他前缀一眼区分。
+	//
+	// ⚠️ 写法必须与「猫咪大院」完全一致（见上面 `lib.namePrefix.set("猫咪")`）：
+	//    **只设 `fontFamily = "NonameSuits"`，不设 fontSize / lineHeight / verticalAlign**。
+	//    emoji 走 `font/suits.woff2` 字形，尺寸由所在行的继承字号决定；一旦手写 fontSize
+	//    就会比同排的其他前缀明显偏小（踩过：写了 12px 导致 🍵 比「猫咪」🐱 小一圈）。
+	//    同理不要加 filter/lineHeight/verticalAlign —— 都会破坏基线对齐。
+	//
+	// 本扩唯一的新花样：**逐角色换杯**。`getSpan(prefix, name)` 的第二参就是角色 id，
+	//   读 `lib.translate[<id>_teaprefix]` 可单独指定 🫖/🧋/🍃…（缺省 🍵），
+	//   只在 `src/character/translate.js` 加一行即可，不必改这里。
+	// ⚠️ 链路：get.slimNameHorizontal 会把 `lib.translate[id+"_prefix"]` 按 `|` 拆段、
+	//   逐段从译名开头 startsWith 切掉再换成 span —— 所以译名必须真以「茶水」开头，
+	//   emoji 只出现在本函数的渲染结果里，**不要写进译名**。
+	lib.namePrefix.set("茶水", {
+		getSpan: (prefix, name) => {
+			const custom = name && lib.translate?.[`${name}_teaprefix`];
+			const emoji = typeof custom == "string" && custom.trim() ? custom.trim() : "🍵";
+			const span = document.createElement("span");
+			span.style.fontFamily = "NonameSuits";
+			span.textContent = emoji;
+			return span.outerHTML;
+		},
+	});
 	// 注册汉势力
 	game.addGroup("han", "汉", "汉势力", {
 		color: "#FAD6A2",
@@ -397,4 +423,7 @@ export function precontent() {
 	// 大包必须走 game.import("character", 包对象)（与活动武将扩展的 11 个包同样写法），
 	// 只在主包的 characterSort 里加顶层键是无效的——顶层键必须对应一个真实存在的武将包。
 	game.import("character", getXiaobaiPack());
+
+	// 茶水贤设：同构的第二个独立大包（小包表 chashuiSort / getChashuiPack 都在 package.js）
+	game.import("character", getChashuiPack());
 }

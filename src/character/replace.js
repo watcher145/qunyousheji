@@ -5,11 +5,13 @@ import { lib } from "noname";
  * 解析规则：取角色 id 最后一个 "_" 之后的部分作 baseName（支持"第二前缀+下划线"命名，
  * 如 qunyou_cbp_zhaoyun → zhaoyun），若 lib.character 中存在该本体 id，则加入替换组。
  */
-const PREFIXES = ["qunyou_", "wending_", "shanhe_", "zishu_", "zhuoming_", "yachaiclan_", "xiaobai_", "qiufeng_", "threed_","xuandie_","xingyu_"];
+const PREFIXES = ["qunyou_", "wending_", "shanhe_", "zishu_", "zhuoming_", "yachaiclan_", "xiaobai_", "qiufeng_", "threed_","xuandie_","xingyu_","chashui_"];
 
 // 去掉末段后会误配到本体其他人物（名字不同人）的，需排除。
 // 例：qunyou_simayi=司马乂（本体 simayi=司马懿）、qunyou_sunshao=孙绍（本体 sunshao=孙韶）、qunyou_sunxiu=孙秀（本体 sunxiu=孙休）
-const EXCLUDED = new Set(["qunyou_simayi", "qunyou_sunshao", "qunyou_sunxiu"]);
+// chashui_zhangwen=群张温（东汉太常；本体 zhangwen=sp2 吴张温惠原，不同人）
+// chashui_zhangxiu=张修（五斗米道；本体 zhangxiu=shenhua 张绣北地枪王，不同人）
+const EXCLUDED = new Set(["qunyou_simayi", "qunyou_sunshao", "qunyou_sunxiu", "chashui_zhangwen", "chashui_zhangxiu"]);
 
 export function setupCharacterReplace() {
 	const cr = lib.characterReplace || (lib.characterReplace = {});

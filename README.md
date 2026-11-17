@@ -1,6 +1,6 @@
 # 群友设计（模块化扩展）
 一个很简陋的无名杀扩展，大量武将没有配图，没有语音，而且都是搜集来的，我自己想玩。
-结构与 **`extension/奇臣传`** 对齐，便于只改数据与技能、不动入口装配逻辑。
+结构与同目录的其它扩展对齐，便于只改数据与技能、不动入口装配逻辑。
 搜集设计，然后做出来玩玩，有意见可以提出
 
 ## 目录说明
@@ -20,20 +20,22 @@
 | `src/card/data.js` | 扩展卡牌定义 |
 | `src/card/translate.js` | 卡牌名与 `*_info` |
 | `src/card/patchAssets.js` | 卡牌插画 `ext:群友设计/image/card/...` |
-| `src/skill/index.js` | 合并 5 个技能文件为 `lib.skill` |
+| `src/skill/index.js` | 合并各技能文件为 `lib.skill` |
 | `src/skill/helpers.js` | 技能工具函数（跨技能共用逻辑，如 `qunyou_no1Player`） |
 | `src/skill/yachai.js` | 崖柴系技能 (`yachai_*`) |
 | `src/skill/clan.js` | 宗族技 (`clan*`) |
 | `src/skill/qunsai.js` | 群赛技能：`shanhe_*` / `zishu_*` / `maokuo_*` / `zhuoming_*` / `qiufeng_*` / `wending_*` / `threed_*` / `xingyu_*` |
 | `src/skill/xiaobai.js` | 小白杯技能（`xiaobai_*`，含 `lib.xiaobai*` 辅助函数） |
+| `src/skill/chashui.js` | 茶水贤设技能（`chashui_*`；与小白杯同构，是**独立大包**「茶水贤设」的技能表） |
+| `src/skill/chashuiSp.js` | 茶水贤设·晏（`tea_ex_sp`）5 武将 11 技能 |
 | `src/skill/sanshe.js` | 散设技能：`qunyou_*` / `xuandie_*`（含 `qunyouPhaseNames`，被 dynamicTranslate 引用） |
 | `src/translate/skill.js` | 技能译名**汇总入口**：展开合并下列按前缀拆分的译名文件，新增前缀文件时在这里补 import |
 | `src/translate/qunyou.js` | `qunyou_*`（散设）技能译名与 `*_info` |
 | `src/translate/clan.js` / `yachai.js` | `clan*` 宗族技 / 崖柴系技能译名 |
-| `src/translate/{qiufeng,threed,xiaobai,zishu,zhuoming,shanhe,xuandie,maokuo，wending，xingyu, zizi}.js` | 对应来源前缀（秋风 / 3D / 小白 / 自书 / 濯名 / 山河 / 玄蝶 / 猫扩 / 问鼎 / 星玉 / 子子 ）的技能译名 |
+| `src/translate/chashui.js` | `chashui_*`（茶水贤设）技能译名与 `*_info` |
+| `src/translate/{qiufeng,threed,xiaobai,zishu,zhuoming,shanhe,xuandie,maokuo，wending，xingyu, zizi, chashui}.js` | 对应来源前缀（秋风 / 3D / 小白 / 自书 / 濯名 / 山河 / 玄蝶 / 猫扩 / 问鼎 / 星玉 / 子子 / 茶水贤设 ）的技能译名 |
 | `src/translate/misc.js` | 杂项（自定义标签译名，如 `daozhi_tag`） |
 | `src/translate/dynamicTranslate.js` | 局内动态描述（由 `precontent.js` 合并进 `lib.dynamicTranslate`） |
-| `test/` | 开发自检与检索工具（只保留自检指南清单 + `check-all.mjs`）：`skill-test.mjs`（运行时回归）、`dupkey-scan.mjs`（重复键结构自查）、`skill-search.mjs`（语义检索）等，用法见 `test/自检指南.md`；verify/debug/场景脚本已于 2026-10-17 移除，备份在 `.ai-fix-backup/` |
 | `tools/角色添加器/` | 本地网页小工具：填表自动写五个注册文件（写前备份、写后 `node --check`），支持双势力/前缀/选包，详见其目录内 README |
 | `tools/update-readme.mjs` | 重新生成本文件「设计者与来源索引」章节（双击 `更新readme.bat`），标记之前的手写内容不动 |
 | `tools/skill-prefix-stat.mjs` | 统计 `src/skill/*.js` 各自包含哪些前缀的技能（核对「按前缀分文件」的约定是否被破坏） |
@@ -55,15 +57,15 @@
 1. `src/character/data.js` 增加 id 与 `skills` 数组（双势力写 `doubleGroup: ["主", "副"]`）  
 2. `src/character/translate.js` 增加译名（及可选 `id_prefix`）  
 3. `title.js` / `intro.js` 按需补充（`intro` 里的 `设计：` 字段会被 README 索引解析）  
-4. 技能按组别写入 `src/skill/{yachai,clan,qunsai,sanshe,xiaobai}.js`；译名写入**该前缀对应的** `src/translate/*.js`（如 `qunyou_*` → `qunyou.js`、`maokuo_*` → `maokuo.js`、`xiaobai_*` → `xiaobai.js`；`skill.js` 只做汇总）  
+4. 技能按组别写入 `src/skill/<组>.js`（一组一个文件，新增组就新建）；译名写入**该前缀对应的** `src/translate/*.js`（如 `qunyou_*` → `qunyou.js`、`maokuo_*` → `maokuo.js`、`xiaobai_*` → `xiaobai.js`；`skill.js` 只做汇总）  
 5. 放入立绘与（若有）阵亡配音，并更新 `extension.js` 的 `files.character` / `files.audio`  
-6. 跑一遍自检：`node test/skill-test.mjs` 与 `node test/dupkey-scan.mjs`（解读见 `test/自检指南.md`）
 
 ## 添加一张扩展牌
 
 1. `src/card/data.js` + `src/card/translate.js`  
 2. `image/card/{牌名键}.jpg`  
 3. `extension.js` → `files.card`
+
 
 ## 设计者与来源索引
 
@@ -86,6 +88,8 @@
 - `自由圣安`：群友邓艾
 - `滑溜溜`：董卓、石苞、诸葛果
 - `阿桔是我`：费祎、太史慈、邹氏
+- `未知（保存了图片，聊天记录翻不到了，原作者看到说一声）`：群友耿勋、SP孟获、群友族杨骏
+- `止喧`：群友管宁
 - `烦不烦（B站）`：郭图
 - `佐世保之时雨 && 欢愉与希望（补设）`：韩氏五虎（补设）
 - `yyuan`：郝普
@@ -104,14 +108,13 @@
 - `罗乐省标9191（B站）`：谋诸葛亮
 - `紫云飞渡`：群友司马睿
 - `迟眠饱（B站）`：司马乂
-- `未知（保存了图片，聊天记录翻不到了，原作者看到说一声）`：SP孟获、群友族杨骏
 - `昆世`：SP文鸯
 - `罗晓翳不是海龟螺猫（B站）&& 欢愉与希望（补设）`：孙策（补设）
 - `阿柴Aa_chai（B站）\n`：群友孙綝
 - `badlunar`：孙皓（修改）
 - `神威1570`：群友孙坚
 - `杰劼夫长(贴吧）`：孙皎
-- `叼五我爱你麻（B站）`：孙绍
+- `叼五我爱你麻（B站）`：孙绍（修改）
 - `？`：孙秀
 - `左小白`：群友孙资&刘放
 - `余平方`：陶侃（修改）
@@ -131,6 +134,7 @@
 - `BV12Y8B6FE3n`：关羽
 - `BV1bUbY6SEvH`：姜维
 - `BV1KHYX6yErH`：陆逊
+- `嵌花评`：群友势太史慈
 - `BV1Rv7S65EAy`：威陆逊
 - `BV12N9gBMEW2`：王允
 - `BV1r53b61Ep1`：钟进
@@ -159,11 +163,11 @@
 - `固障机器人`：自书张瑾云
 
 ### 濯名杯
+- `孝文白王`：濯名卑弥呼、濯名马腾
 - `我来天地正秋风`：濯名梦董卓（修改）
 - `梦揽星河`：濯名飞戾公孙渊、濯名烽起马腾
 - `终结者一号`：濯名公孙渊
 - `可余雪`：濯名刘焉
-- `孝文白王`：濯名马腾
 - `伊藤幸子`：濯名朔骋马腾（修改）
 
 ### 问鼎•陈郡谢氏
@@ -207,15 +211,18 @@
 - `玄蝶`：蝶设吕雉、蝶设卓文君、荀灌、蝶设祖逖
 
 ### 猫咪大院
-- `RP`：猫咪曹不兴、猫咪黄崇
-- `陈木`：猫咪曹衮、猫咪王蕃（修改）、猫咪王桃&王悦、猫咪夏侯徽（修改）、猫咪张特
-- `七哀凌虚`：猫咪何晏
+- `RP`：猫咪曹不兴、猫咪黄崇、猫咪魏华存
+- `陈木`：猫咪曹衮、猫咪王蕃（修改）、猫咪王桃&王悦、猫咪夏侯徽（修改）、猫咪张特、猫咪绛树、猫咪郝普、猫咪赵直、猫咪郭槐、猫咪阮咸
+- `七哀凌虚`：猫咪何晏、猫咪孙桓、猫咪山涛
 - `怀默`：猫咪神姜维、猫咪刘伶、猫咪陆抗、猫咪怒麒·姜维、猫咪臧洪
 - `RP&辰木`：猫咪李春香
-- `冥狐`：猫咪彭羕
+- `冥狐`：猫咪彭羕、猫咪赵姬、猫咪嵇康
 - `龙哥头肩`：猫咪卫温&诸葛直
 - `辰木`：猫咪杨戏
 - `Geniova`：猫咪笮融
+- `Genfova`：猫咪秦朗
+- `-拉普拉斯-`：猫咪阮籍、猫咪向秀
+- `兔子`：猫咪王戎
 
 ### 子子杯
 - `纸盒`：子子曹真&曹休、子子郭图&逢纪
@@ -315,6 +322,73 @@
 - `左小白`：小白崔芣（修改）
 - `虎鲸`：小白胡氏（修改）
 - `大祭司`：小白暨艳
+
+### 茶水贤设
+
+#### 茶水贤设·昕
+- `cc`：茶水典满、茶水霍峻（修改）
+- `菖蒲`：茶水马钧、茶水殷观、茶水桓阶、茶水司马孚
+- `仁语`：茶水钟离牧
+- `鲲鲲`：茶水波才
+- `yyuaN`：茶水郑泰
+- `有懒癌的wkc`：茶水王濬
+
+#### 茶水贤设·晌
+- `孤豹`：茶水曹洪
+- `cc`：茶水应玚
+- `菖蒲`：茶水王平（修改）、茶水程普
+- `梁清渤`：茶水王崇
+- `とわこ`：茶水韦曜（修改）
+- `妙啊`：茶水郑玄、茶水张温
+- `梦貘`：茶水石苞
+- `杜预`：茶水左思
+
+#### 茶水贤设·昳
+- `布林`：茶水卫臻
+- `Joyeuse`：茶水莫护跋
+- `暴食大王 Azusa`：茶水陈祇、茶水袁隗
+- `终汐舷`：茶水济火
+- `孙笑川`：茶水丁固
+- `夜伟`：茶水康僧会
+- `小叶子`：茶水北宫伯玉
+- `奥料`：茶水何曾
+- `cyc`：茶水拓跋沙漠汗
+
+#### 茶水贤设·晡
+- `烂月饼`：茶水朱建平
+- `森伯十夜`：茶水邓飏
+- `秀丽`：茶水李意、茶水何定
+- `圣雄`：茶水刘琰
+- `菖蒲`：茶水王表&纺绩
+- `小叶子`：茶水张修
+- `棒即是棒`：茶水张让&赵忠
+- `胖即是胖`：茶水魏华存
+- `Raufongt`：茶水荀勖（修改）
+
+#### 茶水贤设·曛
+- `残蝶未陨`：茶水杜畿、茶水灵雎
+- `winkid`：茶水卞夫人
+- `菖蒲`：茶水夏侯霸、茶水张华
+- `胖即是胖`：茶水甘夫人、茶水王祥
+- `复仇滚木`：茶水周泰
+- `Sachiko`：茶水孙休
+- `纸盒`：茶水管宁
+
+#### 茶水贤设·曦
+- `胖即是胖`：茶水范粲、茶水张裔、茶水环夫人
+- `夜已央`：茶水孟观、茶水孙寒华、茶水徐登&赵炳、茶水贾午
+- `菖蒲`：茶水李夫人
+- `Phania`：茶水刘兰芝、茶水邓展、茶水刘纂
+- `秋风　插画：翔七七`：茶水步度根
+- `秋风`：茶水蒋显、茶水徐光、茶水阮瞻
+
+#### 茶水贤设·晏
+- `菖蒲`：茶水祖郎、茶水吴纲
+- `Jovetic`：茶水陈寿
+- `布林`：茶水齐万年、茶水刘阿知
+
+### 收集到的好设
+- `RP`：猫咪秦宜禄
 
 ### 能永动的武将
 - `滑溜溜`：王朗

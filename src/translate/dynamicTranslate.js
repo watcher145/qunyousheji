@@ -1,6 +1,6 @@
-import { lib, get, _status } from "noname";
+import { lib, game, get, ui, _status } from "noname";
 import { qunyou_no1Player } from "../skill/helpers.js";
-import { qunyou_jike_del, qunyou_jike_texts, qunyouPhaseNames } from "../skill/sanshe.js";
+import { qunyou_jike_del, qunyou_jike_texts, qunyouPhaseNames, QUNYOU_QINGYIN_TEXTS, qunyou_qingyin_len } from "../skill/sanshe.js";
 
 const blue = (text) => `<span class="bluetext">${text}</span>`;
 const red = (text) => `<span style="color:#f04a4a">${text}</span>`;
@@ -89,6 +89,21 @@ const dynamicTranslates = {
 		const num = Math.max(1, cond.length);
 		return info.replace("限X次", `限${blue(num)}次`);
 	},
+	// 清隐：剩余项数（storage.qunyou_qingyin）变了，就把已删除的项从描述里去掉。
+	// 与技能实现同源：都读 qunyou_qingyin_len / QUNYOU_QINGYIN_TEXTS（sanshe.js）。
+	// 只替换「依次执行前X项：…。」这一段，周始与其余文字仍取自 _info，避免两处漂移。
+	qunyou_qingyin(player, skill) {
+		const info = lib.translate[`${skill}_info`] || "";
+		if (!player) {
+			return info;
+		}
+		const len = qunyou_qingyin_len(player);
+		const items = QUNYOU_QINGYIN_TEXTS.slice(0, len)
+			.map((text, index) => `${index + 1}.${text}`)
+			.join("；");
+		const list = items || "（四项均已删除，无法发动）";
+		return info.replace(/依次执行前X项：[^。]*。/, `依次执行前X项：${list}。`);
+	},
 	zishu_mitu(player, skill) {
 		const left = player?.storage?.zishu_mitu_left;
 		const right = player?.storage?.zishu_mitu_right;
@@ -101,16 +116,21 @@ const dynamicTranslates = {
 		}
 		return `锁定技，你的回合开始时，按以下三条规则重新排列阶段顺序：${rules.join("；")}。`;
 	},
-	// 辟易：「」里显示当前所有辟易实例的牌名（按牌名去重聚合 ×N；初始是两个【无懈可击】）
+	// 辟易：「」里按“未发动 / 已发动”分组显示实例牌名（与卦解 mark 悬浮同源；初始是两个【无懈可击】）
 	// ⚠️ 锚点必须与 xiaobai_piyi_info 里的字面量完全一致；对不上时走兜底追加，不静默失效
 	xiaobai_piyi(player, skill) {
 		const base = lib.translate[`${skill}_info`] || "";
 		const slots = player?.storage?.xiaobai_piyi_slots || [];
-		const counts = {};
-		for (const slot of slots) counts[slot.name] = (counts[slot.name] || 0) + 1;
-		const names = Object.keys(counts);
-		const text = names.length
-			? names.map((name) => `【${get.translation(name)}】${counts[name] > 1 ? `×${counts[name]}` : ""}`).join("、")
+		const fmt = (list) => {
+			if (!list.length) return "—";
+			const counts = {};
+			for (const slot of list) counts[slot.name] = (counts[slot.name] || 0) + 1;
+			return Object.keys(counts)
+				.map((name) => `【${get.translation(name)}】${counts[name] > 1 ? `×${counts[name]}` : ""}`)
+				.join("、");
+		};
+		const text = slots.length
+			? `未发动：${fmt(slots.filter((slot) => !slot.used))}；已发动：${fmt(slots.filter((slot) => slot.used))}`
 			: "无";
 		const anchor = "「【无懈可击】」";
 		if (base.includes(anchor)) {
@@ -359,17 +379,6 @@ qunyou_qiongji(player) {
 			"你曾登场过的额定回合开始前，你可以令当前回合角色选择一项：1.交给「一号位」一张牌；2.「一号位」对其发动对应的〖显灾〗效果。若其已死亡，你令一名角色执行此额定回合；若你已死亡，你依然可以发动此技能。"
 		);
 	},
-	// 素翩：第一段失效期间置灰（字段改写型；锚点与 xiaobai_supian_info 逐字一致）
-	xiaobai_supian(player, skill) {
-		const base = lib.translate[`${skill}_info`] || "";
-		if ((player.storage?.xiaobai_supian_ban_num || 0) > 0) {
-			return base.replace(
-				"你可以重铸X张牌并使用其中一张牌，然后此段失效至有X张牌被使用后。",
-				`<font color='grey'>你可以重铸X张牌并使用其中一张牌，然后此段失效至有X张牌被使用后。</font>`
-			);
-		}
-		return base;
-	},
 	// 先略：失效期间（有角色进入濒死前）整段描述置灰（字段改写型）
 	xingyu_xianlue(player, skill) {
 		const base = lib.translate[`${skill}_info`] || "";
@@ -381,7 +390,7 @@ qunyou_qiongji(player) {
 	// 迂策：契定技——契定后两效果由「可以」变「须」（原生乞施/殚瘁同款切换）
 	qunyou_yuce(player, skill) {
 		if (player?.storage?.qunyou_yuce) {
-			return "锁定技，你于摸牌阶段外获得牌后，你须弃置这些牌；当你每回合首次进入濒死状态时，你须令本回合其他角色不能对你使用【桃】，然后回复一点体力并视为使用一张【过河拆桥】。";
+			return "锁定技，你于摸牌阶段外获得牌后，你须弃置这些牌；当你每回合首次进入濒死状态时，你须令本回合其他角色不能对你使用【桃】，然后回复一点体力并视为使用一张【过河拆桥】。若你没有因此回复体力，你获得因此进入弃牌堆的牌。";
 		}
 		return lib.translate[`${skill}_info`] || "";
 	},
@@ -415,6 +424,18 @@ qunyou_qiongji(player) {
 				? `<br>当前：三项均已删去（已以此法使用${used}张♠基本牌）。`
 				: `<br>当前首项：${names[stage]}（已以此法使用${used}张♠基本牌）。`;
 		return head + status;
+	},
+
+	// 素翩：第一段失效期间置灰（锚点与 xiaobai_supian_info 逐字一致；剩余计数由「翩」mark 的 markcount 负责）
+	xiaobai_supian(player, skill) {
+		const base = lib.translate[`${skill}_info`] || "";
+		if ((player.storage?.xiaobai_supian_ban_num || 0) > 0) {
+			return base.replace(
+				"你可以重铸X张牌并使用其中一张牌，然后此段失效至有X张牌被使用后。",
+				`<span style='opacity:0.45;text-decoration:line-through'>你可以重铸X张牌并使用其中一张牌，然后此段失效至有X张牌被使用后。</span>`
+			);
+		}
+		return base;
 	},
 
 	// ==================== 一蛋展示（猫咪大院）：随状态刷新的技能面板描述 ====================
@@ -654,6 +675,85 @@ qunyou_qiongji(player) {
 		const hpCond = "若你的体力上限不大于2，改为每回合限两次，并追加扣减体力上限";
 		const slotCond = "若你的装备栏数不大于2，改为每回合限两次，并追加废除装备栏";
 		return `${text}。<br>${cond(hpCond, hpLow)}；${cond(slotCond, slotLow)}。`;
+	},
+
+	// ==================== 二蛋展示（猫咪大院）：随状态刷新的技能面板描述 ====================
+	// 袅袅：静态描述已标红/标蓝；动态只在咏唱后追加本轮状态提示
+	maokuo_niaoniao(player) {
+		const base = lib.translate.maokuo_niaoniao_info || "";
+		const mode = player?.storage?.maokuo_niaoniao_mode;
+		if (!mode) {
+			return base;
+		}
+		if (mode == "both") {
+			return `${base}<br>${blue("本轮：柔音与烈音均生效（体力值等于手牌数）")}`;
+		}
+		return `${base}<br>${blue(`本轮咏唱：${mode == "rou" ? "柔音" : "烈音"}`)}`;
+	},
+	// 婆娑：未咏唱（开局普通状态）→ 红/蓝两段全显示；只咏唱某一音 → 另一段整段消失
+	maokuo_posuo(player) {
+		const base = lib.translate.maokuo_posuo_info || "";
+		const mode = player?.storage?.maokuo_niaoniao_mode;
+		const fire = (t) => `<span class='firetext'>${t}</span>`;
+		const blueText = (t) => `<span class="bluetext">${t}</span>`;
+		const posuo = get.poptip("maokuo_posuo");
+		// 未咏唱 / 两者均生效：完整双段（红蓝并存）
+		if (!mode || mode == "both") return base;
+		if (mode == "rou") {
+			// 只显示柔音（红）分支，烈音整段消失
+			return (
+				`当你${fire("受到伤害时")}，你可以判定。若结果：不为【杀】，${fire("此伤害-1")}；不为♥，你${fire("弃置一张牌")}。` +
+				`此回合结束时，你${fire("可以摸X张牌")}（X为你此回合发动${posuo}的次数）。`
+			);
+		}
+		// 只显示烈音（蓝）分支，柔音整段消失
+		return (
+			`当你${blueText("弃置牌时")}，你可以判定。若结果：不为【杀】，${blueText("你获得此次弃置的一张牌")}；不为♥，${blueText("你受到1点伤害")}。` +
+			`此回合结束时，你${blueText("令至多X名已受伤的角色各回复1点体力")}（X为你此回合发动${posuo}的次数）。`
+		);
+	},
+	// 梦启：显示已声明过的身份集合（公开信息，与 mark 悬浮同源）
+	maokuo_mengqi(player) {
+		const base = lib.translate.maokuo_mengqi_info || "";
+		const list = player?.storage?.maokuo_mengqi_declared || [];
+		if (!list.length) {
+			return base;
+		}
+		const names = { zhong: "忠臣", fan: "反贼", nei: "内奸" };
+		return `${base}<br>${blue(`已声明：${list.map(id => names[id] || id).join("、")}`)}`;
+	},
+	// 阶音：显示本回合已用过的目标值与失效状态（同源：maokuo_jieyin_state / maokuo_jieyin_ban）
+	maokuo_jieyin(player) {
+		const base = lib.translate.maokuo_jieyin_info || "";
+		const st = player?.storage?.maokuo_jieyin_state;
+		const used = st && st.turn == game.phaseNumber ? st.used : [];
+		let text = used.length ? `${base}<br>${blue(`本回合已调整至：${used.join("、")}张`)}` : base;
+		if (player?.hasSkill?.("maokuo_jieyin_ban")) {
+			text += `<br>${red("【阶音】失效直到回合结束")}`;
+		}
+		return text;
+	},
+	// 正音：两态转换技，把当前生效的那一态标色（原生范本 character/clan.js:8453 clanfuyao：
+	// storage 为真=阴态→bluetext 标阴，否则 firetext 标阳）
+	chashui_zhengyin(player, skill) {
+		const yin = !!player?.storage?.[skill];
+		const yang = "你可以将至少X张红色牌当做任意一张基本牌或普通锦囊牌使用";
+		const yinText = "你可以展示X张黑色牌并将之置于牌堆顶，视为使用任意一张基本牌或普通锦囊牌";
+		return `转换技，每轮每种牌名限一次。阳：${yin ? yang : `<span class='firetext'>${yang}</span>`}；阴：${yin ? `<span class='bluetext'>${yinText}</span>` : yinText}（X为本轮发动此技能的次数，至多为体力值）。`;
+	},
+	// 修仁：两态转换技，把当前生效的那一态标色（原生范本 character/clan.js:8453 clanfuyao：
+	// storage 为真=阴态→bluetext 标阴，否则 firetext 标阳）
+	chashui_xiuren(player, skill) {
+		const bool = player?.storage?.[skill];
+		const yang = "你可以令其摸两张牌";
+		const yin = "其可以令你摸两张牌";
+		return `转换技，当一名角色回复体力后，①${bool ? yang : `<span class='firetext'>${yang}</span>`}；②${bool ? `<span class='bluetext'>${yin}</span>` : yin}。`;
+	},
+	// 注经·他人版：牌名是「已记录」的，必须显示成具体牌名（用户要求：两个都是具体牌名，如【酒】当【无中生有】）
+	chashui_zhujing_other(player, skill) {
+		const trans = player?.storage?.chashui_zhujing_trans;
+		if (!trans) return lib.translate[`${skill}_info`] || "";
+		return `出牌阶段限一次，你可以将一张${blue(`【${get.translation(trans.basic)}】`)}当${blue(`【${get.translation(trans.trick)}】`)}使用。`;
 	},
 };
 

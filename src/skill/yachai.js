@@ -1674,7 +1674,7 @@ yachai_qiyi: {
 	chooseButton: {
 		dialog(event, player) {
 			const source = event.respondTo[0];
-			if (!source.countCards("h")) return;
+			if (!source.countCards("h")) return ui.create.dialog("岐嶷：" + get.translation(source) + "没有手牌");
 			player.logSkill("yachai_qiyi", source);
 			player.markAuto("yachai_qiyi_used", [source]);
 			return ui.create.dialog("岐嶷：选择" + get.translation(source) + "的手牌", source.getCards("h"));
@@ -1807,7 +1807,8 @@ yachai_shibian: {
 		global: ["drawAfter", "gainAfter", "cardsGotoPileAfter"],
 	},
 	filter(event, player) {
-		if (player.storage.yachai_shibian_disabled) return false;
+		// 失效期间主技能会被 game.filterSkills 摘除，本行只是防御式兜底
+		if (player.hasSkill("yachai_shibian_disabled")) return false;
 		const bottom = ui.cardPile.lastChild;
 		const last = player.storage.yachai_shibian_lastBottom;
 		if (bottom !== last) {
@@ -1820,12 +1821,21 @@ yachai_shibian: {
 		await player.draw();
 		player.storage.yachai_shibian_count = (player.storage.yachai_shibian_count || 0) + 1;
 		if (player.storage.yachai_shibian_count > player.maxHp && _status.currentPhase) {
-			player.storage.yachai_shibian_disabled = true;
+			// 「本技能失效直到本回合结束」用 disableSkill 才会让技能描述变灰
+			player.disableSkill("yachai_shibian_disabled", "yachai_shibian");
+			player.addTempSkill("yachai_shibian_disabled", "phaseAfter");
 			await player.loseHp(1);
 		}
 	},
 	group: "yachai_shibian_reset",
 	subSkill: {
+		disabled: {
+			charlotte: true,
+			sub: true,
+			onremove(player) {
+				player.enableSkill("yachai_shibian_disabled");
+			},
+		},
 		reset: {
 			trigger: { global: "phaseBegin" },
 			forced: true,
@@ -2007,7 +2017,11 @@ yachai_tuicheng: {
 					const myIdx = game.players.indexOf(p);
 					const preSeatWu = game.players.some((pl, idx) => {
 						if (idx >= myIdx) return false;
-						if (pl.getHistory("phaseBegin").length > 0) return false;
+						// 本轮第一个行动的角色一定已经行动过（其 phase 事件记在上一段全局历史里，getRoundHistory 取不到）
+						if (pl === _status.roundStart) return false;
+						// player.getHistory 只接受 useCard/respond/skipped/lose/gain/sourceDamage/damage/custom/useSkill
+						// （content.js:4126-4136），没有 phaseBegin；判断「本轮已行动过」要用 game.getRoundHistory
+						if (game.getRoundHistory("everything", (evt) => evt.name === "phase" && evt.player === pl).length > 0) return false;
 						return pl.getExpansions("yachai_wuyan_return").length > 0;
 					});
 					if (preSeatWu) {

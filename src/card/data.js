@@ -221,6 +221,18 @@ export const cardData = {
 		subtype: "equip3",
 		distance: { globalFrom: -1 },
 	},
+	// 横驰：〖横驰〗把重铸牌当作此牌置入装备栏的 -1 马指示物。
+	// 不进牌堆、不可被获取，只在技能结算时作为虚拟装备牌出现。
+	zhuoming_hengchi_card: {
+		type: "equip",
+		subtype: "equip4",
+		distance: { globalFrom: -1 },
+		vanish: true,
+		hidden: true,
+		ai: {
+			equipValue: 4,
+		},
+	},
 	// 悬鱼的宝物（置入宝物栏的实体化载体）
 	xiaobai_xuanyubao: {
 		fullskin: true,
@@ -229,6 +241,25 @@ export const cardData = {
 		skills: ["xiaobai_xuanyubao_skill"],
 		cardPrompt(card) {
 			return "当你失去牌后，你可以选择从牌堆顶或底进行一次判定，若判定牌颜色与此牌的颜色相同，你获得此判定牌。";
+		},
+	},
+	// 「遗祸」牌（郭槐）：本质是一张特殊的【闪电】。用独立 id maokuo_yihuo_card 避免与技能 id 撞名，
+	// type:special_delay + noEffect 跳过 phaseJudge 自动结算（不自动判定/不下移/不进弃牌堆 → 一直留判定区）；
+	// judgeSlots:["shandian"] 占闪电槽（与真闪电互斥）；cardimage:"shandian" 让判定区显示闪电图标（"闪"）。
+	// 真正判定由 maokuo_yihuo_judge 全局技在判定阶段手动执行（黑桃2-9 → 3 点雷电伤害）。
+	maokuo_yihuo_card: {
+		type: "special_delay",
+		fullskin: true,
+		fullimage: true,
+		cardimage: "shandian",
+		noEffect: true,
+		wuxieable: false,
+		judgeSlots: ["shandian"],
+		judge(card) {
+			if (get.suit(card) === "spade" && get.number(card) > 1 && get.number(card) < 10) {
+				return -5;
+			}
+			return 1;
 		},
 	},
 };

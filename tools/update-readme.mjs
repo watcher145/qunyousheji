@@ -63,6 +63,9 @@ const characterSort = parseObjText(parseObj(pkgSrc, 'characterSort'));
 // 但它的 8 个「届」小包仍要进索引，故单独解析 xiaobaiSort。
 const xiaobaiSort = parseObjText(parseObj(pkgSrc, 'xiaobaiSort'));
 const xiaobaiIdSet = new Set(Object.values(xiaobaiSort).flat());
+// 茶水贤设同理：第二个独立大包（getChashuiPack），小包表 chashuiSort。
+const chashuiSort = parseObjText(parseObj(pkgSrc, 'chashuiSort'));
+const chashuiIdSet = new Set(Object.values(chashuiSort).flat());
 const sortTranslate = parseObjStringValues(parseObj(pkgSrc, 'characterSortTranslate'));
 
 const introSrc = read('character/intro.js');
@@ -100,6 +103,7 @@ for (const [pkg, ids] of Object.entries(characterSort)) {
   for (const id of ids) packagedIds.add(id);
 }
 for (const id of xiaobaiIdSet) packagedIds.add(id);
+for (const id of chashuiIdSet) packagedIds.add(id);
 
 // 特殊包：这两个包的角色不加后缀
 const specialPkgs = new Set(['qunyou_yongdong', 'qunyou_gaijin']);
@@ -135,7 +139,7 @@ for (const id of allIds) {
     }
     // 找出角色所属的包
     let charPkg = null;
-    for (const [pkg, ids] of Object.entries({ ...characterSort, ...xiaobaiSort })) {
+    for (const [pkg, ids] of Object.entries({ ...characterSort, ...xiaobaiSort, ...chashuiSort })) {
       if (ids.includes(id)) {
         charPkg = pkg;
         break;
@@ -246,6 +250,23 @@ if (xiaobaiOrder.length > 0) {
     // 大包名固定为「小白杯」（与 package.js 里 getXiaobaiPack 的 name / precontent 注册名一致），
     // 不用 sortTranslate.xiaobai —— 那个键在 pkgPrefixMap 里是「小白」（前缀用），容易取错。
     pkgSections.push(`### 小白杯\n\n${subSections.join('\n\n')}`);
+  }
+}
+
+// 茶水贤设也是**独立大包**（getChashuiPack），写法与小白杯一致：
+// 大包用 ### 写「茶水贤设」，每个专题小包用 #### 写分组名。
+const chashuiOrder = Object.keys(chashuiSort);
+if (chashuiOrder.length > 0) {
+  const subSections = [];
+  for (const pkg of chashuiOrder) {
+    const ids = listableIds(chashuiSort[pkg]);
+    if (!ids || ids.length === 0) continue;
+    const subName = sortTranslate[pkg] || pkg;
+    subSections.push(`#### ${subName}\n${makeMergedLinesWithSuffix(ids).join('\n')}`);
+  }
+  if (subSections.length > 0) {
+    // 大包名固定「茶水贤设」（= getChashuiPack 的 name / precontent 注册名）
+    pkgSections.push(`### 茶水贤设\n\n${subSections.join('\n\n')}`);
   }
 }
 

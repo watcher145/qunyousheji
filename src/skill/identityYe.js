@@ -78,7 +78,7 @@ export const skills = {
 		},
 		// async：走 AsyncCompiler 保住模块级闭包（同步 content 引用模块函数会 ReferenceError，知识库 #70）
 		async content(event, trigger, player) {
-			qunyouYeSyncSkills();
+			lib.qunyouYeSyncSkills();
 		},
 	},
 // === 跋扈 ===
@@ -250,3 +250,7 @@ export function setupIdentityYe() {
 		};
 	}
 }
+
+// ===== StepCompiler 可见性：编译后的回调（content/cost/precontent/onuse）里只能用引擎注入的名字，
+// 模块作用域的函数/import 全部丢失，所以这里统一挂到 lib 上，回调里写 lib.xxx。
+lib.qunyouYeSyncSkills = qunyouYeSyncSkills;

@@ -89,6 +89,7 @@ const clanZhudingSkillTypes = {
  * @returns {"basic"|"trick"|"equip"}
  */
 function clanZhudingBestType(player) {
+	/** @type {["basic", "trick", "equip"]} */
 	const order = ["basic", "trick", "equip"];
 	const score = { basic: 0, trick: 0, equip: 0 };
 	for (const skill of player.getSkills(null, false, false)) {
@@ -97,6 +98,7 @@ function clanZhudingBestType(player) {
 			for (const type of types) score[type]++;
 		}
 	}
+	/** @type {"basic" | "trick" | "equip"} */
 	let best = order[0];
 	for (const type of order) {
 		if (score[type] > score[best]) best = type;
@@ -133,7 +135,7 @@ function clanZuguanCardValue(player, target, card) {
 function clanZuguanBestGain(player, target, cards) {
 	let best = 0;
 	for (const card of cards) {
-		const value = clanZuguanCardValue(player, target, card);
+		const value = lib.clanZuguanCardValue(player, target, card);
 		if (value > best) best = value;
 	}
 	return best;
@@ -209,7 +211,7 @@ clan_xinggu: {
 	},
 	async content(event, trigger, player) {
 		while (player.isIn()) {
-			const card = clanXingguSharedCard(player);
+			const card = lib.clanXingguSharedCard(player);
 			const hits = typeof card.storage.fulei == "number" ? card.storage.fulei : 0;
 			// 交待天水姜氏共同的浮雷判定黑桃命中次数，每次判定后重新询问，取消即停
 			const go = await player
@@ -261,7 +263,7 @@ clanguming: {
 		if (!result?.targets?.length) return;
 		const target = result.targets[0];
 		// 沽名前移一格（helper 内含缓存清理、联机同步与鬩墙失效位置同步）
-		qunyou_gumingMove(target, 1);
+		lib.qunyou_gumingMove(target, 1);
 		// 持有者视为使用【无中生有】或【桃】（桃仅在可用时进入选项；仅剩一个选项直接跳过选择）
 		// ⚠️ chooseButton 的按钮数组必须与 "vcard" 类型标记配对成 [按钮数组, "vcard"]，否则按钮按无类型创建会抛“button不合法”
 		const cardList = [["锦囊", "", "wuzhong"]];
@@ -408,7 +410,7 @@ clanshuze: {
 		return true;
 	},
 	async content(event, trigger, player) {
-		await clanshuze_effect(player);
+		await lib.clanshuze_effect(player);
 	},
 },
 // === 训礼 ===
@@ -501,7 +503,7 @@ clanzhuding: {
 			async content(event, trigger, player) {
 				const result = await player.chooseControl("basic", "trick", "equip")
 					.set("prompt", "柱鼎：选择一种牌的类别")
-					.set("ai", (trigger2, chooser) => clanZhudingBestType(chooser))
+					.set("ai", (trigger2, chooser) => lib.clanZhudingBestType(chooser))
 					.forResult();
 				player.storage.clanzhuding_type = result.control;
 			},
@@ -525,27 +527,27 @@ clanzhuding: {
 			);
 		},
 		check(event, player) {
-			const cards = clanZuguanCards(event, player);
+			const cards = lib.clanZuguanCards(event, player);
 			if (!cards.length) return false;
 			return game.hasPlayer(
-				(target) => target.hasClan("琅琊诸葛氏") && clanZuguanBestGain(player, target, cards) > 0
+				(target) => target.hasClan("琅琊诸葛氏") && lib.clanZuguanBestGain(player, target, cards) > 0
 			);
 		},
 		async content(event, trigger, player) {
-			const cards = clanZuguanCards(trigger, player);
+			const cards = lib.clanZuguanCards(trigger, player);
 			if (!cards.length) return;
 			const tr = await player
 				.chooseTarget(get.prompt("clanzuguan"), (c, f, t) => t.hasClan("琅琊诸葛氏"))
-				.set("ai", (target) => clanZuguanBestGain(player, target, cards))
+				.set("ai", (target) => lib.clanZuguanBestGain(player, target, cards))
 				.forResult();
 			if (!tr.bool) return;
 			const target = tr.targets[0];
-			const usable = cards.filter((card) => clanZuguanCardValue(player, target, card) > 0);
+			const usable = cards.filter((card) => lib.clanZuguanCardValue(player, target, card) > 0);
 			if (!usable.length) return;
 			const cr = await target
 				.chooseButton(["族冠：选择使用其中一张牌", usable])
-				.set("filterButton", (button) => clanZuguanCardValue(player, target, button.link) > 0)
-				.set("ai", (button) => clanZuguanCardValue(player, target, button.link))
+				.set("filterButton", (button) => lib.clanZuguanCardValue(player, target, button.link) > 0)
+				.set("ai", (button) => lib.clanZuguanCardValue(player, target, button.link))
 				.forResult();
 			if (!cr.bool) return;
 			target.$gain2(cr.links[0], false);
@@ -557,3 +559,12 @@ clanzhuding: {
 		},
 	},
 };
+
+// ===== StepCompiler 可见性：编译后的回调（content/cost/precontent/onuse）里只能用引擎注入的名字，
+// 模块作用域的函数/import 全部丢失，所以这里统一挂到 lib 上，回调里写 lib.xxx。
+lib.clanXingguSharedCard = clanXingguSharedCard;
+lib.clanshuze_effect = clanshuze_effect;
+lib.clanZhudingBestType = clanZhudingBestType;
+lib.clanZuguanCards = clanZuguanCards;
+lib.clanZuguanBestGain = clanZuguanBestGain;
+lib.clanZuguanCardValue = clanZuguanCardValue;

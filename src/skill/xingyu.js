@@ -179,9 +179,15 @@ xingyu_yingfeng: {
 			onremove: true,
 			name: "英風",
 			// 本回合攻击范围 buff 需可见：mark 数量 = 已重铸张数（"#" 占位符由引擎替换为 storage 数值）
+			// 改攻击范围必须挂 attackRange.png（R18），否则 marktext 会把图标退化成字符
 			mark: true,
-			marktext: "英",
-			intro: { name: "英風", content: "攻击范围+#" },
+			markimage: "image/card/attackRange.png",
+			intro: {
+				name: "英風",
+				content(storage, player) {
+					return `<li>攻击范围+${storage || 0}<br><li>当前攻击范围：${player.getAttackRange(false)}`;
+				},
+			},
 			mod: {
 				attackRange(player, num) {
 					return num + player.countMark("xingyu_yingfeng_range");
@@ -849,7 +855,12 @@ xingyu_jiyu: {
 	trigger: { global: "phaseZhunbeiBegin" },
 	direct: true,
 	filter(event, player) {
-		return event.player != player && player.countCards("h") > 0;
+		// 描述是「一名角色的准备阶段」，含自己。
+		// trigger.global 对每个玩家分别注册钩子（player.js:10767-10789）并在派发时逐个查表
+		// （gameEvent.js:576-579），global 角色还会跳过 player!==event[role] 的判断
+		// （gameEvent.js:551），所以自己的准备阶段本来就会派发到这里。
+		// 唯一条件是「有手牌可弃」（内容里要弃置一张手牌）。
+		return player.countCards("h") > 0;
 	},
 	async content(event, trigger, player) {
 		const target = trigger.player;
@@ -875,16 +886,27 @@ xingyu_jiyu: {
 		target.storage.xingyu_jiyu_dist = num;
 		target.addTempSkill("xingyu_jiyu_dist");
 		// 若你以此法弃置了最后的手牌，其选择令你回复1点体力，或你对其造成1点伤害
+		// 选项文案按描述「令你回复 / 你对其造成伤害」直接写清主客体，避免两个「其」互指。
+		// damage 的方向：a.damage(b, n) = b 对 a 造成伤害（player.js:8616 next.player=this 承伤，
+		// source 由 player 类型实参指定，player.js:8643-8649），所以「你对其造成伤害」要写 target.damage(player)
+		//
+		// 关键：recover 的 filterStop 在 isHealthy() 时直接 finish（player.js:8777-8785），
+		// 也就是满血/无法回复时「令你回复1点体力」是个空选项。描述是「二选一」而非「可以选」，
+		// 所以回复不成立时不该把空选项丢给目标选，直接按「你对其造成1点伤害」结算——
+		// 原生同款短路：old_mbquesong（newjiang.js:7141）`target.isHealthy() ? { index: 0 } : await target.chooseControl(...)`。
+		// 这里回复的一方是 player，所以判 player.isHealthy()；不成立则跳过询问走 damage 分支。
 		if (player.countCards("h") == 0) {
-			const pick = await target
-				.chooseControl("令其回复1点体力", "令其对你造成1点伤害")
-				.set("prompt", "戢羽：其弃置了最后的手牌，请你选择")
-				.set("ai", () => (get.attitude(target, player) > 0 ? 0 : 1))
-				.forResult();
+			const pick = player.isHealthy()
+				? { index: 1 }
+				: await target
+						.chooseControl("令其回复1点体力", `令${get.translation(player)}对其造成1点伤害`)
+						.set("prompt", `戢羽：${get.translation(player)}弃置了最后的手牌，选择对你的影响`)
+						.set("ai", () => (get.attitude(target, player) > 0 ? 0 : 1))
+						.forResult();
 			if (pick?.index == 0) {
 				await player.recover(1);
 			} else if (pick?.index == 1) {
-				await player.damage(target, 1);
+				await target.damage(player, 1);
 			}
 		}
 	},
@@ -894,7 +916,18 @@ xingyu_jiyu_dist: {
 	onremove: true,
 	mark: true,
 	marktext: "羽",
-	intro: { name: "戢羽", content: "本回合计算与其他角色的距离$（自身除外）" },
+	// 距离是「本回合」的临时修正，用 mark:true + 字符 mark 是原生允许的写法
+	// （不是 R18 的手牌上限/攻击范围那两类，没有成套图片，别套 attackRange.png）；
+	// 距离不是攻击范围，`-1` 坐骑那套 `distance.globalFrom` 才是距离的写法，方向一致。
+	// 但 intro.content 里的 `$` 会被 get.translation(storage) 替换（get/index.js:4895），
+	// 而 storage 是形如 -3 的数字，翻译不出东西。这里改成函数形态直接返回带符号数字。
+	intro: {
+		name: "戢羽",
+		content(storage) {
+			const num = storage || 0;
+			return `本回合计算与其他角色的距离${num >= 0 ? "+" : ""}${num}（自身除外）`;
+		},
+	},
 	mod: {
 		globalFrom(from, to, distance) {
 			return distance + (from.storage.xingyu_jiyu_dist || 0);
@@ -1004,7 +1037,7 @@ xingyu_juechou: {
 		if (!go?.bool) return;
 		const result = await player
 			.chooseTarget("决仇：选择体力值大于你的目标", true, (card, me, t) => t != me && me.inRange(t) && t.hp > me.hp)
-			.set("ai", (button) => -get.attitude(get.event().player, button.link))
+			.set("ai", (target) => (target ? -get.attitude(get.event().player, target) : 0))
 			.forResult();
 		if (!result?.targets?.length) return;
 		player.awakenSkill("xingyu_juechou");
@@ -1082,10 +1115,13 @@ xingyu_qianci: {
 		// 酒因 modTarget:true 可选任意角色；同时尊重 targetEnabled/playerEnabled 修正
 		const result = await player
 			.chooseTarget(`谦辞：选择${name == "jiu" ? "【酒】" : "【桃】"}的目标`, true, (cardx, me, t) => lib.filter.targetEnabled2(vcard, me, t))
-			.set("ai", (button) => {
-				const t = button.link;
+			// ⚠️ chooseTarget 的 ai 回调收到的是**目标玩家本身**（noname/ai/basic.js:162-169 的
+			// `check(target?: Player, targets?: Player[])`），不是 button；写成 (button) => button.link
+			// 会拿到 undefined，get.attitude 里读 to.ai.shown 直接崩（mode/identity.js:3734）。
+			.set("ai", (target) => {
+				if (!target) return 0;
 				const me = get.event().player;
-				return name == "tao" ? get.attitude(me, t) + (t.isDamaged() ? 2 : 0) : get.attitude(me, t);
+				return name == "tao" ? get.attitude(me, target) + (target.isDamaged() ? 2 : 0) : get.attitude(me, target);
 			})
 			.forResult();
 		if (!result?.targets?.length) return;
@@ -1169,10 +1205,13 @@ xingyu_qingke_pick: {
 	async content(event, trigger, player) {
 		const x = player.storage.xingyu_qingke_x;
 		player.storage.xingyu_qingke_x = 0;
-		// 其于本回合弃置的牌（在弃牌堆里的）
+		// 其于本回合弃置的牌（在弃牌堆里的）。
+		// ⚠️ getHistory("discard") 是死键（actionHistory 初始键只有 useCard/respond/skipped/lose/gain/sourceDamage/damage/custom/useSkill，
+		// content.js:4126-4136），必须用 lose + type=="discard" 认领，否则 undefined.flatMap 直接抛错。
 		const discarded = player
-			.getHistory("discard")
-			.flatMap((evt) => evt.cards || [])
+			.getHistory("lose")
+			.filter((evt) => evt.type == "discard")
+			.flatMap((evt) => [...(evt.hs || []), ...(evt.es || []), ...(evt.js || [])])
 			.filter((card) => get.position(card, true) == "d")
 			.slice(0, x);
 		if (discarded.length) {
@@ -1295,10 +1334,11 @@ xingyu_qinjian: {
 	direct: true,
 	filter(event, player) {
 		const cards = event.cards || [];
-		return cards.some((card) => get.position(card, true) == "d" && get.subtype(card).startsWith("equip") && player.countEnabledSlot() > 0);
+		// get.subtype 对非装备牌返回 undefined ⇒ 直接 .startsWith 会崩；用可选链守卫
+		return cards.some((card) => get.position(card, true) == "d" && get.subtype(card)?.startsWith("equip") && player.countEnabledSlot() > 0);
 	},
 	async content(event, trigger, player) {
-		const cards = (trigger.cards || []).filter((card) => get.position(card, true) == "d" && get.subtype(card).startsWith("equip"));
+		const cards = (trigger.cards || []).filter((card) => get.position(card, true) == "d" && get.subtype(card)?.startsWith("equip"));
 		for (const card of cards) {
 			if (!player.isIn()) return;
 			if (get.position(card, true) != "d") continue;
@@ -1433,16 +1473,31 @@ xingyu_yinling: {
 			.forResult();
 		if (!choose?.links?.length) return;
 		const name = choose.links[0][2], nature = choose.links[0][3];
-		const drunk = typeof player.hasWine == "function" ? player.hasWine() : false;
+		const drunk = player.hasSkill("jiu");
 		const vcard = get.autoViewAs({ name, nature }, []);
 		// 若你不处于【酒】状态，以此法使用的牌仅对一个目标生效
 		if (!drunk) {
-			const result = await player
-				.chooseTarget(`吟翎：选择【${get.translation(name)}】的目标（仅对一个目标生效）`, true, (card, me, t) => me.canUse(vcard, t))
-				.set("ai", (button) => get.effect(button.link, vcard, player, player))
-				.forResult();
-			if (!result?.targets?.length) return;
-			await player.useCard(vcard, [], result.targets, "xingyu_yinling");
+			// ⚠️ 不能无条件弹「选目标」：本来就只能指定自己的单目标牌（无中生有、桃等 toself），
+			//    以及无目标牌（notarget），合法目标只有 0~1 个，弹窗要么给空框、要么根本没得选。
+			// 正确口径：先算合法目标，按数量分流——
+			//   0 个 → 无目标牌，直接视为使用；
+			//   1 个 → 直接指定它，不问（这就是「本来就指定自己的牌不用选目标」）；
+			//   ≥2 个 → 才让玩家挑一个（描述「仅对一个目标生效」）。
+			const legal = game.filterPlayer((target) => player.canUse(vcard, target));
+			let targets;
+			if (legal.length <= 1) {
+				targets = legal;
+			} else {
+				const result = await player
+					.chooseTarget(`吟翎：选择【${get.translation(name)}】的目标（仅对一个目标生效）`, true, (card, me, t) => me.canUse(vcard, t))
+					// chooseTarget 的 ai 回调收到的是**目标玩家**本身；旧写法 (button) => get.effect(button.link, ...)
+					// 里 button.link 恒 undefined，等于每次都在给 get.effect 传垃圾参数（AI 目标选择失效）。
+					.set("ai", (target) => get.effect(target, vcard, player, player))
+					.forResult();
+				if (!result?.targets?.length) return;
+				targets = result.targets;
+			}
+			await player.useCard(vcard, [], targets, "xingyu_yinling");
 		} else {
 			await player.chooseUseTarget(vcard, true).set("logSkill", "xingyu_yinling");
 		}
@@ -1493,7 +1548,7 @@ xingyu_xianlue: {
 		} else if (ctrl?.index == 1) {
 			const result = await player
 				.chooseTarget(`先略：令一名与你势力相同的角色摸牌至体力上限（不超过五张）`, true, (card, me, t) => lib.skill.xingyu_xianlue.sameGroup(me, t))
-				.set("ai", (button) => get.attitude(get.event().player, button.link))
+				.set("ai", (target) => (target ? get.attitude(get.event().player, target) : 0))
 				.forResult();
 			if (result?.targets?.length) {
 				const t = result.targets[0];
@@ -1542,10 +1597,11 @@ xingyu_fengwang: {
 		if (!go?.bool) return;
 		const result = await player
 			.chooseTarget(`奉王：选择与你势力相同的角色`, true, (card, me, t) => lib.skill.xingyu_xianlue.sameGroup(me, t))
-			.set("ai", (button) => {
-				const t = button.link;
+			// ⚠️ chooseTarget 的 ai 参数是目标角色本身（不是 button，没有 .link）
+			.set("ai", (target) => {
+				if (!target) return 0;
 				const me = get.event().player;
-				return get.attitude(me, t) + (t.getHandcardLimit() > me.getHandcardLimit() ? 3 : 0);
+				return get.attitude(me, target) + (target.getHandcardLimit() > me.getHandcardLimit() ? 3 : 0);
 			})
 			.forResult();
 		if (!result?.targets?.length) return;
@@ -1561,8 +1617,15 @@ xingyu_fengwang_eff: {
 	charlotte: true,
 	onremove: true,
 	mark: true,
-	marktext: "奉",
-	intro: { name: "奉王", content: "本回合手牌上限与$相同" },
+	// 改手牌上限必须挂 handcard.png（R18）；storage 是目标角色，intro 里 $ 由引擎换成其名字
+	markimage: "image/card/handcard.png",
+	intro: {
+		name: "奉王",
+		content(storage, player) {
+			const target = get.translation(storage);
+			return `<li>本回合手牌上限与${target}相同<br><li>当前手牌上限：${player.getHandcardLimit()}`;
+		},
+	},
 	mod: {
 		maxHandcard(player, num) {
 			const t = player.storage.xingyu_fengwang_eff;
@@ -1746,7 +1809,7 @@ xingyu_niansi: {
 				if (!marked?.length || event.player == player) return false;
 				if (name === "gainBefore") {
 					// 两条取牌路径统一判断：get.cardPile（牌仍在牌堆）/ get.cards（original="c"）
-					return (event.cards || []).some((card) => xingyuNiansiIsVisiblePileGain(card, marked));
+					return (event.cards || []).some((card) => lib.xingyuNiansiIsVisiblePileGain(card, marked));
 				}
 				const pending = player.storage.xingyu_niansi_gaining?.[event.id] || [];
 				return (event.cards || []).some((card) => marked.includes(card) && pending.includes(card.cardid));
@@ -1755,7 +1818,7 @@ xingyu_niansi: {
 				if (event.triggername === "gainBefore") {
 					const marked = player.storage.xingyu_niansi_cards || [];
 					const ids = (trigger.cards || [])
-						.filter((card) => xingyuNiansiIsVisiblePileGain(card, marked))
+						.filter((card) => lib.xingyuNiansiIsVisiblePileGain(card, marked))
 						.map((card) => card.cardid);
 					player.storage.xingyu_niansi_gaining ??= {};
 					player.storage.xingyu_niansi_gaining[trigger.id] = ids;
@@ -1860,7 +1923,7 @@ xingyu_jueyin: {
 		if (!go?.bool) return;
 		player.awakenSkill("xingyu_jueyin");
 		player.logSkill("xingyu_jueyin");
-		const cards = qunyou_getVisiblePileTop().map((item) => item.card);
+		const cards = lib.qunyou_getVisiblePileTop().map((item) => item.card);
 		if (cards.length) {
 			await player.gain(cards, "gain2", "log");
 			// 同步清掉念嗣个人记录中已被获得的牌
@@ -2296,7 +2359,7 @@ xingyu_yishi_ui: {
 		await lib.skill.xingyu_yishi_ui.run(event, trigger, player);
 	},
 	run() {
-		game?.players?.forEach((cur) => xingyuBindYiMark(cur));
+		game?.players?.forEach((cur) => lib.xingyuBindYiMark(cur));
 	},
 },
 xingyu_yishi_mark_skill: {
@@ -2326,21 +2389,21 @@ xingyu_nongju: {
 	filter(event, player, name) {
 		if (!name || player.hasSkill("xingyu_nongju_used")) return false;
 		// 场上某枚「弈」含有该时机的非标签技能，且该事件归属于它自己声明的主语
-		return game.hasPlayer((cur) => (cur.storage.xingyu_yi || []).some((char) => xingyuNongjuHasTrigger(char, name, event, player)));
+		return game.hasPlayer((cur) => (cur.storage.xingyu_yi || []).some((char) => lib.xingyuNongjuHasTrigger(char, name, event, player)));
 	},
 	async content(event, trigger, player) {
 		player.logSkill("xingyu_nongju");
 		player.addTempSkill("xingyu_nongju_used");
 		const triggerName = event.triggername;
-		const targetCandidates = game.filterPlayer((cur) => (cur.storage.xingyu_yi || []).some((char) => xingyuNongjuHasTrigger(char, triggerName, trigger, player)));
+		const targetCandidates = game.filterPlayer((cur) => (cur.storage.xingyu_yi || []).some((char) => lib.xingyuNongjuHasTrigger(char, triggerName, trigger, player)));
 		if (!targetCandidates.length) return;
 		const targetRes = await player
 			.chooseTarget("弄局：移除一名角色的一张含有对应时机的非标签技能的「弈」", (card, me, t) => targetCandidates.includes(t))
-			.set("ai", (button) => (get.attitude(player, button.link) < 0 ? 1 : 0))
+			.set("ai", (target) => (target && get.attitude(player, target) < 0 ? 1 : 0))
 			.forResult();
 		if (!targetRes?.bool || !targetRes.targets?.length) return;
 		const target = targetRes.targets[0];
-		const matching = (target.storage.xingyu_yi || []).filter((char) => xingyuNongjuHasTrigger(char, triggerName, trigger, player));
+		const matching = (target.storage.xingyu_yi || []).filter((char) => lib.xingyuNongjuHasTrigger(char, triggerName, trigger, player));
 		if (!matching.length) return;
 		let char = matching[0];
 		if (matching.length > 1) {
@@ -2355,12 +2418,12 @@ xingyu_nongju: {
 		delete player.storage.xingyu_yi_map[target.playerid];
 		// 每人的「弈」标记减计数 / 刷新简介
 		target.updateMarks("xingyu_yishi_mark_skill");
-		xingyuBindYiMark(target);
+		lib.xingyuBindYiMark(target);
 		// 三个选项的界面直接展开：
 		// · 每个「发动此弈上的技能」候选各占一条，附技能全文（等价于选项一，但不用二段选择）
 		// · 另两条为改目标 / 替换武将
 		// 写法同原生 jinghe/twbudao：controls 是底栏按钮（技能 id 自动显示技名），choiceList 是对话框全文
-		const matchingSkills = xingyuNongjuSkillsMatching(char, triggerName, trigger, player);
+		const matchingSkills = lib.xingyuNongjuSkillsMatching(char, triggerName, trigger, player);
 		if (!matchingSkills.length) return;
 		const optionTarget = "弄局·改目标";
 		const optionReplace = "弄局·替换武将";
@@ -2420,7 +2483,7 @@ xingyu_nongju_t2: {
 		if (!trigger.targets?.length) return;
 		const result = await me
 			.chooseTarget("弄局：为其指定目标", true, (card, m, t) => t.isIn())
-			.set("ai", (button) => -get.attitude(get.event().player, button.link))
+			.set("ai", (target) => (target ? -get.attitude(get.event().player, target) : 0))
 			.forResult();
 		if (result?.targets) {
 			trigger.targets = result.targets;
@@ -2649,6 +2712,10 @@ xingyu_qulie: {
 },
 xingyu_qulie_respond: {
 	charlotte: true,
+	// 内部子技能：不能再让技能拥有者确认一次「是否发动驱烈」，是否弃牌由响应者决定
+	forced: true,
+	silent: true,
+	popup: false,
 	trigger: { global: "respondAfter" },
 	filter(event, player) {
 		const store = player.storage.xingyu_qulie_respond;
@@ -2660,17 +2727,16 @@ xingyu_qulie_respond: {
 	async content(event, trigger, player) {
 		const target = trigger.player;
 		if (!target.isIn()) return;
+		// 「其可以令你弃置你区域内的一张牌」：是否弃、弃哪张都由响应此牌的角色决定，
+		// 技能拥有者只负责执行弃置。
 		const go = await target
 			.chooseBool(`驱烈：是否令${get.translation(player)}弃置其区域内的一张牌？`)
-			.set("ai", () => (get.attitude(target, player) < 0 && player.countCards("he") > 0 ? 1 : 0))
+			.set("ai", () => (get.attitude(target, player) < 0 && player.countCards("hej") > 0 ? 1 : 0))
 			.forResult();
 		if (!go?.bool) return;
 		if (!player.isIn() || player.countCards("hej") <= 0) return;
-		const pick = await player
-			.choosePlayerCard(player, "hej", true, 1, "驱烈：弃置你区域内的一张牌")
-			.set("ai", (button) => (button.link ? 10 - get.value(button.link) : 0))
-			.forResult();
-		if (pick?.cards?.length) await player.discard(pick.cards);
+		// 由响应者挑牌（手牌对他显示为牌背），拥有者执行弃置
+		await target.discardPlayerCard(player, "hej", true, 1, `驱烈：弃置${get.translation(player)}区域内的一张牌`);
 	},
 },
 xingyu_kaitian: {
@@ -2737,7 +2803,7 @@ xingyu_kaitian: {
 		// 令一名角色获得所有角色各1点体力上限：其余角色各-1上限，该角色+（减少总数）
 		const result = await player
 			.chooseTarget("开天：令一名角色获得其余角色各失去的1点体力上限", true)
-			.set("ai", (button) => get.attitude(get.event().player, button.link))
+			.set("ai", (target) => (target ? get.attitude(get.event().player, target) : 0))
 			.forResult();
 		if (!result?.targets?.length) return;
 		const chosen = result.targets[0];
@@ -3039,3 +3105,11 @@ xingyu_xuechou_mark: {
 	intro: { name: "血仇", content: "「倾世」中的【桃园结义】已改为【万箭齐发】" },
 },
 }
+
+// ===== StepCompiler 可见性：编译后的回调（content/cost/precontent/onuse）里只能用引擎注入的名字，
+// 模块作用域的函数/import 全部丢失，所以这里统一挂到 lib 上，回调里写 lib.xxx。
+lib.xingyuNiansiIsVisiblePileGain = xingyuNiansiIsVisiblePileGain;
+lib.qunyou_getVisiblePileTop = qunyou_getVisiblePileTop;
+lib.xingyuNongjuHasTrigger = xingyuNongjuHasTrigger;
+lib.xingyuBindYiMark = xingyuBindYiMark;
+lib.xingyuNongjuSkillsMatching = xingyuNongjuSkillsMatching;

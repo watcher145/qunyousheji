@@ -19,6 +19,10 @@ export function qunyou_validNumber(card, player) {
 	return Number.isInteger(num) && num >= 1 && num <= 13 ? num : null;
 }
 
+// StepCompiler 编译过的 step content（`onuse` / `precontent` / `content` / `cost` …）拿不到
+// 模块闭包，只能看见引擎 topVars ⇒ 这些位置必须走 `lib.` 上的引用，不能直接写 import 的名字。
+lib.qunyouValidNumber = qunyou_validNumber;
+
 export function qunyou_numberText(num) {
 	if (num === 1) return "A";
 	if (num === 11) return "J";
@@ -630,13 +634,9 @@ export function qunyou_combo_isDiscard(event, player) {
 		return true;
 	}
 	if (event.name === "loseAsync") {
-		let discarding = false;
-		event.checkHistory?.("lose", (evt) => {
-			if (evt.type === "discard" && evt.player === player) {
-				discarding = true;
-			}
-		});
-		return discarding;
+		// loseAsync 自己不带 type，看它是不是由 discard 事件派生出来的
+		const parent = event.getParent("discard");
+		return !!parent && parent.name === "discard" && parent.player === player;
 	}
 	return false;
 }
@@ -1365,7 +1365,7 @@ export function qunyou_gushe_getLastDiscardCard(player) {
 	if (phaseId && stored?.phaseId === phaseId && stored.card && get.position(stored.card, true) === "d") {
 		return stored.card;
 	}
-	const phaseEvent = _status.event?.getParent?.("phase");
+	const phaseEvent = _status.event?.getParent?.("phase", true);
 	if (!phaseEvent) {
 		return null;
 	}
@@ -2677,4 +2677,212 @@ export async function qunyouFugaiAsk(player, skill, trigger) {
 	}
 	await next;
 	return true;
+}
+
+// ===== StepCompiler 可见性批量挂载 =====
+// 原因：`content` / `precontent` / `onuse` / `cost` 会被 StepCompiler 重新编译成
+//   `new Function(...StepParser.params, ...var{...}=event, ...var{...}=topVars, stepHead)`，
+//   编译产物只拿得到 StepParser.params 和 topVars（引擎全局 game/get/lib/ui/_status/ai），
+//   模块的 import 闭包全部丢失。所以这些回调里不能裸写 import 进来的函数名，必须走 `lib.`。
+// 这里一次性把 helpers 的全部导出挂到 lib 上。
+const stepScopeMounts = {
+	"getTurnDiscardCards": getTurnDiscardCards,
+	"jinluSwapUI": jinluSwapUI,
+	"qunyouFugaiAsk": qunyouFugaiAsk,
+	"qunyou_adjustHandTo": qunyou_adjustHandTo,
+	"qunyou_adjustHpTo": qunyou_adjustHpTo,
+	"qunyou_aoyue_execute": qunyou_aoyue_execute,
+	"qunyou_aoyue_vcards": qunyou_aoyue_vcards,
+	"qunyou_cardNameLength": qunyou_cardNameLength,
+	"qunyou_chengshi_restore": qunyou_chengshi_restore,
+	"qunyou_chouci_addRecords": qunyou_chouci_addRecords,
+	"qunyou_chouci_cardName": qunyou_chouci_cardName,
+	"qunyou_chouci_discardByName": qunyou_chouci_discardByName,
+	"qunyou_chouci_eventDiscardCards": qunyou_chouci_eventDiscardCards,
+	"qunyou_chouci_eventOrderingCards": qunyou_chouci_eventOrderingCards,
+	"qunyou_chouci_isNormalTrick": qunyou_chouci_isNormalTrick,
+	"qunyou_chouci_namesToRecord": qunyou_chouci_namesToRecord,
+	"qunyou_chouci_records": qunyou_chouci_records,
+	"qunyou_combo_break": qunyou_combo_break,
+	"qunyou_combo_getDiscardCards": qunyou_combo_getDiscardCards,
+	"qunyou_combo_isDiscard": qunyou_combo_isDiscard,
+	"qunyou_combo_isDraw": qunyou_combo_isDraw,
+	"qunyou_cuisheng_viewAs": qunyou_cuisheng_viewAs,
+	"qunyou_cycleState": qunyou_cycleState,
+	"qunyou_damageCardInDiscardThisRound": qunyou_damageCardInDiscardThisRound,
+	"qunyou_danpo_isPhaseUsing": qunyou_danpo_isPhaseUsing,
+	"qunyou_danpo_list": qunyou_danpo_list,
+	"qunyou_danpo_matches": qunyou_danpo_matches,
+	"qunyou_danpo_responseMap": qunyou_danpo_responseMap,
+	"qunyou_danpo_useMap": qunyou_danpo_useMap,
+	"qunyou_dingyi_targets": qunyou_dingyi_targets,
+	"qunyou_discardCountThisRound": qunyou_discardCountThisRound,
+	"qunyou_dusheng_getUnusedSuits": qunyou_dusheng_getUnusedSuits,
+	"qunyou_dusheng_tryBinglin": qunyou_dusheng_tryBinglin,
+	"qunyou_fenzi_maxHandPlayers": qunyou_fenzi_maxHandPlayers,
+	"qunyou_fuzhen_zoneCount": qunyou_fuzhen_zoneCount,
+	"qunyou_gainCount": qunyou_gainCount,
+	"qunyou_getDiscardSuits": qunyou_getDiscardSuits,
+	"qunyou_getLastNumber": qunyou_getLastNumber,
+	"qunyou_getPreviousUseNumber": qunyou_getPreviousUseNumber,
+	"qunyou_getState": qunyou_getState,
+	"qunyou_gouxian_useDamageCards": qunyou_gouxian_useDamageCards,
+	"qunyou_gudan_cleanup": qunyou_gudan_cleanup,
+	"qunyou_gudan_discardCards": qunyou_gudan_discardCards,
+	"qunyou_gudan_gainCard": qunyou_gudan_gainCard,
+	"qunyou_gudan_track": qunyou_gudan_track,
+	"qunyou_gumingMove": qunyou_gumingMove,
+	"qunyou_gushe_assignCards": qunyou_gushe_assignCards,
+	"qunyou_gushe_canUse": qunyou_gushe_canUse,
+	"qunyou_gushe_cards": qunyou_gushe_cards,
+	"qunyou_gushe_getDiscardFromEvent": qunyou_gushe_getDiscardFromEvent,
+	"qunyou_gushe_getLastDiscardCard": qunyou_gushe_getLastDiscardCard,
+	"qunyou_gushe_getTopCard": qunyou_gushe_getTopCard,
+	"qunyou_gushe_rank": qunyou_gushe_rank,
+	"qunyou_gushe_showCards": qunyou_gushe_showCards,
+	"qunyou_gushe_targets": qunyou_gushe_targets,
+	"qunyou_gushe_useRemaining": qunyou_gushe_useRemaining,
+	"qunyou_hanguo_visibleTag": qunyou_hanguo_visibleTag,
+	"qunyou_haoxianCanGain": qunyou_haoxianCanGain,
+	"qunyou_haoxianFieldCandidates": qunyou_haoxianFieldCandidates,
+	"qunyou_haoxianGainSequential": qunyou_haoxianGainSequential,
+	"qunyou_haoxianHandCandidates": qunyou_haoxianHandCandidates,
+	"qunyou_haoxianPileCandidates": qunyou_haoxianPileCandidates,
+	"qunyou_huameng_clear": qunyou_huameng_clear,
+	"qunyou_huameng_skillList": qunyou_huameng_skillList,
+	"qunyou_isInstantCard": qunyou_isInstantCard,
+	"qunyou_isPositiveMultiple": qunyou_isPositiveMultiple,
+	"qunyou_jianjiang_getShownCards": qunyou_jianjiang_getShownCards,
+	"qunyou_jianjiang_hasTaggedCard": qunyou_jianjiang_hasTaggedCard,
+	"qunyou_jianjiang_isMinHand": qunyou_jianjiang_isMinHand,
+	"qunyou_jianjiang_syncHolder": qunyou_jianjiang_syncHolder,
+	"qunyou_jicheng_addLimitLoss": qunyou_jicheng_addLimitLoss,
+	"qunyou_jicheng_adjustHand": qunyou_jicheng_adjustHand,
+	"qunyou_jicheng_canUseDuel": qunyou_jicheng_canUseDuel,
+	"qunyou_jicheng_finishTurn": qunyou_jicheng_finishTurn,
+	"qunyou_jicheng_options": qunyou_jicheng_options,
+	"qunyou_jicheng_redCompareCount": qunyou_jicheng_redCompareCount,
+	"qunyou_jicheng_targets": qunyou_jicheng_targets,
+	"qunyou_jingce_clear": qunyou_jingce_clear,
+	"qunyou_jingce_modeText": qunyou_jingce_modeText,
+	"qunyou_jingce_peek": qunyou_jingce_peek,
+	"qunyou_jingce_recordUse": qunyou_jingce_recordUse,
+	"qunyou_jingce_storage": qunyou_jingce_storage,
+	"qunyou_jingce_targetCount": qunyou_jingce_targetCount,
+	"qunyou_jingce_usedSuitsText": qunyou_jingce_usedSuitsText,
+	"qunyou_jingce_usedTypesText": qunyou_jingce_usedTypesText,
+	"qunyou_jingfa_getCompareEvent": qunyou_jingfa_getCompareEvent,
+	"qunyou_jingfa_getEventStorage": qunyou_jingfa_getEventStorage,
+	"qunyou_jingfa_sameSuitAndType": qunyou_jingfa_sameSuitAndType,
+	"qunyou_jingfa_sum": qunyou_jingfa_sum,
+	"qunyou_junming_hasUsed": qunyou_junming_hasUsed,
+	"qunyou_junming_markUsed": qunyou_junming_markUsed,
+	"qunyou_junming_usedBranches": qunyou_junming_usedBranches,
+	"qunyou_lingzhen_limit": qunyou_lingzhen_limit,
+	"qunyou_lingzhen_useLoop": qunyou_lingzhen_useLoop,
+	"qunyou_longjue_isFull": qunyou_longjue_isFull,
+	"qunyou_longjue_remaining": qunyou_longjue_remaining,
+	"qunyou_longjue_vcards": qunyou_longjue_vcards,
+	"qunyou_no1Player": qunyou_no1Player,
+	"qunyou_numberText": qunyou_numberText,
+	"qunyou_qionfu_basicVcards": qunyou_qionfu_basicVcards,
+	"qunyou_rongguo_compareCards": qunyou_rongguo_compareCards,
+	"qunyou_rongguo_targets": qunyou_rongguo_targets,
+	"qunyou_setLastNumber": qunyou_setLastNumber,
+	"qunyou_shenshi_areaTargets": qunyou_shenshi_areaTargets,
+	"qunyou_shenshi_canAddTarget": qunyou_shenshi_canAddTarget,
+	"qunyou_shenshi_canRemoveTarget": qunyou_shenshi_canRemoveTarget,
+	"qunyou_shenshi_getTurnDiscardCards": qunyou_shenshi_getTurnDiscardCards,
+	"qunyou_skillMove": qunyou_skillMove,
+	"qunyou_taowei_compare": qunyou_taowei_compare,
+	"qunyou_taowei_currentMaxNumber": qunyou_taowei_currentMaxNumber,
+	"qunyou_taowei_handCardsBeforeUse": qunyou_taowei_handCardsBeforeUse,
+	"qunyou_taowei_matchStage": qunyou_taowei_matchStage,
+	"qunyou_taowei_reuseCard": qunyou_taowei_reuseCard,
+	"qunyou_taowei_useCards": qunyou_taowei_useCards,
+	"qunyou_tongxian_canUse": qunyou_tongxian_canUse,
+	"qunyou_tongxian_type": qunyou_tongxian_type,
+	"qunyou_touxie_candidates": qunyou_touxie_candidates,
+	"qunyou_turnDiscards": qunyou_turnDiscards,
+	"qunyou_turnSuits": qunyou_turnSuits,
+	"qunyou_turnUseCount": qunyou_turnUseCount,
+	"qunyou_validNumber": qunyou_validNumber,
+	"qunyou_weishi_entries": qunyou_weishi_entries,
+	"qunyou_weishi_mark": qunyou_weishi_mark,
+	"qunyou_weishi_storage": qunyou_weishi_storage,
+	"qunyou_weitai_isSingleTarget": qunyou_weitai_isSingleTarget,
+	"qunyou_weitai_storage": qunyou_weitai_storage,
+	"qunyou_weitai_viewAs": qunyou_weitai_viewAs,
+	"qunyou_xiongbo_compareCards": qunyou_xiongbo_compareCards,
+	"qunyou_xiongbo_debaters": qunyou_xiongbo_debaters,
+	"qunyou_xiongbo_majorityTargets": qunyou_xiongbo_majorityTargets,
+	"qunyou_xiongbo_selfCards": qunyou_xiongbo_selfCards,
+	"qunyou_yinshen_canUse": qunyou_yinshen_canUse,
+	"qunyou_yinshen_records": qunyou_yinshen_records,
+	"qunyou_yinshen_usableNames": qunyou_yinshen_usableNames,
+	"qunyou_yunxian_sameColorActivate": qunyou_yunxian_sameColorActivate,
+	"qunyou_zhaduo_compareCards": qunyou_zhaduo_compareCards,
+	"qunyou_zhaduo_nonWinners": qunyou_zhaduo_nonWinners,
+	"qunyou_zhaduo_targets": qunyou_zhaduo_targets,
+	"qunyou_zhashu_cards": qunyou_zhashu_cards,
+	"qunyou_zhashu_clear": qunyou_zhashu_clear,
+	"qunyou_zhashu_storage": qunyou_zhashu_storage,
+	"qunyou_zhichao_lostEquips": qunyou_zhichao_lostEquips,
+	"qunyou_zhihu_handCounts": qunyou_zhihu_handCounts,
+	"qunyou_zhihu_handCountsText": qunyou_zhihu_handCountsText,
+	"qunyou_zhihu_modeText": qunyou_zhihu_modeText,
+	"qunyou_zhihu_noDamage": qunyou_zhihu_noDamage,
+	"qunyou_zhihu_storage": qunyou_zhihu_storage,
+	"qunyou_zhihu_sync": qunyou_zhihu_sync,
+	"qunyou_zhihu_target": qunyou_zhihu_target,
+	"qunyou_zhitian_execute": qunyou_zhitian_execute,
+	"qunyou_zhitian_getExecutor": qunyou_zhitian_getExecutor,
+	"qunyou_zhitian_isDamageUnique": qunyou_zhitian_isDamageUnique,
+	"qunyou_zhitian_uniqueMinHandOther": qunyou_zhitian_uniqueMinHandOther,
+	"qunyou_zhouli_activate": qunyou_zhouli_activate,
+	"qunyou_zhouli_bottomCards": qunyou_zhouli_bottomCards,
+	"qunyou_zhouli_reveal": qunyou_zhouli_reveal,
+	"qunyou_zhouli_topCards": qunyou_zhouli_topCards,
+	"qunyou_zhuoqu_addNumber": qunyou_zhuoqu_addNumber,
+	"qunyou_zhuoqu_cardNumbers": qunyou_zhuoqu_cardNumbers,
+	"qunyou_zhuoqu_discardedNumbers": qunyou_zhuoqu_discardedNumbers,
+	"qunyou_zhuoqu_getUsedNumber": qunyou_zhuoqu_getUsedNumber,
+	"qunyou_zhuoqu_isBlocked": qunyou_zhuoqu_isBlocked,
+	"qunyou_zhuoqu_isCurrentUse": qunyou_zhuoqu_isCurrentUse,
+	"qunyou_zhuoqu_isOutsideDiscardPhase": qunyou_zhuoqu_isOutsideDiscardPhase,
+	"qunyou_zhuoqu_numberText": qunyou_zhuoqu_numberText,
+	"qunyou_zhuoqu_numbers": qunyou_zhuoqu_numbers,
+	"qunyou_zhuoqu_removeNumbers": qunyou_zhuoqu_removeNumbers,
+	"wending_beixuan_cancelEvent": wending_beixuan_cancelEvent,
+	"wending_bingzhu_cardOptions": wending_bingzhu_cardOptions,
+	"wending_bingzhu_counts": wending_bingzhu_counts,
+	"wending_guiwu_isInstant": wending_guiwu_isInstant,
+	"wending_guiwu_targetKind": wending_guiwu_targetKind,
+	"wending_guiwu_targets": wending_guiwu_targets,
+	"wending_jidu_discardedShan": wending_jidu_discardedShan,
+	"wending_jidu_isCard": wending_jidu_isCard,
+	"wending_miaoyu_canUse": wending_miaoyu_canUse,
+	"wending_miaoyu_controls": wending_miaoyu_controls,
+	"wending_miaoyu_modAiValue": wending_miaoyu_modAiValue,
+	"wending_suijian_canUse": wending_suijian_canUse,
+	"wending_suijian_historyOptions": wending_suijian_historyOptions,
+	"wending_suijian_options": wending_suijian_options,
+	"wending_suijian_prompt": wending_suijian_prompt,
+	"wending_suijian_queueTargets": wending_suijian_queueTargets,
+	"wending_suijian_vcard": wending_suijian_vcard,
+	"wending_yaliang_addDelayed": wending_yaliang_addDelayed,
+	"wending_yaliang_clearDelayed": wending_yaliang_clearDelayed,
+	"wending_yaliang_damageCards": wending_yaliang_damageCards,
+	"wending_yaliang_delayed": wending_yaliang_delayed,
+	"wending_yaliang_updateMark": wending_yaliang_updateMark,
+	"wending_yanghui_phaseDiscardCards": wending_yanghui_phaseDiscardCards,
+	"wending_yongxu_baseCards": wending_yongxu_baseCards,
+	"wending_yongxu_flatPhysical": wending_yongxu_flatPhysical,
+	"wending_yongxu_isTrick": wending_yongxu_isTrick,
+	"zishu_yusan_getCards": zishu_yusan_getCards,
+};
+for (const [name, fn] of Object.entries(stepScopeMounts)) {
+	if (typeof fn != "function") continue;
+	lib[name] = fn;
+	lib[name.charAt(0).toUpperCase() + name.slice(1)] = fn;
 }

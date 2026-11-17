@@ -8,6 +8,10 @@ export const cardTranslate = {
 	xiaobai_dabai_info: "此牌可当作其对应的「小白杯」武将技能描述中的一张基本牌或普通锦囊牌使用。此牌进入弃牌堆后销毁。",
 	zhuoming_fangma: "防御马",
 	zhuoming_jinma: "进攻马",
+	zhuoming_hengchi_card: "横驰",
+	zhuoming_hengchi_card_info: "衍生的 -1 马指示牌。",
 	xiaobai_xuanyubao: "悬鱼宝物",
 	xiaobai_xuanyubao_info: "〖悬鱼〗置入宝物栏的牌。",
+	maokuo_yihuo_card: "闪电",
+	maokuo_yihuo_card_info: "出牌阶段，对自己使用。若判定结果为黑桃2~9，则目标角色受到3点雷电伤害。若判定不为黑桃2~9，将之移动到下家的判定区里。",
 };
