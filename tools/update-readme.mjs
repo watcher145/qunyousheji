@@ -20,6 +20,9 @@ function parseObj(src, varName) {
 
 function parseObjText(text) {
   text = text.replace(/;(\s*[}\]])/g, '$1');
+  // 先剥掉行注释（// ...），否则注释会与相邻数组元素被 split(',') 拼成一个脏项，
+  // 造成该元素（如紧跟注释的 maokuo_qinyilu）从包列表里丢失、被误判为“未打包”。
+  text = text.replace(/\/\/[^\n]*/g, '');
   const result = {};
   const pairRx = /(\w+)\s*:\s*((?:"[^"]*")|(?:\[[\s\S]*?\]))/g;
   let match;
@@ -147,12 +150,18 @@ for (const id of allIds) {
     }
     (packages[charPkg] ??= []).push(id);
 
-    // 记录包内角色的修改/补设标记（特殊包除外）
-    if (charPkg && !specialPkgs.has(charPkg)) {
+    // 记录包内角色的修改/补设后缀（所有包通用：特殊包也加（修改）/（补设）后缀）
+    if (charPkg) {
       if (intro.includes('修改') || intro.includes('补充')) {
         packageModify[id] = '修改';
       } else if (hasPatch) {
         packageModify[id] = '补设';
+      }
+      // 但「改设和补设」专辑只收普通包的（特殊包 yongdong/gaijin 只在自身包内加后缀，不进专辑）
+      // 「改设和补设」专辑只收「群友散设(qunyou_sanshe)」里的改/补设角色；
+      // 小白杯、茶水贤设、秋风、3D 等其余专题/独立包（统称特殊包）只在自身包内加（修改）/（补设）后缀，不进本专辑。
+      if (packageModify[id] && charPkg === 'qunyou_sanshe') {
+        gaishe.push(id);
       }
     }
     continue;
@@ -220,7 +229,8 @@ const pkgSections = [];
 for (const pkg of pkgOrder) {
   const ids = packages[pkg];
   if (!ids || ids.length === 0) continue;
-  const pkgName = sortTranslate[pkg] || pkg;
+  // 「群友散设」现在收纳了所有散装武将，README 标题改为「收集到的好设（群友散设）」
+  const pkgName = pkg === 'qunyou_sanshe' ? '收集到的好设（群友散设）' : (sortTranslate[pkg] || pkg);
 
   let lines;
   if (pkg === 'yachaiclan') {
@@ -249,12 +259,13 @@ if (xiaobaiOrder.length > 0) {
   if (subSections.length > 0) {
     // 大包名固定为「小白杯」（与 package.js 里 getXiaobaiPack 的 name / precontent 注册名一致），
     // 不用 sortTranslate.xiaobai —— 那个键在 pkgPrefixMap 里是「小白」（前缀用），容易取错。
-    pkgSections.push(`### 小白杯\n\n${subSections.join('\n\n')}`);
+    // 用 <details> 折叠，默认收起。
+    pkgSections.push(`<details>\n<summary><b>小白杯</b>（点击展开/收起）</summary>\n\n${subSections.join('\n\n')}\n\n</details>`);
   }
 }
 
 // 茶水贤设也是**独立大包**（getChashuiPack），写法与小白杯一致：
-// 大包用 ### 写「茶水贤设」，每个专题小包用 #### 写分组名。
+// 大包用 #### 写每个专题小包，整体用 <details> 折叠。
 const chashuiOrder = Object.keys(chashuiSort);
 if (chashuiOrder.length > 0) {
   const subSections = [];
@@ -265,8 +276,8 @@ if (chashuiOrder.length > 0) {
     subSections.push(`#### ${subName}\n${makeMergedLinesWithSuffix(ids).join('\n')}`);
   }
   if (subSections.length > 0) {
-    // 大包名固定「茶水贤设」（= getChashuiPack 的 name / precontent 注册名）
-    pkgSections.push(`### 茶水贤设\n\n${subSections.join('\n\n')}`);
+    // 大包名固定「茶水贤设」（= getChashuiPack 的 name / precontent 注册名）；<details> 折叠，默认收起
+    pkgSections.push(`<details>\n<summary><b>茶水贤设</b>（点击展开/收起）</summary>\n\n${subSections.join('\n\n')}\n\n</details>`);
   }
 }
 
@@ -305,12 +316,12 @@ if (needImprove.length > 0) {
   sections.push('\n### 需要改进的设计\n' + makeMergedLines(needImprove).join('\n'));
 }
 
-// Last packages: 能永动的武将, 有问题的设计 (always at the very end, no suffix)
+// Last packages: 能永动的武将, 有问题的设计 (very end; 带（修改）/（补设）后缀，但不进“改设和补设”专辑)
 for (const pkg of pkgLast) {
   const ids = packages[pkg];
   if (!ids || ids.length === 0) continue;
   const pkgName = sortTranslate[pkg] || pkg;
-  sections.push(`\n### ${pkgName}\n${makeMergedLines(ids).join('\n')}`);
+  sections.push(`\n### ${pkgName}\n${makeMergedLinesWithSuffix(ids).join('\n')}`);
 }
 
 const newContent = sections.join('\n');

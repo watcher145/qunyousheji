@@ -366,7 +366,7 @@ export const characterIntro = {
 	chashui_sunhanhua: "设计：夜已央　",
 	chashui_liulanzhi: "设计：Phania　",
 	chashui_dengzhan: "设计：Phania　",
-	chashui_budugen: "设计：秋风　插画：翔七七",
+	chashui_budugen: "设计：秋风　",
 	chashui_liuzuan: "设计：Phania　",
 	chashui_xudeng: "设计：夜已央　",
 	chashui_jiangxian: "设计：秋风　",
